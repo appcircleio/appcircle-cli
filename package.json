@@ -1,0 +1,36 @@
+{
+  "name": "appcircle-cli",
+  "version": "1.0.0",
+  "description": "CLI tool for running Appcircle services from the command line",
+  "main": "bin/appcircle",
+  "bin": {
+    "appcircle": "bin/appcircle"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/appcircleio/appcircle-cli.git"
+  },
+  "keywords": [
+    "appcircle",
+    "cli"
+  ],
+  "author": "Appcircle",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/appcircleio/appcircle-cli/issues"
+  },
+  "homepage": "https://github.com/appcircleio/appcircle-cli#readme",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "esm": "^3.2.25",
+    "form-data": "^4.0.0",
+    "yargs": "^16.2.0"
+  },
+  "files": [
+    "bin/",
+    "src/"
+  ]
+}
