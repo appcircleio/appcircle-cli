@@ -5,6 +5,9 @@ import FormData from 'form-data';
 import axios from 'axios';
 
 const HOSTNAME = "https://dev-api.appcircle.io";
+
+const sleep = (waitTimeInMs) => new Promise(resolve => setTimeout(resolve, waitTimeInMs));
+
 function genericRequest(args) {
     let { options, data, onSuccess, onError } = args
     const req = https.request(options, function (res) {
@@ -164,6 +167,21 @@ export async function startBuild(options) {
             }
         );
         console.log("Build task response: ", buildResponse.data);
+
+        let buildStateValue = -1;
+        while (buildStateValue != 3) { // 3 = Completed
+            console.log("Waiting for 30 seconds...");
+            await sleep(30000); // sleep for 30 seconds
+            const taskStatus = await axios.get(`${HOSTNAME}/task/v1/tasks/${buildResponse.data.taskId}`,
+                {
+                    headers: {
+                        "accept": "application/json",
+                        "Authorization": `Bearer ${options.access_token}`
+                    }
+                });
+            console.log("Build status: ", taskStatus.data.stateName);
+            buildStateValue = taskStatus.data.stateValue;
+        }
     } catch (error) {
         console.error(error);
     }
@@ -180,7 +198,7 @@ export function uploadArtifact(options) {
     const req = https.request(
         {
             host: 'dev-api.appcircle.io',
-            path: '/distribution/v2/profiles/b445efff-7617-4b3f-a2f3-a451c1db39fb/app-versions',
+            path: `/distribution/v2/profiles/${options.id}/app-versions`,
             method: 'POST',
             headers: {
                 ...form.getHeaders(),
