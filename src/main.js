@@ -18,7 +18,6 @@ export function cli(args) {
         .command('login <pat>')
         .description('Log in')
         .action((pat) => {
-            console.log('pat: ' + pat);
             getToken(pat);
         });
 
@@ -26,7 +25,6 @@ export function cli(args) {
         .command('listBuildProfiles')
         .description('Get list of build profiles')
         .action(() => {
-            console.log('listBuildProfiles');
             getBuildProfiles(access_token);
         });
 
@@ -34,7 +32,6 @@ export function cli(args) {
         .command('listDistributionProfiles')
         .description('Get list of distribution profiles')
         .action(() => {
-            console.log('listDistributionProfiles');
             getDistributionProfiles(access_token);
         });
 
@@ -42,7 +39,6 @@ export function cli(args) {
         .command('build <id> <branch>')
         .description('Start a new build')
         .action((id, branch) => {
-            console.log('build ', id, "   ", branch);
             startBuild({
                 branch: branch,
                 profileId: id,
@@ -54,8 +50,6 @@ export function cli(args) {
         .command('upload <app> <profileId> [release_notes]')
         .description('Upload your mobile app to selceted distribution profile')
         .action((app, profileId, release_notes,) => {
-            console.log('upload ', app, "   ", profileId, "   ", release_notes);
-
             uploadArtifact({
                 app: app,
                 message: release_notes,

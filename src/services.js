@@ -3,10 +3,19 @@ import qs from 'querystring';
 import fs from 'fs';
 import FormData from 'form-data';
 import axios from 'axios';
-https://auth
-const HOSTNAME = "https://api.appcircle.io";
 
+const HOSTNAME = "https://dev-api.appcircle.io";
 const sleep = (waitTimeInMs) => new Promise(resolve => setTimeout(resolve, waitTimeInMs));
+const buildStatus = {
+    "0": "Success",
+    "1": "Failed",
+    "2": "Canceled",
+    "3": "Timeout",
+    "90": "Waiting",
+    "91": "Running",
+    "92": "Completing",
+    "99": "Unknown"
+};
 
 function genericRequest(args) {
     let { options, data, onSuccess, onError } = args
@@ -36,7 +45,7 @@ function genericRequest(args) {
 export async function getToken(pat) {
     var options = {
         "method": "POST",
-        "hostname": "auth.appcircle.io",
+        "hostname": "dev-auth.appcircle.io",
         "path": "/auth/v1/token",
         "headers": {
             "accept": "application/json",
@@ -74,7 +83,7 @@ export async function getDistributionProfiles(access_token) {
 export function createDistributionProfile(access_token) {
     var options = {
         "method": "POST",
-        "hostname": "auth.appcircle.io",
+        "hostname": "dev-auth.appcircle.io",
         "path": "/distribution/v2/profiles",
         "headers": {
             "accept": "text/plain",
@@ -98,7 +107,7 @@ export function createDistributionProfile(access_token) {
 
 export function getTestingGroups(access_token) {
     var options = {
-        "hostname": "auth.appcircle.io",
+        "hostname": "dev-auth.appcircle.io",
         "path": "/distribution/v2/testing-groups",
         "headers": {
             "accept": "application/json",
@@ -168,9 +177,11 @@ export async function startBuild(options) {
         );
         console.log("Build task response: ", buildResponse.data);
 
-        let buildStateValue = -1;
-        while (buildStateValue != 3) { // 3 = Completed
+        let buildStateValue = 1000;
+        while (buildStateValue > 3) { // 3 = Completed
             console.log("Waiting for 30 seconds...");
+            await sleep(30000); // sleep for 30 seconds
+
             const taskStatus = await axios.get(`${HOSTNAME}/build/v2/commits/${latestCommitId}/builds/${buildResponse.data.taskId}/status`,
                 {
                     headers: {
@@ -178,7 +189,7 @@ export async function startBuild(options) {
                         "Authorization": `Bearer ${options.access_token}`
                     }
                 });
-            console.log("Build status: ", taskStatus.data.status);
+            console.log("Build status: ", buildStatus[taskStatus.data.status]);
             buildStateValue = taskStatus.data.status;
         }
     } catch (error) {
