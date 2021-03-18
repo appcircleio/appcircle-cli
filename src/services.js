@@ -3,8 +3,8 @@ import qs from 'querystring';
 import fs from 'fs';
 import FormData from 'form-data';
 import axios from 'axios';
-
-const HOSTNAME = "https://dev-api.appcircle.io";
+https://auth
+const HOSTNAME = "https://api.appcircle.io";
 
 const sleep = (waitTimeInMs) => new Promise(resolve => setTimeout(resolve, waitTimeInMs));
 
@@ -36,7 +36,7 @@ function genericRequest(args) {
 export async function getToken(pat) {
     var options = {
         "method": "POST",
-        "hostname": "dev-auth.appcircle.io",
+        "hostname": "auth.appcircle.io",
         "path": "/auth/v1/token",
         "headers": {
             "accept": "application/json",
@@ -74,7 +74,7 @@ export async function getDistributionProfiles(access_token) {
 export function createDistributionProfile(access_token) {
     var options = {
         "method": "POST",
-        "hostname": "dev-auth.appcircle.io",
+        "hostname": "auth.appcircle.io",
         "path": "/distribution/v2/profiles",
         "headers": {
             "accept": "text/plain",
@@ -98,7 +98,7 @@ export function createDistributionProfile(access_token) {
 
 export function getTestingGroups(access_token) {
     var options = {
-        "hostname": "dev-auth.appcircle.io",
+        "hostname": "auth.appcircle.io",
         "path": "/distribution/v2/testing-groups",
         "headers": {
             "accept": "application/json",
@@ -196,7 +196,7 @@ export function uploadArtifact(options) {
     }
     const req = https.request(
         {
-            host: 'dev-api.appcircle.io',
+            host: 'api.appcircle.io',
             path: `/distribution/v2/profiles/${options.id}/app-versions`,
             method: 'POST',
             headers: {
