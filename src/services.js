@@ -171,10 +171,6 @@ export async function startBuild(options) {
         let buildStateValue = -1;
         while (buildStateValue != 3) { // 3 = Completed
             console.log("Waiting for 30 seconds...");
-            await sleep(30000); // sleep for 30 seconds
-            // const taskStatus = await axios.get(`${HOSTNAME}/task/v1/tasks/${buildResponse.data.taskId}`,
-            // "https://dev-api.appcircle.io/build/v2/commits/f300a97f-7e10-483b-85a8-2e725db4974c/builds/b0df1e70-d1d2-45a4-b07a-13639a7f7e43/status"
-
             const taskStatus = await axios.get(`${HOSTNAME}/build/v2/commits/${latestCommitId}/builds/${buildResponse.data.taskId}/status`,
                 {
                     headers: {
