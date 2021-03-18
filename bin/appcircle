@@ -1,4 +1,3 @@
 #!/usr/bin/env node
 require = require('esm')(module /*, options*/);
-const args = require('yargs').argv;
-require('../src/main.js').cli(args);
+require('../src/main.js').cli(process.argv);
