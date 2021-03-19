@@ -17,5 +17,5 @@ Below is the list of commands currently supported by Appcircle CLI:
 | `appcircle login` | Get access token |
 | `appcenter listBuildProfiles` | Get list of build profiles |
 | `appcenter listDistributionProfiles` | Get list of distribution profiles |
-| `appcenter listDistributionProfiles` | Get list of distribution profiles |
+| `appcenter build` | Start a new build |
 | `appcenter upload` | Upload your mobile app to selceted distribution profile |
