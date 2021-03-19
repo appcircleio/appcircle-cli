@@ -1,6 +1,6 @@
 # Appcircle Command Line Interface
 
-Appcircle CLI is a unified tool for running App Center services from the command line.
+Appcircle CLI is a unified tool for running Appcircle services from the command line.
 
 # Installation
 
