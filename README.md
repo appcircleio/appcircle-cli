@@ -22,7 +22,7 @@ Below is the list of commands currently supported by Appcircle CLI:
 
 ## How to start a new build via the Appcircle CLI?
 
-- Add a build profile and [connect repository](https://docs.appcircle.io/build/adding-a-build-profile#connect-your-repository)
+- Add a build profile and [connect a repository](https://docs.appcircle.io/build/adding-a-build-profile#connect-your-repository)
 - [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication)
 - Using the Appcircle CLI, create a full access API token using the following command with the personal access token specified as "pat": `appcircle login ${pat}`. Copy the result and and set it as the `AC_ACCESS_TOKEN` enviroment variable.
 - Get the build profile ID using `appcircle listBuildProfiles`
