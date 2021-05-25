@@ -208,7 +208,7 @@ export function uploadArtifact(options) {
     const req = https.request(
         {
             host: 'api.appcircle.io',
-            path: `/distribution/v2/profiles/${options.id}/app-versions`,
+            path: `/distribution/v2/profiles/${options.profileId}/app-versions`,
             method: 'POST',
             headers: {
                 ...form.getHeaders(),
