@@ -57,5 +57,11 @@ export function cli(args) {
                 access_token: access_token
             });
         });
+
+    program.command('createDistributionProfile <name>')
+        .description('Create a distribution profile')
+        .action((name) => {
+            createDistributionProfile({ access_token: access_token, name });
+        });
     program.parse(args);
 }

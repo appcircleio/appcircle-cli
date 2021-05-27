@@ -80,29 +80,21 @@ export async function getDistributionProfiles(access_token) {
     }
 }
 
-export function createDistributionProfile(access_token) {
-    var options = {
-        "method": "POST",
-        "hostname": "auth.appcircle.io",
-        "path": "/distribution/v2/profiles",
-        "headers": {
-            "accept": "text/plain",
-            "content-type": "application/json-patch+json",
-            "Authorization": `Bearer ${access_token}`
-        }
-    };
-
-    genericRequest({
-        options: options,
-        data: "{\"name\": \"my-test-dist1\"}",
-        onSuccess: (bodyString) => {
-            console.log('\x1b[36m', 'Created the distribution profile', '\x1b[0m');
-            console.log((JSON.parse(bodyString)));
-        },
-        onFailure: (error) => {
-            console.log(error);
-        }
-    });
+export async function createDistributionProfile(options) {
+    try {
+        await axios.post(`${HOSTNAME}/distribution/v1/profiles`,
+            { name: options.name },
+            {
+                headers: {
+                    "content-type": "application/json-patch+json",
+                    "Authorization": `Bearer ${options.access_token}`
+                }
+            }
+        );
+        console.info(`\n${options.name} distribution profile created successfully!`);
+    } catch (error) {
+        handleError(error);
+    }
 }
 
 export function getTestingGroups(access_token) {
@@ -222,4 +214,22 @@ export function uploadArtifact(options) {
     );
 
     form.pipe(req);
+}
+
+function handleError(error) {
+    if (error.response) {
+        if (error.response.data) {
+            if (error.response.data.message) {
+                console.error(`${error.response.data.message} ${error.response.data.code}`);
+            } else if (error.response.data.innerErrors.length > 0) {
+                console.error(`${error.response.data.innerErrors[0].message} ${error.response.data.innerErrors[0].code}`);
+            } else {
+                console.error(error.response.data);
+            }
+        } else {
+            console.error(error.response);
+        }
+    } else {
+        console.error(error);
+    }
 }
