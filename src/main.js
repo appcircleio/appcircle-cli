@@ -88,16 +88,16 @@ export function cli(args) {
             getEnvironmentVariables({ access_token: access_token, variableGroupId });
         });
 
-    program.command('createTextEnvironmentVariable <environmentVariableGroupId> <key> <value> <isSecret>')
+    program.command('createTextEnvironmentVariable <variableGroupId> <key> <value> <isSecret>')
         .description('Create a text environment variable')
         .action((environmentVariableGroupId, key, value, isSecret) => {
-            createTextEnvironmentVariable({ access_token: access_token, environmentVariableGroupId, key, value, isSecret })
+            createTextEnvironmentVariable({ access_token: access_token, variableGroupId, key, value, isSecret })
         });
 
-    program.command('createFileEnvironmentVariable <environmentVariableGroupId> <key> <value> <filePath> <isSecret>')
+    program.command('createFileEnvironmentVariable <variableGroupId> <key> <value> <filePath> <isSecret>')
         .description('Create a file environment variable')
         .action((environmentVariableGroupId, key, value, filePath, isSecret) => {
-            createFileEnvironmentVariable({ access_token: access_token, environmentVariableGroupId, key, value, filePath, isSecret })
+            createFileEnvironmentVariable({ access_token: access_token, variableGroupId, key, value, filePath, isSecret })
         });
 
     program.parse(args);

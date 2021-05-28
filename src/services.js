@@ -264,14 +264,14 @@ export function uploadArtifact(options) {
 
 export async function getEnvironmentVariableGroups(access_token) {
     try {
-        const environmentVariableGroupList = await axios.get(`${HOSTNAME}/build/v1/variable-groups`,
+        const environmentVariableGroups = await axios.get(`${HOSTNAME}/build/v1/variable-groups`,
             {
                 headers: {
                     "Authorization": `Bearer ${access_token}`
                 }
             }
         );
-        console.table(environmentVariableGroupList.data
+        console.table(environmentVariableGroups.data
             .map(x => ({ 'Variable Groups ID': x.id, 'Variable Groups Name': x.name }))
         );
     } catch (error) {
@@ -297,7 +297,7 @@ export async function createEnvironmentVariableGroup(options) {
 
 export async function getEnvironmentVariables(options) {
     try {
-        const environmentVariableList =
+        const environmentVariables =
             await axios.get(`${HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
                 {
                     headers: {
@@ -305,7 +305,7 @@ export async function getEnvironmentVariables(options) {
                     }
                 }
             );
-        console.table(environmentVariableList.data
+        console.table(environmentVariables.data
             .map(environmentVariable => (
                 {
                     'Key Name': environmentVariable.key,
@@ -320,7 +320,7 @@ export async function getEnvironmentVariables(options) {
 
 export async function createTextEnvironmentVariable(options) {
     try {
-        await axios.post(`${HOSTNAME}/build/v1/variable-groups/${options.environmentVariableGroupId}/variables`,
+        await axios.post(`${HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
             { Key: options.key, Value: options.value, IsSecret: options.isSecret },
             {
                 headers: {
@@ -347,7 +347,7 @@ export async function createFileEnvironmentVariable(options) {
         const req = https.request(
             {
                 host: 'api.appcircle.io',
-                path: `/build/v1/variable-groups/${options.environmentVariableGroupId}/variables/files`,
+                path: `/build/v1/variable-groups/${options.variableGroupId}/variables/files`,
                 method: 'POST',
                 headers: {
                     ...form.getHeaders(),
