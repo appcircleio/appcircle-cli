@@ -249,6 +249,29 @@ export async function createEnvironmentVariableGroup(options) {
     }
 }
 
+export async function getEnvironmentVariables(options) {
+    try {
+        const environmentVariableList =
+            await axios.get(`${HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${options.access_token}`
+                    }
+                }
+            );
+        console.table(environmentVariableList.data
+            .map(environmentVariable => (
+                {
+                    'Key Name': environmentVariable.key,
+                    'Key Value': environmentVariable.isSecret ? '********' : environmentVariable.value
+                }
+            ))
+        );
+    } catch (error) {
+        handleError(error);
+    }
+}
+
 export async function createTextEnvironmentVariable(options) {
     try {
         await axios.post(`${HOSTNAME}/build/v1/variable-groups/${options.environmentVariableGroupId}/variables`,

@@ -11,6 +11,7 @@ import {
     startBuild,
     getEnvironmentVariableGroups,
     createEnvironmentVariableGroup,
+    getEnvironmentVariables,
     createTextEnvironmentVariable,
     createFileEnvironmentVariable
 } from '../src/services';
@@ -79,6 +80,12 @@ export function cli(args) {
         .description('Create an environment variable group')
         .action((name) => {
             createEnvironmentVariableGroup({ access_token: access_token, name });
+        });
+
+    program.command('getEnvironmentVariables <variableGroupId>')
+        .description('Get list of environment variables')
+        .action((variableGroupId) => {
+            getEnvironmentVariables({ access_token: access_token, variableGroupId });
         });
 
     program.command('createTextEnvironmentVariable <environmentVariableGroupId> <key> <value> <isSecret>')
