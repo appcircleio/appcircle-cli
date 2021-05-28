@@ -2,13 +2,15 @@
 const { createCommand } = require('commander');
 const program = createCommand();
 import {
-    getToken, getTestingGroups,
+    getToken,
+    getTestingGroups,
     getDistributionProfiles,
     createDistributionProfile,
     uploadArtifact,
     getBuildProfiles,
     startBuild,
-    createEnvironmentVariableGroup
+    createEnvironmentVariableGroup,
+    createTextEnvironmentVariable
 } from '../src/services';
 
 const access_token = process.env.AC_ACCESS_TOKEN
@@ -69,6 +71,12 @@ export function cli(args) {
         .description('Create an environment variable group')
         .action((name) => {
             createEnvironmentVariableGroup({ access_token: access_token, name });
+        });
+
+    program.command('createTextEnvironmentVariable <environmentVariableGroupId> <key> <value> <isSecret>')
+        .description('Create a text environment variable')
+        .action((environmentVariableGroupId, key, value, isSecret) => {
+            createTextEnvironmentVariable({ access_token: access_token, environmentVariableGroupId, key, value, isSecret })
         });
 
     program.parse(args);

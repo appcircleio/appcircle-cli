@@ -232,6 +232,22 @@ export async function createEnvironmentVariableGroup(options) {
     }
 }
 
+export async function createTextEnvironmentVariable(options) {
+    try {
+        await axios.post(`${HOSTNAME}/build/v1/variable-groups/${options.environmentVariableGroupId}/variables`,
+            { Key: options.key, Value: options.value, IsSecret: options.isSecret },
+            {
+                headers: {
+                    "Authorization": `Bearer ${options.access_token}`
+                }
+            }
+        );
+        console.info(`\n${options.key} environment variable created successfully!`);
+    } catch (error) {
+        handleError(error);
+    }
+}
+
 function handleError(error) {
     if (error.response) {
         if (error.response.data) {
