@@ -216,6 +216,23 @@ export function uploadArtifact(options) {
     form.pipe(req);
 }
 
+export async function getEnvironmentVariableGroups(access_token) {
+    try {
+        const environmentVariableGroupList = await axios.get(`${HOSTNAME}/build/v1/variable-groups`,
+            {
+                headers: {
+                    "Authorization": `Bearer ${access_token}`
+                }
+            }
+        );
+        console.table(environmentVariableGroupList.data
+            .map(x => ({ 'Variable Groups ID': x.id, 'Variable Groups Name': x.name }))
+        );
+    } catch (error) {
+        handleError(error);
+    }
+}
+
 export async function createEnvironmentVariableGroup(options) {
     try {
         await axios.post(`${HOSTNAME}/build/v1/variable-groups`,

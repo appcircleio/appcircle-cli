@@ -9,6 +9,7 @@ import {
     uploadArtifact,
     getBuildProfiles,
     startBuild,
+    getEnvironmentVariableGroups,
     createEnvironmentVariableGroup,
     createTextEnvironmentVariable,
     createFileEnvironmentVariable
@@ -66,6 +67,12 @@ export function cli(args) {
         .description('Create a distribution profile')
         .action((name) => {
             createDistributionProfile({ access_token: access_token, name });
+        });
+
+    program.command('getEnvironmentVariableGroups')
+        .description('Get list of environment variable groups')
+        .action(() => {
+            getEnvironmentVariableGroups(access_token);
         });
 
     program.command('createEnvironmentVariableGroup <name>')
