@@ -5,8 +5,11 @@ import FormData from 'form-data';
 import axios from 'axios';
 import moment from 'moment';
 
-const HOSTNAME = "https://api.appcircle.io";
+const API_HOSTNAME = process.env.API_HOSTNAME || "https://api.appcircle.io";
+const AUTH_HOSTNAME = process.env.AUTH_HOSTNAME || "https://auth.appcircle.io";
+
 const sleep = (waitTimeInMs) => new Promise(resolve => setTimeout(resolve, waitTimeInMs));
+
 const buildStatus = {
     "0": "Success",
     "1": "Failed",
@@ -64,7 +67,7 @@ function genericRequest(args) {
 export async function getToken(pat) {
     var options = {
         "method": "POST",
-        "hostname": "auth.appcircle.io",
+        "hostname": removeHttp(AUTH_HOSTNAME),
         "path": "/auth/v1/token",
         "headers": {
             "accept": "application/json",
@@ -86,7 +89,7 @@ export async function getToken(pat) {
 
 export async function getDistributionProfiles(access_token) {
     try {
-        const distributionProfiles = await axios.get(`${HOSTNAME}/distribution/v2/profiles`,
+        const distributionProfiles = await axios.get(`${API_HOSTNAME}/distribution/v2/profiles`,
             {
                 headers: {
                     "accept": "application/json",
@@ -113,7 +116,7 @@ export async function getDistributionProfiles(access_token) {
 
 export async function createDistributionProfile(options) {
     try {
-        await axios.post(`${HOSTNAME}/distribution/v1/profiles`,
+        await axios.post(`${API_HOSTNAME}/distribution/v1/profiles`,
             { name: options.name },
             {
                 headers: {
@@ -130,7 +133,7 @@ export async function createDistributionProfile(options) {
 
 export function getTestingGroups(access_token) {
     var options = {
-        "hostname": "auth.appcircle.io",
+        "hostname": removeHttp(AUTH_HOSTNAME),
         "path": "/distribution/v2/testing-groups",
         "headers": {
             "accept": "application/json",
@@ -151,7 +154,7 @@ export function getTestingGroups(access_token) {
 
 export async function getBuildProfiles(access_token) {
     try {
-        const buildProfiles = await axios.get(`${HOSTNAME}/build/v2/profiles`,
+        const buildProfiles = await axios.get(`${API_HOSTNAME}/build/v2/profiles`,
             {
                 headers: {
                     "accept": "application/json",
@@ -180,7 +183,7 @@ export async function getBuildProfiles(access_token) {
 // access_token: access_token
 export async function startBuild(options) {
     try {
-        let getBranchListResponse = await axios.get(`${HOSTNAME}/build/v2/profiles/${options.profileId}`,
+        let getBranchListResponse = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
             {
                 headers: {
                     "accept": "application/json",
@@ -245,7 +248,7 @@ export function uploadArtifact(options) {
     }
     const req = https.request(
         {
-            host: 'api.appcircle.io',
+            host: removeHttp(API_HOSTNAME),
             path: `/distribution/v2/profiles/${options.profileId}/app-versions`,
             method: 'POST',
             headers: {
@@ -264,7 +267,7 @@ export function uploadArtifact(options) {
 
 export async function getEnvironmentVariableGroups(access_token) {
     try {
-        const environmentVariableGroups = await axios.get(`${HOSTNAME}/build/v1/variable-groups`,
+        const environmentVariableGroups = await axios.get(`${API_HOSTNAME}/build/v1/variable-groups`,
             {
                 headers: {
                     "Authorization": `Bearer ${access_token}`
@@ -281,7 +284,7 @@ export async function getEnvironmentVariableGroups(access_token) {
 
 export async function createEnvironmentVariableGroup(options) {
     try {
-        await axios.post(`${HOSTNAME}/build/v1/variable-groups`,
+        await axios.post(`${API_HOSTNAME}/build/v1/variable-groups`,
             { name: options.name, variables: [] },
             {
                 headers: {
@@ -298,7 +301,7 @@ export async function createEnvironmentVariableGroup(options) {
 export async function getEnvironmentVariables(options) {
     try {
         const environmentVariables =
-            await axios.get(`${HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
+            await axios.get(`${API_HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
                 {
                     headers: {
                         "Authorization": `Bearer ${options.access_token}`
@@ -320,7 +323,7 @@ export async function getEnvironmentVariables(options) {
 
 export async function createTextEnvironmentVariable(options) {
     try {
-        await axios.post(`${HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
+        await axios.post(`${API_HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
             { Key: options.key, Value: options.value, IsSecret: options.isSecret },
             {
                 headers: {
@@ -346,7 +349,7 @@ export async function createFileEnvironmentVariable(options) {
 
         const req = https.request(
             {
-                host: 'api.appcircle.io',
+                host: removeHttp(API_HOSTNAME),
                 path: `/build/v1/variable-groups/${options.variableGroupId}/variables/files`,
                 method: 'POST',
                 headers: {
@@ -382,4 +385,8 @@ function handleError(error) {
     } else {
         console.error(error);
     }
+}
+
+function removeHttp(url) {
+    return url.replace(/(^\w+:|^)\/\//, '');
 }
