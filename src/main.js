@@ -12,8 +12,7 @@ import {
     getEnvironmentVariableGroups,
     createEnvironmentVariableGroup,
     getEnvironmentVariables,
-    createTextEnvironmentVariable,
-    createFileEnvironmentVariable
+    createEnvironmentVariable
 } from '../src/services';
 
 const access_token = process.env.AC_ACCESS_TOKEN
@@ -88,16 +87,18 @@ export function cli(args) {
             getEnvironmentVariables({ access_token: access_token, variableGroupId });
         });
 
-    program.command('createTextEnvironmentVariable <variableGroupId> <key> <value> <isSecret>')
-        .description('Create a text environment variable')
-        .action((variableGroupId, key, value, isSecret) => {
-            createTextEnvironmentVariable({ access_token: access_token, variableGroupId, key, value, isSecret })
-        });
-
-    program.command('createFileEnvironmentVariable <variableGroupId> <key> <value> <filePath> <isSecret>')
-        .description('Create a file environment variable')
-        .action((variableGroupId, key, value, filePath, isSecret) => {
-            createFileEnvironmentVariable({ access_token: access_token, variableGroupId, key, value, filePath, isSecret })
+    program.command('createEnvironmentVariable <type> <variableGroupId> <key> <value> <filePath> <isSecret>')
+        .description('Create a file or text environment variable')
+        .action((type, variableGroupId, key, value, filePath, isSecret) => {
+            createEnvironmentVariable({
+                access_token: access_token,
+                type,
+                variableGroupId,
+                key,
+                value,
+                filePath,
+                isSecret
+            });
         });
 
     program.parse(args);

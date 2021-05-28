@@ -38,6 +38,10 @@ const platformTypes = {
     5: "Xamarin",
     6: "Flutter"
 };
+const environmentVariableTypes = {
+    TEXT: 'text',
+    FILE: 'file'
+};
 
 function genericRequest(args) {
     let { options, data, onSuccess, onError } = args
@@ -321,7 +325,7 @@ export async function getEnvironmentVariables(options) {
     }
 }
 
-export async function createTextEnvironmentVariable(options) {
+async function createTextEnvironmentVariable(options) {
     try {
         await axios.post(`${API_HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
             { Key: options.key, Value: options.value, IsSecret: options.isSecret },
@@ -337,7 +341,7 @@ export async function createTextEnvironmentVariable(options) {
     }
 }
 
-export async function createFileEnvironmentVariable(options) {
+async function createFileEnvironmentVariable(options) {
     try {
         const form = new FormData();
         const file = fs.createReadStream(options.filePath);
@@ -366,6 +370,31 @@ export async function createFileEnvironmentVariable(options) {
         form.pipe(req);
     } catch (error) {
         handleError(error);
+    }
+}
+
+export async function createEnvironmentVariable(options) {
+    if (options.type && options.type === environmentVariableTypes.FILE) {
+        createFileEnvironmentVariable({
+            access_token: options.access_token,
+            variableGroupId: options.variableGroupId,
+            key: options.key,
+            value: options.value,
+            filePath: options.filePath,
+            isSecret: options.isSecret,
+        });
+    } else if (options.type && options.type === environmentVariableTypes.TEXT) {
+        createTextEnvironmentVariable({
+            access_token: options.access_token,
+            variableGroupId: options.variableGroupId,
+            key: options.key,
+            value: options.value,
+            isSecret: options.isSecret
+        });
+    } else if (options.type) {
+        console.error('Environment variable type not found');
+    } else {
+        console.error('Environment variable is required');
     }
 }
 
