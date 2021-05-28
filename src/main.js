@@ -90,13 +90,13 @@ export function cli(args) {
 
     program.command('createTextEnvironmentVariable <variableGroupId> <key> <value> <isSecret>')
         .description('Create a text environment variable')
-        .action((environmentVariableGroupId, key, value, isSecret) => {
+        .action((variableGroupId, key, value, isSecret) => {
             createTextEnvironmentVariable({ access_token: access_token, variableGroupId, key, value, isSecret })
         });
 
     program.command('createFileEnvironmentVariable <variableGroupId> <key> <value> <filePath> <isSecret>')
         .description('Create a file environment variable')
-        .action((environmentVariableGroupId, key, value, filePath, isSecret) => {
+        .action((variableGroupId, key, value, filePath, isSecret) => {
             createFileEnvironmentVariable({ access_token: access_token, variableGroupId, key, value, filePath, isSecret })
         });
 
