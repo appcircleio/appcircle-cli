@@ -3,6 +3,7 @@ import qs from 'querystring';
 import fs from 'fs';
 import FormData from 'form-data';
 import axios from 'axios';
+import moment from 'moment';
 
 const HOSTNAME = "https://api.appcircle.io";
 const sleep = (waitTimeInMs) => new Promise(resolve => setTimeout(resolve, waitTimeInMs));
@@ -15,6 +16,11 @@ const buildStatus = {
     "91": "Running",
     "92": "Completing",
     "99": "Unknown"
+};
+const authenticationTypes = {
+    1: "None",
+    2: "Individual Enrollment",
+    3: "Static Username and Password"
 };
 
 function genericRequest(args) {
@@ -67,14 +73,26 @@ export async function getToken(pat) {
 
 export async function getDistributionProfiles(access_token) {
     try {
-        const distProfiles = await axios.get(`${HOSTNAME}/distribution/v2/profiles`,
+        const distributionProfiles = await axios.get(`${HOSTNAME}/distribution/v2/profiles`,
             {
                 headers: {
                     "accept": "application/json",
                     "Authorization": `Bearer ${access_token}`
                 }
             });
-        console.log("Distribution profiles: ", distProfiles);
+        console.table(distributionProfiles.data
+            .map(distributionProfile => ({
+                'Profile Name': distributionProfile.name,
+                'Pinned': distributionProfile.pinned,
+                'iOS Version': distributionProfile.iOSVersion ? distributionProfile.iOSVersion : 'No versions available',
+                'Android Version': distributionProfile.androidVersion ? distributionProfile.androidVersion : 'No versions available',
+                'Last Updated': moment(distributionProfile.updateDate).fromNow(),
+                'Last Shared': distributionProfile.lastAppVersionSharedDate ?
+                    moment(distributionProfile.lastAppVersionSharedDate).fromNow() : 'Not Shared',
+                'Authentication': authenticationTypes[distributionProfile.settings.authenticationType],
+                'Auto Send': distributionProfile.testingGroupIds ? 'Enabled' : 'Disabled'
+            }))
+        );
     } catch (error) {
         console.error(error);
     }
