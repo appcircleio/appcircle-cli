@@ -22,6 +22,19 @@ const authenticationTypes = {
     2: "Individual Enrollment",
     3: "Static Username and Password"
 };
+const operatingSystems = {
+    1: 'iOS',
+    2: 'Android'
+};
+const platformTypes = {
+    0: "None",
+    1: "Swift/Objective-C",
+    2: "Java/Kotlin",
+    3: "Smartface",
+    4: "React Native",
+    5: "Xamarin",
+    6: "Flutter"
+};
 
 function genericRequest(args) {
     let { options, data, onSuccess, onError } = args
@@ -137,14 +150,29 @@ export function getTestingGroups(access_token) {
 }
 
 export async function getBuildProfiles(access_token) {
-    let buildProfiles = await axios.get(`${HOSTNAME}/build/v2/profiles`,
-        {
-            headers: {
-                "accept": "application/json",
-                "Authorization": `Bearer ${access_token}`
-            }
-        });
-    console.log("Build profiles: ", buildProfiles);
+    try {
+        const buildProfiles = await axios.get(`${HOSTNAME}/build/v2/profiles`,
+            {
+                headers: {
+                    "accept": "application/json",
+                    "Authorization": `Bearer ${access_token}`
+                }
+            });
+        console.table(buildProfiles.data
+            .map(buildProfile => ({
+                'Profile Name': buildProfile.name,
+                'Pinned': buildProfile.pinned,
+                'Target OS': operatingSystems[buildProfile.os],
+                'Target Platform': platformTypes[buildProfile.buildPlatformType],
+                'Repository': buildProfile.repositoryName ? buildProfile.repositoryName : 'No repository connected',
+                'Last Build': buildProfile.lastBuildDate ? moment(buildProfile.lastBuildDate).calendar() : 'No previous builds',
+                'Auto Distribute': buildProfile.autoDistributeCount === 0 ? 'Disabled' : `Enabled in ${buildProfile.autoDistributeCount} branch(es)`,
+                'Auto Build': buildProfile.autoBuildCount === 0 ? 'Disabled' : 'Enabled'
+            }))
+        );
+    } catch (error) {
+        handleError(error);
+    }
 }
 
 // branch: args.branch,
