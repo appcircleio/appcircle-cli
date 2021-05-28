@@ -10,7 +10,8 @@ import {
     getBuildProfiles,
     startBuild,
     createEnvironmentVariableGroup,
-    createTextEnvironmentVariable
+    createTextEnvironmentVariable,
+    createFileEnvironmentVariable
 } from '../src/services';
 
 const access_token = process.env.AC_ACCESS_TOKEN
@@ -77,6 +78,12 @@ export function cli(args) {
         .description('Create a text environment variable')
         .action((environmentVariableGroupId, key, value, isSecret) => {
             createTextEnvironmentVariable({ access_token: access_token, environmentVariableGroupId, key, value, isSecret })
+        });
+
+    program.command('createFileEnvironmentVariable <environmentVariableGroupId> <key> <value> <filePath> <isSecret>')
+        .description('Create a file environment variable')
+        .action((environmentVariableGroupId, key, value, filePath, isSecret) => {
+            createFileEnvironmentVariable({ access_token: access_token, environmentVariableGroupId, key, value, filePath, isSecret })
         });
 
     program.parse(args);

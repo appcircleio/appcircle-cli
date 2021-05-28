@@ -248,6 +248,38 @@ export async function createTextEnvironmentVariable(options) {
     }
 }
 
+export async function createFileEnvironmentVariable(options) {
+    try {
+        const form = new FormData();
+        const file = fs.createReadStream(options.filePath);
+
+        form.append('Key', options.key);
+        form.append('Value', options.value);
+        form.append('IsSecret', options.isSecret);
+        form.append('Binary', file);
+
+        const req = https.request(
+            {
+                host: 'api.appcircle.io',
+                path: `/build/v1/variable-groups/${options.environmentVariableGroupId}/variables/files`,
+                method: 'POST',
+                headers: {
+                    ...form.getHeaders(),
+                    "accept": "*/*",
+                    "authorization": `Bearer ${options.access_token}`
+                },
+            },
+            () => {
+                console.info(`\n${options.key} environment variable created successfully!`);
+            }
+        );
+
+        form.pipe(req);
+    } catch (error) {
+        handleError(error);
+    }
+}
+
 function handleError(error) {
     if (error.response) {
         if (error.response.data) {
