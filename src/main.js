@@ -70,7 +70,7 @@ export function cli(args) {
             createDistributionProfile({ access_token: access_token, name });
         });
 
-    program.command('getEnvironmentVariableGroups')
+    program.command('listEnvironmentVariableGroups')
         .description('Get list of environment variable groups')
         .action(() => {
             getEnvironmentVariableGroups(access_token);
@@ -82,7 +82,7 @@ export function cli(args) {
             createEnvironmentVariableGroup({ access_token: access_token, name });
         });
 
-    program.command('getEnvironmentVariables <variableGroupId>')
+    program.command('listEnvironmentVariables <variableGroupId>')
         .description('Get list of environment variables')
         .action((variableGroupId) => {
             getEnvironmentVariables({ access_token: access_token, variableGroupId });
