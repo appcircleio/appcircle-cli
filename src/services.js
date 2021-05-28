@@ -216,12 +216,28 @@ export function uploadArtifact(options) {
     form.pipe(req);
 }
 
+export async function createEnvironmentVariableGroup(options) {
+    try {
+        await axios.post(`${HOSTNAME}/build/v1/variable-groups`,
+            { name: options.name, variables: [] },
+            {
+                headers: {
+                    "Authorization": `Bearer ${options.access_token}`
+                }
+            }
+        );
+        console.info(`\n${options.name} environment variable group created successfully!`);
+    } catch (error) {
+        handleError(error);
+    }
+}
+
 function handleError(error) {
     if (error.response) {
         if (error.response.data) {
             if (error.response.data.message) {
                 console.error(`${error.response.data.message} ${error.response.data.code}`);
-            } else if (error.response.data.innerErrors.length > 0) {
+            } else if (error.response.data.innerErrors && error.response.data.innerErrors.length > 0) {
                 console.error(`${error.response.data.innerErrors[0].message} ${error.response.data.innerErrors[0].code}`);
             } else {
                 console.error(error.response.data);

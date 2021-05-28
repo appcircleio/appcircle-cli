@@ -7,7 +7,8 @@ import {
     createDistributionProfile,
     uploadArtifact,
     getBuildProfiles,
-    startBuild
+    startBuild,
+    createEnvironmentVariableGroup
 } from '../src/services';
 
 const access_token = process.env.AC_ACCESS_TOKEN
@@ -63,5 +64,12 @@ export function cli(args) {
         .action((name) => {
             createDistributionProfile({ access_token: access_token, name });
         });
+
+    program.command('createEnvironmentVariableGroup <name>')
+        .description('Create an environment variable group')
+        .action((name) => {
+            createEnvironmentVariableGroup({ access_token: access_token, name });
+        });
+
     program.parse(args);
 }
