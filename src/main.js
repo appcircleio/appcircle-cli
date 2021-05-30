@@ -1,5 +1,6 @@
 import { prompt, Select, BooleanPrompt } from 'enquirer';
 import ora from 'ora';
+import chalk from 'chalk';
 import {
     getToken,
     getDistributionProfiles,
@@ -167,14 +168,14 @@ const commands = [
             },
             {
                 name: 'value',
-                description: 'Key Value',
+                description: `Key Value (You can skip this if you selected type of ${chalk.hex('#ff8f34')('file')})`,
                 type: commandParameterTypes.STRING
             },
             {
                 name: 'filePath',
-                description: 'File path',
+                description: `File path (You can skip this if you selected type of ${chalk.hex('#ff8f34')('text')})`,
                 type: commandParameterTypes.STRING
-            },
+            }
         ]
     }
 ];
@@ -204,6 +205,7 @@ let access_token = process.env.AC_ACCESS_TOKEN;
             spinner.text = 'Branches fetched';
             spinner.succeed();
         } else if (param.name === 'value' && params.isSecret) {
+            console.log('1');
             param.type = commandParameterTypes.PASSWORD;
         }
 
