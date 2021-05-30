@@ -61,7 +61,7 @@ const commands = [
         params: [
             {
                 name: 'profileId',
-                description: 'Profile ID',
+                description: 'Build profile ID',
                 type: commandParameterTypes.STRING
             },
             {
