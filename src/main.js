@@ -123,7 +123,13 @@ const commands = [
     {
         command: commandTypes.LIST_ENVIRONMENT_VARIABLES,
         description: 'Get list of environment variables',
-        params: []
+        params: [
+            {
+                name: 'variableGroupId',
+                description: 'Variable Groups ID',
+                type: commandParameterTypes.STRING
+            }
+        ]
     },
     {
         command: commandTypes.CREATE_ENVIRONMENT_VARIABLE,
@@ -184,11 +190,11 @@ let access_token = process.env.AC_ACCESS_TOKEN;
     });
 
     const selectedCommandDescription = await commandSelect.run();
-    const selectedCommandIndex = selectedCommandDescription.split('.')[0];
+    const selectedCommandIndex = (selectedCommandDescription.split('.')[0] - 1);
     const selectedCommand = commands[selectedCommandIndex];
-    const params = {};
+    const params = { access_token };
 
-    for (let param of commands[selectedCommandIndex - 1].params) {
+    for (let param of commands[selectedCommandIndex].params) {
         if (param.name === 'branch') {
             const spinner = ora('Branches fetching').start();
 
@@ -228,60 +234,39 @@ let access_token = process.env.AC_ACCESS_TOKEN;
         }
     }
 
-
     switch (selectedCommand.command) {
         case commandTypes.LOGIN:
-            getToken(pat);
+            getToken(params);
             break;
         case commandTypes.LIST_BUILD_PROFILES:
-            getBuildProfiles(access_token);
+            getBuildProfiles(params);
             break;
         case commandTypes.LIST_DISTRIBUTION_PROFILES:
-            getDistributionProfiles(access_token);
+            getDistributionProfiles(params);
             break;
         case commandTypes.BUILD:
-            startBuild({
-                branch: branch,
-                profileId: id,
-                access_token: access_token
-            });
+            startBuild(params);
             break;
-        case commandTypes.BUILD:
-            uploadArtifact({
-                app: app,
-                message: release_notes,
-                profileId: profileId,
-                access_token: access_token
-            });
+        case commandTypes.UPLOAD:
+            uploadArtifact(params);
             break;
         case commandTypes.CREATE_DISTRIBUTION_PROFILE:
-            createDistributionProfile({ access_token: access_token, name });
+            createDistributionProfile(params);
             break;
         case commandTypes.LIST_ENVIRONMENT_VARIABLE_GROUPS:
-            getEnvironmentVariableGroups(access_token);
+            getEnvironmentVariableGroups(params);
             break;
         case commandTypes.CREATE_ENVIRONMENT_VARIABLE_GROUP:
-            createEnvironmentVariableGroup({ access_token: access_token, name });
+            createEnvironmentVariableGroup(params);
             break;
         case commandTypes.LIST_ENVIRONMENT_VARIABLES:
-            getEnvironmentVariables({ access_token: access_token, variableGroupId });
+            getEnvironmentVariables(params);
             break;
         case commandTypes.CREATE_ENVIRONMENT_VARIABLE:
-            createEnvironmentVariable({
-                access_token: access_token,
-                type,
-                variableGroupId,
-                key,
-                value,
-                filePath,
-                isSecret
-            });
+            createEnvironmentVariable(params);
             break;
         default:
             console.error('Command not found');
             break;
     }
-
-    console.log(selectedCommandDescription);
-    console.log(params);
 })();

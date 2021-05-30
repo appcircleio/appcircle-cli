@@ -69,7 +69,7 @@ function genericRequest(args) {
 }
 
 export async function getToken(options) {
-    var options = {
+    const requestOptions = {
         "method": "POST",
         "hostname": removeHttp(AUTH_HOSTNAME),
         "path": "/auth/v1/token",
@@ -80,8 +80,8 @@ export async function getToken(options) {
     };
 
     genericRequest({
-        options: options,
-        data: qs.stringify({ pat }),
+        options: requestOptions,
+        data: qs.stringify({ pat: options.pat }),
         onSuccess: (bodyString) => {
             console.log((JSON.parse(bodyString).access_token));
         },
@@ -91,13 +91,13 @@ export async function getToken(options) {
     });
 }
 
-export async function getDistributionProfiles(access_token) {
+export async function getDistributionProfiles(options) {
     try {
         const distributionProfiles = await axios.get(`${API_HOSTNAME}/distribution/v2/profiles`,
             {
                 headers: {
                     "accept": "application/json",
-                    "Authorization": `Bearer ${access_token}`
+                    "Authorization": `Bearer ${options.access_token}`
                 }
             });
         console.table(distributionProfiles.data
@@ -114,7 +114,7 @@ export async function getDistributionProfiles(access_token) {
             }))
         );
     } catch (error) {
-        console.error(error);
+        handleError(error);
     }
 }
 
@@ -135,17 +135,17 @@ export async function createDistributionProfile(options) {
     }
 }
 
-export function getTestingGroups(access_token) {
-    var options = {
+export function getTestingGroups(options) {
+    const requestOptions = {
         "hostname": removeHttp(AUTH_HOSTNAME),
         "path": "/distribution/v2/testing-groups",
         "headers": {
             "accept": "application/json",
-            "Authorization": `Bearer ${access_token}`
+            "Authorization": `Bearer ${options.access_token}`
         }
     };
     genericRequest({
-        options: options,
+        options: requestOptions,
         onSuccess: (bodyString) => {
             console.log('\x1b[36m', 'Testing Groups: ', '\x1b[0m');
             console.log((JSON.parse(bodyString)));
@@ -156,13 +156,13 @@ export function getTestingGroups(access_token) {
     });
 }
 
-export async function getBuildProfiles(access_token) {
+export async function getBuildProfiles(options) {
     try {
         const buildProfiles = await axios.get(`${API_HOSTNAME}/build/v2/profiles`,
             {
                 headers: {
                     "accept": "application/json",
-                    "Authorization": `Bearer ${access_token}`
+                    "Authorization": `Bearer ${options.access_token}`
                 }
             });
         console.table(buildProfiles.data
@@ -187,7 +187,7 @@ export async function getBuildProfiles(access_token) {
 // access_token: access_token
 export async function startBuild(options) {
     try {
-        let getBranchListResponse = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
+        const getBranchListResponse = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
             {
                 headers: {
                     "accept": "application/json",
@@ -200,7 +200,7 @@ export async function startBuild(options) {
         const branchId = branches[index].id;
         console.log("branchId: ", branchId);
 
-        const allCommitsByBranchId = await axios.get(`${HOSTNAME}/build/v2/commits?branchId=${branchId}`,
+        const allCommitsByBranchId = await axios.get(`${API_HOSTNAME}/build/v2/commits?branchId=${branchId}`,
             {
                 headers: {
                     "accept": "application/json",
@@ -210,7 +210,7 @@ export async function startBuild(options) {
         const latestCommitId = allCommitsByBranchId.data[0].id;
         console.log("Latest commit by branch id: ", latestCommitId);
 
-        const buildResponse = await axios.post(`${HOSTNAME}/build/v2/commits/${latestCommitId}?purpose=1`,
+        const buildResponse = await axios.post(`${API_HOSTNAME}/build/v2/commits/${latestCommitId}?purpose=1`,
             qs.stringify({ sample: 'test' }),
             {
                 headers: {
@@ -269,12 +269,12 @@ export function uploadArtifact(options) {
     form.pipe(req);
 }
 
-export async function getEnvironmentVariableGroups(access_token) {
+export async function getEnvironmentVariableGroups(options) {
     try {
         const environmentVariableGroups = await axios.get(`${API_HOSTNAME}/build/v1/variable-groups`,
             {
                 headers: {
-                    "Authorization": `Bearer ${access_token}`
+                    "Authorization": `Bearer ${options.access_token}`
                 }
             }
         );
