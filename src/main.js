@@ -16,6 +16,7 @@ import {
     getBranches
 } from './services';
 
+const appcircleColor = '#ff8F34';
 const commandParameterTypes = {
     SELECT: 'select',
     BOOLEAN: 'boolean',
@@ -169,12 +170,12 @@ const commands = [
             },
             {
                 name: 'value',
-                description: `Key Value (You can skip this if you selected type of ${chalk.hex('#ff8f34')('file')})`,
+                description: `Key Value (You can skip this if you selected type of ${chalk.hex(appcircleColor)('file')})`,
                 type: commandParameterTypes.STRING
             },
             {
                 name: 'filePath',
-                description: `File path (You can skip this if you selected type of ${chalk.hex('#ff8f34')('text')})`,
+                description: `File path (You can skip this if you selected type of ${chalk.hex(appcircleColor)('text')})`,
                 type: commandParameterTypes.STRING
             }
         ]
@@ -183,6 +184,19 @@ const commands = [
 let access_token = process.env.AC_ACCESS_TOKEN;
 
 (async () => {
+    console.info(
+        chalk.hex(appcircleColor)(
+            `
+███████ ██████╗ ██████╗  ██████╗██╗██████╗  ██████╗██╗     ███████╗
+██╔══██╗██╔══██╗██╔══██╗██╔════╝██║██╔══██╗██╔════╝██║     ██╔════╝
+███████║██████╔╝██████╔╝██║     ██║██████╔╝██║     ██║     █████╗  
+██╔══██║██╔═══╝ ██╔═══╝ ██║     ██║██╔══██╗██║     ██║     ██╔══╝  
+██║  ██║██║     ██║     ╚██████╗██║██║  ██║╚██████╗███████╗███████╗
+╚═╝  ╚═╝╚═╝     ╚═╝      ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝             
+            `
+        )
+    );
+
     const commandSelect = new Select({
         name: 'command',
         message: 'What do you want to do?',
