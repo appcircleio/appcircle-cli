@@ -1,9 +1,7 @@
-
-const { createCommand } = require('commander');
-const program = createCommand();
+import { prompt, Select, BooleanPrompt } from 'enquirer';
+import ora from 'ora';
 import {
     getToken,
-    getTestingGroups,
     getDistributionProfiles,
     createDistributionProfile,
     uploadArtifact,
@@ -12,84 +10,263 @@ import {
     getEnvironmentVariableGroups,
     createEnvironmentVariableGroup,
     getEnvironmentVariables,
-    createEnvironmentVariable
-} from '../src/services';
+    createEnvironmentVariable,
+    getBranches
+} from './services';
 
-const access_token = process.env.AC_ACCESS_TOKEN
+const commandParameterTypes = {
+    SELECT: 'select',
+    BOOLEAN: 'boolean',
+    STRING: 'input',
+    PASSWORD: 'password'
+};
+const commandTypes = {
+    LOGIN: 'login',
+    LIST_BUILD_PROFILES: 'listBuildProfiles',
+    LIST_DISTRIBUTION_PROFILES: 'listDistributionProfiles',
+    BUILD: 'build',
+    UPLOAD: 'upload',
+    CREATE_DISTRIBUTION_PROFILE: 'createDistributionProfile',
+    LIST_ENVIRONMENT_VARIABLE_GROUPS: 'listEnvironmentVariableGroups',
+    CREATE_ENVIRONMENT_VARIABLE_GROUP: 'createEnvironmentVariableGroup',
+    LIST_ENVIRONMENT_VARIABLES: 'listEnvironmentVariables',
+    CREATE_ENVIRONMENT_VARIABLE: 'createEnvironmentVariable'
 
-export function cli(args) {
-    program
-        .description('Appcircle CLI helps you build and distribute your mobile apps.')
-        .command('login <pat>')
-        .description('Log in')
-        .action((pat) => {
+};
+const commands = [
+    {
+        command: commandTypes.LOGIN,
+        description: 'Login',
+        params: [
+            {
+                name: 'pat',
+                description: 'Personal Access Token',
+                type: commandParameterTypes.STRING
+            }
+        ]
+    },
+    {
+        command: commandTypes.LIST_BUILD_PROFILES,
+        description: 'Get list of build profiles',
+        params: []
+    },
+    {
+        command: commandTypes.LIST_DISTRIBUTION_PROFILES,
+        description: 'Get list of distribution profiles',
+        params: []
+    },
+    {
+        command: commandTypes.BUILD,
+        description: 'Start a new build',
+        params: [
+            {
+                name: 'profileId',
+                description: 'Profile ID',
+                type: commandParameterTypes.STRING
+            },
+            {
+                name: 'branch',
+                description: 'Branch',
+                type: commandParameterTypes.SELECT,
+                params: []
+            }
+        ]
+    },
+    {
+        command: commandTypes.UPLOAD,
+        description: 'Upload your mobile app to selceted distribution profile',
+        params: [
+            {
+                name: 'app',
+                description: 'App path',
+                type: commandParameterTypes.STRING
+            },
+            {
+                name: 'message',
+                description: 'Release notes',
+                type: commandParameterTypes.STRING
+            },
+            {
+                name: 'profileId',
+                description: 'Profile ID',
+                type: commandParameterTypes.STRING
+            }
+        ]
+    },
+    {
+        command: commandTypes.CREATE_DISTRIBUTION_PROFILE,
+        description: 'Create a distribution profile',
+        params: [
+            {
+                name: 'name',
+                description: 'Profile name',
+                type: commandParameterTypes.STRING
+            }
+        ]
+    },
+    {
+        command: commandTypes.LIST_ENVIRONMENT_VARIABLE_GROUPS,
+        description: 'Get list of environment variable groups',
+        params: []
+    },
+    {
+        command: commandTypes.CREATE_ENVIRONMENT_VARIABLE_GROUP,
+        description: 'Create an environment variable group',
+        params: [
+            {
+                name: 'name',
+                description: 'Variable group name',
+                type: commandParameterTypes.STRING
+            }
+        ]
+    },
+    {
+        command: commandTypes.LIST_ENVIRONMENT_VARIABLES,
+        description: 'Get list of environment variables',
+        params: []
+    },
+    {
+        command: commandTypes.CREATE_ENVIRONMENT_VARIABLE,
+        description: 'Create a file or text environment variable',
+        params: [
+            {
+                name: 'type',
+                description: 'Type',
+                type: commandParameterTypes.SELECT,
+                params: [
+                    {
+                        name: 'file',
+                        description: 'File'
+                    },
+                    {
+                        name: 'text',
+                        description: 'Text'
+                    }
+                ]
+            },
+            {
+                name: 'isSecret',
+                description: 'Secret',
+                type: commandParameterTypes.BOOLEAN
+            },
+            {
+                name: 'variableGroupId',
+                description: 'Variable group ID',
+                type: commandParameterTypes.STRING
+            },
+            {
+                name: 'key',
+                description: 'Key Name',
+                type: commandParameterTypes.STRING
+            },
+            {
+                name: 'value',
+                description: 'Key Value',
+                type: commandParameterTypes.STRING
+            },
+            {
+                name: 'filePath',
+                description: 'File path',
+                type: commandParameterTypes.STRING
+            },
+        ]
+    }
+];
+let access_token = process.env.AC_ACCESS_TOKEN;
+
+(async () => {
+    const commandSelect = new Select({
+        name: 'command',
+        message: 'What do you want to do?',
+        choices: [
+            ...commands.map((command, index) => `${index + 1}. ${command.description}`)
+        ]
+    });
+
+    const selectedCommandDescription = await commandSelect.run();
+    const selectedCommandIndex = selectedCommandDescription.split('.')[0];
+    const selectedCommand = commands[selectedCommandIndex];
+    const params = {};
+
+    for (let param of commands[selectedCommandIndex - 1].params) {
+        if (param.name === 'branch') {
+            const spinner = ora('Branches fetching').start();
+
+            const branches = await getBranches({ access_token: process.env.AC_ACCESS_TOKEN, profileId: 'e5a60445-c0a7-4fe2-b496-fd6b47e3886e' });
+            param.params = branches.map(branch => ({ name: branch.name, description: branch.name }));
+
+            spinner.text = 'Branches fetched'
+            spinner.succeed();
+        } else if (param.name === 'value' && params.isSecret) {
+            param.type = commandParameterTypes.PASSWORD;
+        }
+
+        if ([commandParameterTypes.STRING, commandParameterTypes.PASSWORD].includes(param.type)) {
+            const stringPrompt = await prompt([
+                {
+                    type: param.type,
+                    name: param.name,
+                    message: param.description
+                }
+            ]);
+            params[param.name] = stringPrompt[Object.keys(stringPrompt)[0]];
+        } else if (param.type === commandParameterTypes.BOOLEAN) {
+            const booleanPrompt = new BooleanPrompt({
+                name: param.name,
+                message: param.description,
+            });
+            params[param.name] = await booleanPrompt.run();
+        } else if (param.type === commandParameterTypes.SELECT) {
+            const selectPrompt = new Select({
+                name: param.name,
+                message: param.description,
+                choices: [
+                    ...param.params.map(val => val)
+                ]
+            });
+            params[param.name] = await selectPrompt.run();
+        }
+    }
+
+
+    switch (selectedCommand.command) {
+        case commandTypes.LOGIN:
             getToken(pat);
-        });
-
-    program
-        .command('listBuildProfiles')
-        .description('Get list of build profiles')
-        .action(() => {
+            break;
+        case commandTypes.LIST_BUILD_PROFILES:
             getBuildProfiles(access_token);
-        });
-
-    program
-        .command('listDistributionProfiles')
-        .description('Get list of distribution profiles')
-        .action(() => {
+            break;
+        case commandTypes.LIST_DISTRIBUTION_PROFILES:
             getDistributionProfiles(access_token);
-        });
-
-    program
-        .command('build <id> <branch>')
-        .description('Start a new build')
-        .action((id, branch) => {
+            break;
+        case commandTypes.BUILD:
             startBuild({
                 branch: branch,
                 profileId: id,
                 access_token: access_token
-            })
-        });
-
-    program
-        .command('upload <app> <profileId> [release_notes]')
-        .description('Upload your mobile app to selceted distribution profile')
-        .action((app, profileId, release_notes,) => {
+            });
+            break;
+        case commandTypes.BUILD:
             uploadArtifact({
                 app: app,
                 message: release_notes,
                 profileId: profileId,
                 access_token: access_token
             });
-        });
-
-    program.command('createDistributionProfile <name>')
-        .description('Create a distribution profile')
-        .action((name) => {
+            break;
+        case commandTypes.CREATE_DISTRIBUTION_PROFILE:
             createDistributionProfile({ access_token: access_token, name });
-        });
-
-    program.command('listEnvironmentVariableGroups')
-        .description('Get list of environment variable groups')
-        .action(() => {
+            break;
+        case commandTypes.LIST_ENVIRONMENT_VARIABLE_GROUPS:
             getEnvironmentVariableGroups(access_token);
-        });
-
-    program.command('createEnvironmentVariableGroup <name>')
-        .description('Create an environment variable group')
-        .action((name) => {
+            break;
+        case commandTypes.CREATE_ENVIRONMENT_VARIABLE_GROUP:
             createEnvironmentVariableGroup({ access_token: access_token, name });
-        });
-
-    program.command('listEnvironmentVariables <variableGroupId>')
-        .description('Get list of environment variables')
-        .action((variableGroupId) => {
+            break;
+        case commandTypes.LIST_ENVIRONMENT_VARIABLES:
             getEnvironmentVariables({ access_token: access_token, variableGroupId });
-        });
-
-    program.command('createEnvironmentVariable <type> <variableGroupId> <key> <value> <filePath> <isSecret>')
-        .description('Create a file or text environment variable')
-        .action((type, variableGroupId, key, value, filePath, isSecret) => {
+            break;
+        case commandTypes.CREATE_ENVIRONMENT_VARIABLE:
             createEnvironmentVariable({
                 access_token: access_token,
                 type,
@@ -99,7 +276,12 @@ export function cli(args) {
                 filePath,
                 isSecret
             });
-        });
+            break;
+        default:
+            console.error('Command not found');
+            break;
+    }
 
-    program.parse(args);
-}
+    console.log(selectedCommandDescription);
+    console.log(params);
+})();

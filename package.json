@@ -26,9 +26,11 @@
   "dependencies": {
     "axios": "^0.21.1",
     "commander": "^7.1.0",
+    "enquirer": "^2.3.6",
     "esm": "^3.2.25",
     "form-data": "^4.0.0",
     "moment": "^2.29.1",
+    "ora": "^5.4.0",
     "yargs": "^16.2.0"
   },
   "files": [
