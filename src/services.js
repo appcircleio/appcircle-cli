@@ -210,8 +210,6 @@ export async function startBuild(options) {
         const spinner = ora('Try to start a new build').start();
 
         const branches = await getBranches({ access_token: options.access_token, profileId: options.profileId });
-        console.log('branches', branches);
-
         const index = branches.findIndex(element => element.name === options.branch);
         const branchId = branches[index].id;
 
