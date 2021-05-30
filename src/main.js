@@ -88,7 +88,7 @@ const commands = [
             },
             {
                 name: 'profileId',
-                description: 'Profile ID',
+                description: 'Distribution profile ID',
                 type: commandParameterTypes.STRING
             }
         ]
