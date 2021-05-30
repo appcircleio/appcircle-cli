@@ -68,7 +68,7 @@ function genericRequest(args) {
     req.end();
 }
 
-export async function getToken(pat) {
+export async function getToken(options) {
     var options = {
         "method": "POST",
         "hostname": removeHttp(AUTH_HOSTNAME),
@@ -395,6 +395,21 @@ export async function createEnvironmentVariable(options) {
         console.error('Environment variable type not found');
     } else {
         console.error('Environment variable is required');
+    }
+}
+
+export async function getBranches(options) {
+    try {
+        const branches = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
+            {
+                headers: {
+                    "accept": "application/json",
+                    "Authorization": `Bearer ${options.access_token}`
+                }
+            });
+        return branches.data.branches;
+    } catch (error) {
+        handleError(error);
     }
 }
 
