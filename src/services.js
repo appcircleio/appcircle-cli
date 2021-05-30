@@ -4,6 +4,7 @@ import fs from 'fs';
 import FormData from 'form-data';
 import axios from 'axios';
 import moment from 'moment';
+import chalk from 'chalk';
 
 const API_HOSTNAME = process.env.API_HOSTNAME || "https://api.appcircle.io";
 const AUTH_HOSTNAME = process.env.AUTH_HOSTNAME || "https://auth.appcircle.io";
@@ -83,7 +84,9 @@ export async function getToken(options) {
         options: requestOptions,
         data: qs.stringify({ pat: options.pat }),
         onSuccess: (bodyString) => {
-            console.log((JSON.parse(bodyString).access_token));
+            const access_token = (JSON.parse(bodyString)).access_token;
+            console.info(`Login successful.\n\nAppCircle has generated a token for you.\nYou should add this token to your environment variables.\n\nYou can add like this:\n`);
+            console.log(chalk.bold(`export AC_ACCESS_TOKEN="${access_token}"`));
         },
         onFailure: (error) => {
             console.log(error);

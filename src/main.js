@@ -234,6 +234,8 @@ let access_token = process.env.AC_ACCESS_TOKEN;
         }
     }
 
+    console.info('');
+
     switch (selectedCommand.command) {
         case commandTypes.LOGIN:
             getToken(params);
