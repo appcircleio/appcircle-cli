@@ -51,7 +51,6 @@ function genericRequest(args) {
         var chunks = [];
 
         res.on("data", function (chunk) {
-            console.log(chunk);
             chunks.push(chunk);
         });
 
@@ -86,12 +85,16 @@ export async function getToken(options) {
         options: requestOptions,
         data: qs.stringify({ pat: options.pat }),
         onSuccess: (bodyString) => {
-            const access_token = (JSON.parse(bodyString)).access_token;
-            console.info(`Login successful.\n\nAppCircle has generated a token for you.\nYou should add this token to your environment variables.\n\nYou can add like this:\n`);
-            console.log(chalk.bold(`export AC_ACCESS_TOKEN="${access_token}"`));
+            const response = JSON.parse(bodyString);
+            if (response.access_token) {
+                console.info(`Login successful.\n\nAppCircle has generated a token for you.\nYou should add this token to your environment variables.\n\nYou can add like this:\n`);
+                console.log(chalk.bold(`export AC_ACCESS_TOKEN="${response.access_token}"`));
+            } else {
+                console.error(`An error occurred during login.\nDetails: ${JSON.stringify(response)}`);
+            }
         },
         onFailure: (error) => {
-            console.log(error);
+            console.error(error);
         }
     });
 }
@@ -105,6 +108,12 @@ export async function getDistributionProfiles(options) {
                     "Authorization": `Bearer ${options.access_token}`
                 }
             });
+
+        if (distributionProfiles.data.length === 0) {
+            console.info('No distribution profiles available.');
+            return;
+        }
+
         console.table(distributionProfiles.data
             .map(distributionProfile => ({
                 'Profile Name': distributionProfile.name,
@@ -170,6 +179,12 @@ export async function getBuildProfiles(options) {
                     "Authorization": `Bearer ${options.access_token}`
                 }
             });
+
+        if (buildProfiles.data.length === 0) {
+            console.info('No build profiles available.');
+            return;
+        }
+
         console.table(buildProfiles.data
             .map(buildProfile => ({
                 'Profile Name': buildProfile.name,
@@ -195,6 +210,8 @@ export async function startBuild(options) {
         const spinner = ora('Try to start a new build').start();
 
         const branches = await getBranches({ access_token: options.access_token, profileId: options.profileId });
+        console.log('branches', branches);
+
         const index = branches.findIndex(element => element.name === options.branch);
         const branchId = branches[index].id;
 
@@ -389,7 +406,11 @@ export async function getBranches(options) {
             });
         return branches.data.branches;
     } catch (error) {
-        handleError(error);
+        if (error.response && error.response.status === 404) {
+            return [];
+        } else {
+            handleError(error);
+        }
     }
 }
 

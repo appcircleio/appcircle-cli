@@ -1,6 +1,7 @@
 import { prompt, Select, BooleanPrompt } from 'enquirer';
 import ora from 'ora';
 import chalk from 'chalk';
+import fs from 'fs';
 import {
     getToken,
     getDistributionProfiles,
@@ -200,12 +201,17 @@ let access_token = process.env.AC_ACCESS_TOKEN;
             const spinner = ora('Branches fetching').start();
 
             const branches = await getBranches({ access_token: process.env.AC_ACCESS_TOKEN, profileId: params.profileId });
+            if (!branches || branches.length === 0) {
+                spinner.text = 'No branches available';
+                spinner.fail();
+                return;
+            }
+
             param.params = branches.map(branch => ({ name: branch.name, description: branch.name }));
 
             spinner.text = 'Branches fetched';
             spinner.succeed();
         } else if (param.name === 'value' && params.isSecret) {
-            console.log('1');
             param.type = commandParameterTypes.PASSWORD;
         }
 
@@ -214,7 +220,15 @@ let access_token = process.env.AC_ACCESS_TOKEN;
                 {
                     type: param.type,
                     name: param.name,
-                    message: param.description
+                    message: param.description,
+                    validate(value) {
+                        if (value.length === 0) {
+                            return 'This field is required';
+                        } else if (['app'].includes(param.name)) {
+                            return fs.existsSync(value) ? true : 'File not exists';
+                        }
+                        return true;
+                    }
                 }
             ]);
             params[param.name] = stringPrompt[Object.keys(stringPrompt)[0]];
