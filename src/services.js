@@ -51,6 +51,7 @@ function genericRequest(args) {
         var chunks = [];
 
         res.on("data", function (chunk) {
+            console.log(chunk);
             chunks.push(chunk);
         });
 
@@ -223,31 +224,29 @@ export async function startBuild(options) {
     }
 }
 
-export function uploadArtifact(options) {
-    const form = new FormData();
-    const apkFile = fs.createReadStream(options.app);
+export async function uploadArtifact(options) {
+    try {
+        const spinner = ora('Try to upload the app').start();
 
-    form.append('File', apkFile);
-    if (options.message) {
-        form.append('Message', options.message);
+        const data = new FormData();
+        data.append('Message', options.message);
+        data.append('File', fs.createReadStream(options.app));
+
+        const uploadResponse = await axios.post(
+            `${API_HOSTNAME}/distribution/v2/profiles/${options.profileId}/app-versions`,
+            data,
+            {
+                headers: {
+                    'Authorization': `Bearer ${options.access_token}`,
+                    ...data.getHeaders()
+                }
+            }
+        );
+        spinner.text = `App uploaded successfully.\n\nTaskId: ${uploadResponse.data.taskId}`;
+        spinner.succeed();
+    } catch (error) {
+        handleError(error);
     }
-    const req = https.request(
-        {
-            host: removeHttp(API_HOSTNAME),
-            path: `/distribution/v2/profiles/${options.profileId}/app-versions`,
-            method: 'POST',
-            headers: {
-                ...form.getHeaders(),
-                "accept": "*/*",
-                "authorization": `Bearer ${options.access_token}`
-            },
-        },
-        response => {
-            console.log("statusCode:", response.statusCode);
-        }
-    );
-
-    form.pipe(req);
 }
 
 export async function getEnvironmentVariableGroups(options) {
