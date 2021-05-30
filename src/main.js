@@ -301,4 +301,4 @@ let access_token = process.env.AC_ACCESS_TOKEN;
             console.error('Command not found');
             break;
     }
-})();
+})().catch(() => { })
