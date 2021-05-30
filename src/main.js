@@ -74,7 +74,7 @@ const commands = [
     },
     {
         command: commandTypes.UPLOAD,
-        description: 'Upload your mobile app to selceted distribution profile',
+        description: 'Upload your mobile app to selected distribution profile',
         params: [
             {
                 name: 'app',
