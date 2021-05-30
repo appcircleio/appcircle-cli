@@ -2,6 +2,7 @@ import { prompt, Select, BooleanPrompt } from 'enquirer';
 import ora from 'ora';
 import chalk from 'chalk';
 import fs from 'fs';
+import minimist from 'minimist';
 import {
     getToken,
     getDistributionProfiles,
@@ -184,87 +185,103 @@ const commands = [
 let access_token = process.env.AC_ACCESS_TOKEN;
 
 (async () => {
-    console.info(
-        chalk.hex(appcircleColor)(
-            `
-███████ ██████╗ ██████╗  ██████╗██╗██████╗  ██████╗██╗     ███████╗
-██╔══██╗██╔══██╗██╔══██╗██╔════╝██║██╔══██╗██╔════╝██║     ██╔════╝
-███████║██████╔╝██████╔╝██║     ██║██████╔╝██║     ██║     █████╗  
-██╔══██║██╔═══╝ ██╔═══╝ ██║     ██║██╔══██╗██║     ██║     ██╔══╝  
-██║  ██║██║     ██║     ╚██████╗██║██║  ██║╚██████╗███████╗███████╗
-╚═╝  ╚═╝╚═╝     ╚═╝      ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝             
-            `
-        )
-    );
+    let params = { access_token };
+    let selectedCommand = undefined;
+    let selectedCommandDescription = "";
+    let selectedCommandIndex = -1;
 
-    const commandSelect = new Select({
-        name: 'command',
-        message: 'What do you want to do?',
-        choices: [
-            ...commands.map((command, index) => `${index + 1}. ${command.description}`)
-        ]
-    });
+    if (process.argv.length === 2) {
+        console.info(
+            chalk.hex(appcircleColor)(
+                `
+    ███████ ██████╗ ██████╗  ██████╗██╗██████╗  ██████╗██╗     ███████╗
+    ██╔══██╗██╔══██╗██╔══██╗██╔════╝██║██╔══██╗██╔════╝██║     ██╔════╝
+    ███████║██████╔╝██████╔╝██║     ██║██████╔╝██║     ██║     █████╗  
+    ██╔══██║██╔═══╝ ██╔═══╝ ██║     ██║██╔══██╗██║     ██║     ██╔══╝  
+    ██║  ██║██║     ██║     ╚██████╗██║██║  ██║╚██████╗███████╗███████╗
+    ╚═╝  ╚═╝╚═╝     ╚═╝      ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝             
+                `
+            )
+        );
 
-    const selectedCommandDescription = await commandSelect.run();
-    const selectedCommandIndex = (selectedCommandDescription.split('.')[0] - 1);
-    const selectedCommand = commands[selectedCommandIndex];
-    const params = { access_token };
+        const commandSelect = new Select({
+            name: 'command',
+            message: 'What do you want to do?',
+            choices: [
+                ...commands.map((command, index) => `${index + 1}. ${command.description}`)
+            ]
+        });
 
-    for (let param of commands[selectedCommandIndex].params) {
-        if (param.name === 'branch') {
-            const spinner = ora('Branches fetching').start();
+        selectedCommandDescription = await commandSelect.run();
+        selectedCommandIndex = (selectedCommandDescription.split('.')[0] - 1);
+        selectedCommand = commands[selectedCommandIndex];
 
-            const branches = await getBranches({ access_token: process.env.AC_ACCESS_TOKEN, profileId: params.profileId });
-            if (!branches || branches.length === 0) {
-                spinner.text = 'No branches available';
-                spinner.fail();
-                return;
+        for (let param of commands[selectedCommandIndex].params) {
+            if (param.name === 'branch') {
+                const spinner = ora('Branches fetching').start();
+
+                const branches = await getBranches({ access_token: process.env.AC_ACCESS_TOKEN, profileId: params.profileId });
+                if (!branches || branches.length === 0) {
+                    spinner.text = 'No branches available';
+                    spinner.fail();
+                    return;
+                }
+
+                param.params = branches.map(branch => ({ name: branch.name, description: branch.name }));
+
+                spinner.text = 'Branches fetched';
+                spinner.succeed();
+            } else if (param.name === 'value' && params.isSecret) {
+                param.type = commandParameterTypes.PASSWORD;
             }
 
-            param.params = branches.map(branch => ({ name: branch.name, description: branch.name }));
-
-            spinner.text = 'Branches fetched';
-            spinner.succeed();
-        } else if (param.name === 'value' && params.isSecret) {
-            param.type = commandParameterTypes.PASSWORD;
-        }
-
-        if ([commandParameterTypes.STRING, commandParameterTypes.PASSWORD].includes(param.type)) {
-            const stringPrompt = await prompt([
-                {
-                    type: param.type,
+            if ([commandParameterTypes.STRING, commandParameterTypes.PASSWORD].includes(param.type)) {
+                const stringPrompt = await prompt([
+                    {
+                        type: param.type,
+                        name: param.name,
+                        message: param.description,
+                        validate(value) {
+                            if (value.length === 0) {
+                                return 'This field is required';
+                            } else if (['app'].includes(param.name)) {
+                                return fs.existsSync(value) ? true : 'File not exists';
+                            }
+                            return true;
+                        }
+                    }
+                ]);
+                params[param.name] = stringPrompt[Object.keys(stringPrompt)[0]];
+            } else if (param.type === commandParameterTypes.BOOLEAN) {
+                const booleanPrompt = new BooleanPrompt({
                     name: param.name,
                     message: param.description,
-                    validate(value) {
-                        if (value.length === 0) {
-                            return 'This field is required';
-                        } else if (['app'].includes(param.name)) {
-                            return fs.existsSync(value) ? true : 'File not exists';
-                        }
-                        return true;
-                    }
-                }
-            ]);
-            params[param.name] = stringPrompt[Object.keys(stringPrompt)[0]];
-        } else if (param.type === commandParameterTypes.BOOLEAN) {
-            const booleanPrompt = new BooleanPrompt({
-                name: param.name,
-                message: param.description,
-            });
-            params[param.name] = await booleanPrompt.run();
-        } else if (param.type === commandParameterTypes.SELECT) {
-            const selectPrompt = new Select({
-                name: param.name,
-                message: param.description,
-                choices: [
-                    ...param.params.map(val => val)
-                ]
-            });
-            params[param.name] = await selectPrompt.run();
+                });
+                params[param.name] = await booleanPrompt.run();
+            } else if (param.type === commandParameterTypes.SELECT) {
+                const selectPrompt = new Select({
+                    name: param.name,
+                    message: param.description,
+                    choices: [
+                        ...param.params.map(val => val)
+                    ]
+                });
+                params[param.name] = await selectPrompt.run();
+            }
         }
-    }
 
-    console.info('');
+        console.info('');
+    } else {
+        const argv = minimist(process.argv.slice(2));
+        selectedCommandDescription = argv['_'][0];
+        selectedCommand = commands.find(x => x.command === selectedCommandDescription);
+        selectedCommandIndex = commands.indexOf(selectedCommand);
+
+        params = {
+            ...argv
+        };
+        delete params['_'];
+    }
 
     switch (selectedCommand.command) {
         case commandTypes.LOGIN:
