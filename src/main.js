@@ -199,7 +199,7 @@ let access_token = process.env.AC_ACCESS_TOKEN;
         if (param.name === 'branch') {
             const spinner = ora('Branches fetching').start();
 
-            const branches = await getBranches({ access_token: process.env.AC_ACCESS_TOKEN, profileId: 'e5a60445-c0a7-4fe2-b496-fd6b47e3886e' });
+            const branches = await getBranches({ access_token: process.env.AC_ACCESS_TOKEN, profileId: params.profileId });
             param.params = branches.map(branch => ({ name: branch.name, description: branch.name }));
 
             spinner.text = 'Branches fetched';
