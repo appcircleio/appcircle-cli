@@ -5,6 +5,7 @@ import FormData from 'form-data';
 import axios from 'axios';
 import moment from 'moment';
 import chalk from 'chalk';
+import ora from 'ora';
 
 const API_HOSTNAME = process.env.API_HOSTNAME || "https://api.appcircle.io";
 const AUTH_HOSTNAME = process.env.AUTH_HOSTNAME || "https://auth.appcircle.io";
@@ -190,18 +191,11 @@ export async function getBuildProfiles(options) {
 // access_token: access_token
 export async function startBuild(options) {
     try {
-        const getBranchListResponse = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
-            {
-                headers: {
-                    "accept": "application/json",
-                    "Authorization": `Bearer ${options.access_token}`
-                }
-            });
+        const spinner = ora('Try to start a new build').start();
 
-        const branches = getBranchListResponse.data.branches;
+        const branches = await getBranches({ access_token: options.access_token, profileId: options.profileId });
         const index = branches.findIndex(element => element.name === options.branch);
         const branchId = branches[index].id;
-        console.log("branchId: ", branchId);
 
         const allCommitsByBranchId = await axios.get(`${API_HOSTNAME}/build/v2/commits?branchId=${branchId}`,
             {
@@ -211,7 +205,6 @@ export async function startBuild(options) {
                 }
             });
         const latestCommitId = allCommitsByBranchId.data[0].id;
-        console.log("Latest commit by branch id: ", latestCommitId);
 
         const buildResponse = await axios.post(`${API_HOSTNAME}/build/v2/commits/${latestCommitId}?purpose=1`,
             qs.stringify({ sample: 'test' }),
@@ -223,23 +216,8 @@ export async function startBuild(options) {
                 }
             }
         );
-        console.log("Build task response: ", buildResponse.data);
-
-        let buildStateValue = 1000;
-        while (buildStateValue > 3) { // 3 = Completed
-            console.log("Waiting for 30 seconds...");
-            await sleep(30000); // sleep for 30 seconds
-
-            const taskStatus = await axios.get(`${HOSTNAME}/build/v2/commits/${latestCommitId}/builds/${buildResponse.data.taskId}/status`,
-                {
-                    headers: {
-                        "accept": "application/json",
-                        "Authorization": `Bearer ${options.access_token}`
-                    }
-                });
-            console.log("Build status: ", buildStatus[taskStatus.data.status]);
-            buildStateValue = taskStatus.data.status;
-        }
+        spinner.text = `Build added to queue successfully.\n\nTaskId: ${buildResponse.data.taskId}\nQueueItemId: ${buildResponse.data.queueItemId}`;
+        spinner.succeed();
     } catch (error) {
         console.error(error);
     }
@@ -411,6 +389,21 @@ export async function getBranches(options) {
                 }
             });
         return branches.data.branches;
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+export async function getBuildTaskStatus(options) {
+    try {
+        const taskStatus = await axios.get(`${HOSTNAME}/build/v2/commits/${options.latestCommitId}/builds/${options.taskId}/status`,
+            {
+                headers: {
+                    "accept": "application/json",
+                    "Authorization": `Bearer ${options.access_token}`
+                }
+            });
+        return taskStatus.data;
     } catch (error) {
         handleError(error);
     }

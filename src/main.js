@@ -201,7 +201,7 @@ let access_token = process.env.AC_ACCESS_TOKEN;
             const branches = await getBranches({ access_token: process.env.AC_ACCESS_TOKEN, profileId: 'e5a60445-c0a7-4fe2-b496-fd6b47e3886e' });
             param.params = branches.map(branch => ({ name: branch.name, description: branch.name }));
 
-            spinner.text = 'Branches fetched'
+            spinner.text = 'Branches fetched';
             spinner.succeed();
         } else if (param.name === 'value' && params.isSecret) {
             param.type = commandParameterTypes.PASSWORD;
