@@ -14,6 +14,7 @@ Below is the list of commands currently supported by Appcircle CLI:
 
 | Command                                                                                                                     | Description                                             |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `appcircle`                                                                                                                 | AppCircle GUI                                           |
 | `appcircle login [--pat]`                                                                                                   | Get an access token for the session                     |
 | `appcircle listBuildProfiles`                                                                                               | Get the list of build profiles                          |
 | `appcircle listDistributionProfiles`                                                                                        | Get the list of distribution profiles                   |
