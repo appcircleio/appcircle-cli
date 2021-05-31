@@ -22,7 +22,7 @@ Below is the list of commands currently supported by Appcircle CLI:
 | `appcircle createDistributionProfile [--name]`                                                                              | Create a distribution profile                           |
 | `appcircle listEnvironmentVariableGroups`                                                                                   | Get list of environment variable groups                 |
 | `appcircle createEnvironmentVariableGroup [--name]`                                                                         | Create an environment variable group                    |
-| `appcircle listEnvironmentVariables`                                                                                        | Get list of environment variables                       |
+| `appcircle listEnvironmentVariables [--variableGroupId]`                                                                    | Get list of environment variables                       |
 | `appcircle createEnvironmentVariable [--type] [-isSecret, --isSecret] [--variableGroupId] [--key] [--value] [--filePath]`   | Create a file or text environment variable              |
 
 ## How to start a new build via the Appcircle CLI?
