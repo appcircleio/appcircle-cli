@@ -6,6 +6,8 @@ import axios from 'axios';
 import moment from 'moment';
 import chalk from 'chalk';
 import ora from 'ora';
+import path from 'path';
+import os from 'os';
 
 const API_HOSTNAME = process.env.API_HOSTNAME || "https://api.appcircle.io";
 const AUTH_HOSTNAME = process.env.AUTH_HOSTNAME || "https://auth.appcircle.io";
@@ -116,6 +118,7 @@ export async function getDistributionProfiles(options) {
 
         console.table(distributionProfiles.data
             .map(distributionProfile => ({
+                'Profile Id': distributionProfile.id,
                 'Profile Name': distributionProfile.name,
                 'Pinned': distributionProfile.pinned,
                 'iOS Version': distributionProfile.iOSVersion ? distributionProfile.iOSVersion : 'No versions available',
@@ -187,6 +190,7 @@ export async function getBuildProfiles(options) {
 
         console.table(buildProfiles.data
             .map(buildProfile => ({
+                'Profile Id': buildProfile.id,
                 'Profile Name': buildProfile.name,
                 'Pinned': buildProfile.pinned,
                 'Target OS': operatingSystems[buildProfile.os],
@@ -236,6 +240,53 @@ export async function startBuild(options) {
         spinner.succeed();
     } catch (error) {
         console.error(error);
+    }
+}
+
+export async function downloadArtifact(options) {
+    try {
+        const downloadPath = path.resolve((options.path || '').replace('~', `${os.homedir}`));
+        const spinner = ora(`Downloading file artifact.zip under ${downloadPath}`).start();
+        const writer = fs.createWriteStream(`${downloadPath}/artifact.zip`);
+
+        const data = new FormData();
+        data.append('Path', downloadPath);
+        data.append('Build Id', options.buildId);
+        data.append('Commit Id', options.commitId);
+
+        const downloadResponse = await axios.get(
+            `${API_HOSTNAME}/build/v2/commits/${options.commitId}/builds/${options.buildId}`,
+            {
+                responseType: 'stream',
+                headers: {
+                    'Authorization': `Bearer ${options.access_token}`,
+                    ...data.getHeaders()
+                }
+            }
+        );
+        return new Promise((resolve, reject) => {
+            downloadResponse.data.pipe(writer);
+            let error = null;
+            writer.on('error', err => {
+                error = err;
+                writer.close();
+                spinner.text = 'The file could not be downloaded.';
+                spinner.fail();
+                reject(err);
+            });
+            writer.on('close', () => {
+                if (!error) {
+                    spinner.text = `The file artifact.zip is downloaded successfully under path:\n\n ${downloadPath}`;
+                    spinner.succeed();
+                    resolve(true);
+                }
+                //no need to call the reject here, as it will have been called in the
+                //'error' stream;
+            });
+          });
+
+    } catch (error) {
+        handleError(error);
     }
 }
 
