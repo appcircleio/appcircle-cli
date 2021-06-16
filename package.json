@@ -17,6 +17,9 @@
     "appcircle",
     "cli"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "Appcircle",
   "license": "MIT",
   "bugs": {
