@@ -7,6 +7,7 @@ import {
     getToken,
     getDistributionProfiles,
     createDistributionProfile,
+    downloadArtifact,
     uploadArtifact,
     getBuildProfiles,
     startBuild,
@@ -17,132 +18,154 @@ import {
     getBranches
 } from './services';
 
-const appcircleColor = '#ff8F34';
-const commandParameterTypes = {
+const APPCIRCLE_COLOR = '#ff8F34';
+const COMMAND_PARAMETER_TYPES = {
     SELECT: 'select',
     BOOLEAN: 'boolean',
     STRING: 'input',
     PASSWORD: 'password'
 };
-const commandTypes = {
+const COMMAND_TYPES = {
     LOGIN: 'login',
     LIST_BUILD_PROFILES: 'listBuildProfiles',
     LIST_DISTRIBUTION_PROFILES: 'listDistributionProfiles',
     BUILD: 'build',
+    DOWNLOAD: 'download',
     UPLOAD: 'upload',
     CREATE_DISTRIBUTION_PROFILE: 'createDistributionProfile',
     LIST_ENVIRONMENT_VARIABLE_GROUPS: 'listEnvironmentVariableGroups',
     CREATE_ENVIRONMENT_VARIABLE_GROUP: 'createEnvironmentVariableGroup',
     LIST_ENVIRONMENT_VARIABLES: 'listEnvironmentVariables',
     CREATE_ENVIRONMENT_VARIABLE: 'createEnvironmentVariable'
-
 };
 const commands = [
     {
-        command: commandTypes.LOGIN,
+        command: COMMAND_TYPES.LOGIN,
         description: 'Login',
         params: [
             {
                 name: 'pat',
                 description: 'Personal Access Token',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             }
         ]
     },
     {
-        command: commandTypes.LIST_BUILD_PROFILES,
+        command: COMMAND_TYPES.LIST_BUILD_PROFILES,
         description: 'Get list of build profiles',
         params: []
     },
     {
-        command: commandTypes.LIST_DISTRIBUTION_PROFILES,
+        command: COMMAND_TYPES.LIST_DISTRIBUTION_PROFILES,
         description: 'Get list of distribution profiles',
         params: []
     },
     {
-        command: commandTypes.BUILD,
+        command: COMMAND_TYPES.BUILD,
         description: 'Start a new build',
         params: [
             {
                 name: 'profileId',
                 description: 'Build profile ID',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             },
             {
                 name: 'branch',
                 description: 'Branch',
-                type: commandParameterTypes.SELECT,
+                type: COMMAND_PARAMETER_TYPES.SELECT,
                 params: []
             }
         ]
     },
     {
-        command: commandTypes.UPLOAD,
+        command: COMMAND_TYPES.DOWNLOAD,
+        description: 'Download your artifact to the given directory on your machine',
+        params: [
+            {
+                name: 'path',
+                description: '[OPTIONAL] The path for artifacts to be downloaded: (Defaults to the current directory)',
+                type: COMMAND_PARAMETER_TYPES.STRING,
+                required: false
+            },
+            {
+                name: 'buildId',
+                description: 'Build ID of your branch. This can be retrieved from profile list',
+                type: COMMAND_PARAMETER_TYPES.STRING
+            },
+            {
+                name: 'commitId',
+                description: 'Commit ID of your build',
+                type: COMMAND_PARAMETER_TYPES.STRING
+            }
+        ]
+    },
+    {
+        command: COMMAND_TYPES.UPLOAD,
         description: 'Upload your mobile app to selected distribution profile',
         params: [
             {
                 name: 'app',
                 description: 'App path',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             },
             {
                 name: 'message',
                 description: 'Release notes',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             },
             {
                 name: 'profileId',
                 description: 'Distribution profile ID',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             }
         ]
     },
     {
-        command: commandTypes.CREATE_DISTRIBUTION_PROFILE,
+        command: COMMAND_TYPES.CREATE_DISTRIBUTION_PROFILE,
         description: 'Create a distribution profile',
         params: [
             {
                 name: 'name',
                 description: 'Profile name',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             }
         ]
     },
     {
-        command: commandTypes.LIST_ENVIRONMENT_VARIABLE_GROUPS,
+        command: COMMAND_TYPES.LIST_ENVIRONMENT_VARIABLE_GROUPS,
         description: 'Get list of environment variable groups',
         params: []
     },
     {
-        command: commandTypes.CREATE_ENVIRONMENT_VARIABLE_GROUP,
+        command: COMMAND_TYPES.CREATE_ENVIRONMENT_VARIABLE_GROUP,
         description: 'Create an environment variable group',
         params: [
             {
                 name: 'name',
                 description: 'Variable group name',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             }
         ]
     },
     {
-        command: commandTypes.LIST_ENVIRONMENT_VARIABLES,
+        command: COMMAND_TYPES.LIST_ENVIRONMENT_VARIABLES,
         description: 'Get list of environment variables',
         params: [
             {
                 name: 'variableGroupId',
                 description: 'Variable Groups ID',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             }
         ]
     },
     {
-        command: commandTypes.CREATE_ENVIRONMENT_VARIABLE,
+        command: COMMAND_TYPES.CREATE_ENVIRONMENT_VARIABLE,
         description: 'Create a file or text environment variable',
         params: [
             {
                 name: 'type',
                 description: 'Type',
-                type: commandParameterTypes.SELECT,
+                type: COMMAND_PARAMETER_TYPES.SELECT,
                 params: [
                     {
                         name: 'file',
@@ -157,27 +180,27 @@ const commands = [
             {
                 name: 'isSecret',
                 description: 'Secret',
-                type: commandParameterTypes.BOOLEAN
+                type: COMMAND_PARAMETER_TYPES.BOOLEAN
             },
             {
                 name: 'variableGroupId',
                 description: 'Variable group ID',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             },
             {
                 name: 'key',
                 description: 'Key Name',
-                type: commandParameterTypes.STRING
+                type: COMMAND_PARAMETER_TYPES.STRING
             },
             {
                 name: 'value',
-                description: `Key Value (You can skip this if you selected type of ${chalk.hex(appcircleColor)('file')})`,
-                type: commandParameterTypes.STRING
+                description: `Key Value (You can skip this if you selected type of ${chalk.hex(APPCIRCLE_COLOR)('file')})`,
+                type: COMMAND_PARAMETER_TYPES.STRING
             },
             {
                 name: 'filePath',
-                description: `File path (You can skip this if you selected type of ${chalk.hex(appcircleColor)('text')})`,
-                type: commandParameterTypes.STRING
+                description: `File path (You can skip this if you selected type of ${chalk.hex(APPCIRCLE_COLOR)('text')})`,
+                type: COMMAND_PARAMETER_TYPES.STRING
             }
         ]
     }
@@ -192,7 +215,7 @@ let access_token = process.env.AC_ACCESS_TOKEN;
 
     if (process.argv.length === 2) {
         console.info(
-            chalk.hex(appcircleColor)(
+            chalk.hex(APPCIRCLE_COLOR)(
                 `
     ███████ ██████╗ ██████╗  ██████╗██╗██████╗  ██████╗██╗     ███████╗
     ██╔══██╗██╔══██╗██╔══██╗██╔════╝██║██╔══██╗██╔════╝██║     ██╔════╝
@@ -232,17 +255,17 @@ let access_token = process.env.AC_ACCESS_TOKEN;
                 spinner.text = 'Branches fetched';
                 spinner.succeed();
             } else if (param.name === 'value' && params.isSecret) {
-                param.type = commandParameterTypes.PASSWORD;
+                param.type = COMMAND_PARAMETER_TYPES.PASSWORD;
             }
 
-            if ([commandParameterTypes.STRING, commandParameterTypes.PASSWORD].includes(param.type)) {
+            if ([COMMAND_PARAMETER_TYPES.STRING, COMMAND_PARAMETER_TYPES.PASSWORD].includes(param.type)) {
                 const stringPrompt = await prompt([
                     {
                         type: param.type,
                         name: param.name,
                         message: param.description,
                         validate(value) {
-                            if (value.length === 0) {
+                            if (value.length === 0 && param.required !== false) {
                                 return 'This field is required';
                             } else if (['app'].includes(param.name)) {
                                 return fs.existsSync(value) ? true : 'File not exists';
@@ -252,13 +275,13 @@ let access_token = process.env.AC_ACCESS_TOKEN;
                     }
                 ]);
                 params[param.name] = stringPrompt[Object.keys(stringPrompt)[0]];
-            } else if (param.type === commandParameterTypes.BOOLEAN) {
+            } else if (param.type === COMMAND_PARAMETER_TYPES.BOOLEAN) {
                 const booleanPrompt = new BooleanPrompt({
                     name: param.name,
                     message: param.description,
                 });
                 params[param.name] = await booleanPrompt.run();
-            } else if (param.type === commandParameterTypes.SELECT) {
+            } else if (param.type === COMMAND_PARAMETER_TYPES.SELECT) {
                 const selectPrompt = new Select({
                     name: param.name,
                     message: param.description,
@@ -278,40 +301,44 @@ let access_token = process.env.AC_ACCESS_TOKEN;
         selectedCommandIndex = commands.indexOf(selectedCommand);
 
         params = {
+            ...params,
             ...argv
         };
         delete params['_'];
     }
 
     switch (selectedCommand.command) {
-        case commandTypes.LOGIN:
+        case COMMAND_TYPES.LOGIN:
             getToken(params);
             break;
-        case commandTypes.LIST_BUILD_PROFILES:
+        case COMMAND_TYPES.LIST_BUILD_PROFILES:
             getBuildProfiles(params);
             break;
-        case commandTypes.LIST_DISTRIBUTION_PROFILES:
+        case COMMAND_TYPES.LIST_DISTRIBUTION_PROFILES:
             getDistributionProfiles(params);
             break;
-        case commandTypes.BUILD:
+        case COMMAND_TYPES.BUILD:
             startBuild(params);
             break;
-        case commandTypes.UPLOAD:
+        case COMMAND_TYPES.DOWNLOAD:
+            downloadArtifact(params);
+            break;
+        case COMMAND_TYPES.UPLOAD:
             uploadArtifact(params);
             break;
-        case commandTypes.CREATE_DISTRIBUTION_PROFILE:
+        case COMMAND_TYPES.CREATE_DISTRIBUTION_PROFILE:
             createDistributionProfile(params);
             break;
-        case commandTypes.LIST_ENVIRONMENT_VARIABLE_GROUPS:
+        case COMMAND_TYPES.LIST_ENVIRONMENT_VARIABLE_GROUPS:
             getEnvironmentVariableGroups(params);
             break;
-        case commandTypes.CREATE_ENVIRONMENT_VARIABLE_GROUP:
+        case COMMAND_TYPES.CREATE_ENVIRONMENT_VARIABLE_GROUP:
             createEnvironmentVariableGroup(params);
             break;
-        case commandTypes.LIST_ENVIRONMENT_VARIABLES:
+        case COMMAND_TYPES.LIST_ENVIRONMENT_VARIABLES:
             getEnvironmentVariables(params);
             break;
-        case commandTypes.CREATE_ENVIRONMENT_VARIABLE:
+        case COMMAND_TYPES.CREATE_ENVIRONMENT_VARIABLE:
             createEnvironmentVariable(params);
             break;
         default:

@@ -7,7 +7,10 @@ Appcircle CLI is a unified tool for accessing the Appcircle platform features fr
 ```
 npm install -g appcircle-cli
 ```
-
+or you can install locally (requires npx to use)
+```
+npm install appcircle-cli
+```
 ## Commands
 
 Below is the list of commands currently supported by Appcircle CLI:
@@ -19,6 +22,7 @@ Below is the list of commands currently supported by Appcircle CLI:
 | `appcircle listBuildProfiles`                                                                                               | Get the list of build profiles                          |
 | `appcircle listDistributionProfiles`                                                                                        | Get the list of distribution profiles                   |
 | `appcircle build [--profileId] [--branch]`                                                                                  | Start a new build                                       |
+| `appcircle download [--path] [--commitId] [--buildId]`                                                                        | Download the artifact under the selected path |
 | `appcircle upload [--app] [--message] [--profileId]`                                                                        | Upload your app binary to selected distribution profile |
 | `appcircle createDistributionProfile [--name]`                                                                              | Create a distribution profile                           |
 | `appcircle listEnvironmentVariableGroups`                                                                                   | Get list of environment variable groups                 |
