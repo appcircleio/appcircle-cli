@@ -1,3 +1,4 @@
+//@ts-ignore https://github.com/enquirer/enquirer/issues/212
 import { prompt, Select, BooleanPrompt } from 'enquirer';
 import ora from 'ora';
 import chalk from 'chalk';
@@ -18,14 +19,17 @@ import {
     getBranches
 } from './services';
 
+import { readVariable, EnvironmentVariables } from './data';
+
 const APPCIRCLE_COLOR = '#ff8F34';
-const COMMAND_PARAMETER_TYPES = {
+const CommandParameterTypes = {
     SELECT: 'select',
     BOOLEAN: 'boolean',
     STRING: 'input',
     PASSWORD: 'password'
 };
-const COMMAND_TYPES = {
+
+const CommandTypes = {
     LOGIN: 'login',
     LIST_BUILD_PROFILES: 'listBuildProfiles',
     LIST_DISTRIBUTION_PROFILES: 'listDistributionProfiles',
@@ -38,134 +42,135 @@ const COMMAND_TYPES = {
     LIST_ENVIRONMENT_VARIABLES: 'listEnvironmentVariables',
     CREATE_ENVIRONMENT_VARIABLE: 'createEnvironmentVariable'
 };
-const commands = [
+
+const Commands = [
     {
-        command: COMMAND_TYPES.LOGIN,
+        command: CommandTypes.LOGIN,
         description: 'Login',
         params: [
             {
                 name: 'pat',
                 description: 'Personal Access Token',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             }
         ]
     },
     {
-        command: COMMAND_TYPES.LIST_BUILD_PROFILES,
+        command: CommandTypes.LIST_BUILD_PROFILES,
         description: 'Get list of build profiles',
         params: []
     },
     {
-        command: COMMAND_TYPES.LIST_DISTRIBUTION_PROFILES,
+        command: CommandTypes.LIST_DISTRIBUTION_PROFILES,
         description: 'Get list of distribution profiles',
         params: []
     },
     {
-        command: COMMAND_TYPES.BUILD,
+        command: CommandTypes.BUILD,
         description: 'Start a new build',
         params: [
             {
                 name: 'profileId',
                 description: 'Build profile ID',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             },
             {
                 name: 'branch',
                 description: 'Branch',
-                type: COMMAND_PARAMETER_TYPES.SELECT,
+                type: CommandParameterTypes.SELECT,
                 params: []
             }
         ]
     },
     {
-        command: COMMAND_TYPES.DOWNLOAD,
+        command: CommandTypes.DOWNLOAD,
         description: 'Download your artifact to the given directory on your machine',
         params: [
             {
                 name: 'path',
                 description: '[OPTIONAL] The path for artifacts to be downloaded: (Defaults to the current directory)',
-                type: COMMAND_PARAMETER_TYPES.STRING,
+                type: CommandParameterTypes.STRING,
                 required: false
             },
             {
                 name: 'buildId',
                 description: 'Build ID of your branch. This can be retrieved from profile list',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             },
             {
                 name: 'commitId',
                 description: 'Commit ID of your build',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             }
         ]
     },
     {
-        command: COMMAND_TYPES.UPLOAD,
+        command: CommandTypes.UPLOAD,
         description: 'Upload your mobile app to selected distribution profile',
         params: [
             {
                 name: 'app',
                 description: 'App path',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             },
             {
                 name: 'message',
                 description: 'Release notes',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             },
             {
                 name: 'profileId',
                 description: 'Distribution profile ID',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             }
         ]
     },
     {
-        command: COMMAND_TYPES.CREATE_DISTRIBUTION_PROFILE,
+        command: CommandTypes.CREATE_DISTRIBUTION_PROFILE,
         description: 'Create a distribution profile',
         params: [
             {
                 name: 'name',
                 description: 'Profile name',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             }
         ]
     },
     {
-        command: COMMAND_TYPES.LIST_ENVIRONMENT_VARIABLE_GROUPS,
+        command: CommandTypes.LIST_ENVIRONMENT_VARIABLE_GROUPS,
         description: 'Get list of environment variable groups',
         params: []
     },
     {
-        command: COMMAND_TYPES.CREATE_ENVIRONMENT_VARIABLE_GROUP,
+        command: CommandTypes.CREATE_ENVIRONMENT_VARIABLE_GROUP,
         description: 'Create an environment variable group',
         params: [
             {
                 name: 'name',
                 description: 'Variable group name',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             }
         ]
     },
     {
-        command: COMMAND_TYPES.LIST_ENVIRONMENT_VARIABLES,
+        command: CommandTypes.LIST_ENVIRONMENT_VARIABLES,
         description: 'Get list of environment variables',
         params: [
             {
                 name: 'variableGroupId',
                 description: 'Variable Groups ID',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             }
         ]
     },
     {
-        command: COMMAND_TYPES.CREATE_ENVIRONMENT_VARIABLE,
+        command: CommandTypes.CREATE_ENVIRONMENT_VARIABLE,
         description: 'Create a file or text environment variable',
         params: [
             {
                 name: 'type',
                 description: 'Type',
-                type: COMMAND_PARAMETER_TYPES.SELECT,
+                type: CommandParameterTypes.SELECT,
                 params: [
                     {
                         name: 'file',
@@ -180,37 +185,43 @@ const commands = [
             {
                 name: 'isSecret',
                 description: 'Secret',
-                type: COMMAND_PARAMETER_TYPES.BOOLEAN
+                type: CommandParameterTypes.BOOLEAN
             },
             {
                 name: 'variableGroupId',
                 description: 'Variable group ID',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             },
             {
                 name: 'key',
                 description: 'Key Name',
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             },
             {
                 name: 'value',
                 description: `Key Value (You can skip this if you selected type of ${chalk.hex(APPCIRCLE_COLOR)('file')})`,
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             },
             {
                 name: 'filePath',
                 description: `File path (You can skip this if you selected type of ${chalk.hex(APPCIRCLE_COLOR)('text')})`,
-                type: COMMAND_PARAMETER_TYPES.STRING
+                type: CommandParameterTypes.STRING
             }
         ]
     }
 ];
-let access_token = process.env.AC_ACCESS_TOKEN;
+
+type CommandParams = {
+    access_token: string;
+    profileId?: string;
+    isSecret?: boolean;
+}
 
 (async () => {
-    let params = { access_token };
-    let selectedCommand = undefined;
-    let selectedCommandDescription = "";
+    const accessToken = readVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
+    let params: CommandParams = { access_token: accessToken };
+    let selectedCommand: typeof Commands[number];
+    let selectedCommandDescription = '';
     let selectedCommandIndex = -1;
 
     if (process.argv.length === 2) {
@@ -231,40 +242,41 @@ let access_token = process.env.AC_ACCESS_TOKEN;
             name: 'command',
             message: 'What do you want to do?',
             choices: [
-                ...commands.map((command, index) => `${index + 1}. ${command.description}`)
+                ...Commands.map((command, index) => `${index + 1}. ${command.description}`)
             ]
         });
 
         selectedCommandDescription = await commandSelect.run();
-        selectedCommandIndex = (selectedCommandDescription.split('.')[0] - 1);
-        selectedCommand = commands[selectedCommandIndex];
+        selectedCommandIndex = (Number(selectedCommandDescription.split('.')[0]) - 1);
+        selectedCommand = Commands[selectedCommandIndex];
 
-        for (let param of commands[selectedCommandIndex].params) {
+        for (let param of selectedCommand.params) {
             if (param.name === 'branch') {
                 const spinner = ora('Branches fetching').start();
 
-                const branches = await getBranches({ access_token: process.env.AC_ACCESS_TOKEN, profileId: params.profileId });
+                const branches = await getBranches({ access_token: accessToken, profileId: params.profileId || '' });
                 if (!branches || branches.length === 0) {
                     spinner.text = 'No branches available';
                     spinner.fail();
                     return;
                 }
-
-                param.params = branches.map(branch => ({ name: branch.name, description: branch.name }));
+                //@ts-ignore
+                param.params = branches.map((branch: any) => ({ name: branch.name, description: branch.name }));
 
                 spinner.text = 'Branches fetched';
                 spinner.succeed();
             } else if (param.name === 'value' && params.isSecret) {
-                param.type = COMMAND_PARAMETER_TYPES.PASSWORD;
+                param.type = CommandParameterTypes.PASSWORD;
             }
 
-            if ([COMMAND_PARAMETER_TYPES.STRING, COMMAND_PARAMETER_TYPES.PASSWORD].includes(param.type)) {
+            if ([CommandParameterTypes.STRING, CommandParameterTypes.PASSWORD].includes(param.type)) {
                 const stringPrompt = await prompt([
                     {
                         type: param.type,
                         name: param.name,
                         message: param.description,
                         validate(value) {
+                            //@ts-ignore
                             if (value.length === 0 && param.required !== false) {
                                 return 'This field is required';
                             } else if (['app'].includes(param.name)) {
@@ -274,22 +286,24 @@ let access_token = process.env.AC_ACCESS_TOKEN;
                         }
                     }
                 ]);
-                params[param.name] = stringPrompt[Object.keys(stringPrompt)[0]];
-            } else if (param.type === COMMAND_PARAMETER_TYPES.BOOLEAN) {
+                (params as any)[param.name] = (stringPrompt as any)[Object.keys(stringPrompt)[0]];
+            } else if (param.type === CommandParameterTypes.BOOLEAN) {
                 const booleanPrompt = new BooleanPrompt({
                     name: param.name,
                     message: param.description,
                 });
+                //@ts-ignore
                 params[param.name] = await booleanPrompt.run();
-            } else if (param.type === COMMAND_PARAMETER_TYPES.SELECT) {
+            } else if (param.type === CommandParameterTypes.SELECT) {
                 const selectPrompt = new Select({
                     name: param.name,
                     message: param.description,
                     choices: [
-                        ...param.params.map(val => val)
+                        //@ts-ignore
+                        ...param.params.map((val: any) => val)
                     ]
                 });
-                params[param.name] = await selectPrompt.run();
+                (params as any)[param.name] = await selectPrompt.run();
             }
         }
 
@@ -297,49 +311,49 @@ let access_token = process.env.AC_ACCESS_TOKEN;
     } else {
         const argv = minimist(process.argv.slice(2));
         selectedCommandDescription = argv['_'][0];
-        selectedCommand = commands.find(x => x.command === selectedCommandDescription);
-        selectedCommandIndex = commands.indexOf(selectedCommand);
+        selectedCommand = Commands.find(x => x.command === selectedCommandDescription) || { command: '', description: '', params: [] };
+        selectedCommandIndex = Commands.indexOf(selectedCommand);
 
         params = {
             ...params,
             ...argv
         };
-        delete params['_'];
+        delete (params as any)['_'];
     }
 
     switch (selectedCommand.command) {
-        case COMMAND_TYPES.LOGIN:
+        case CommandTypes.LOGIN:
             getToken(params);
             break;
-        case COMMAND_TYPES.LIST_BUILD_PROFILES:
+        case CommandTypes.LIST_BUILD_PROFILES:
             getBuildProfiles(params);
             break;
-        case COMMAND_TYPES.LIST_DISTRIBUTION_PROFILES:
+        case CommandTypes.LIST_DISTRIBUTION_PROFILES:
             getDistributionProfiles(params);
             break;
-        case COMMAND_TYPES.BUILD:
+        case CommandTypes.BUILD:
             startBuild(params);
             break;
-        case COMMAND_TYPES.DOWNLOAD:
+        case CommandTypes.DOWNLOAD:
             downloadArtifact(params);
             break;
-        case COMMAND_TYPES.UPLOAD:
+        case CommandTypes.UPLOAD:
             uploadArtifact(params);
             break;
-        case COMMAND_TYPES.CREATE_DISTRIBUTION_PROFILE:
+        case CommandTypes.CREATE_DISTRIBUTION_PROFILE:
             createDistributionProfile(params);
             break;
-        case COMMAND_TYPES.LIST_ENVIRONMENT_VARIABLE_GROUPS:
+        case CommandTypes.LIST_ENVIRONMENT_VARIABLE_GROUPS:
             getEnvironmentVariableGroups(params);
             break;
-        case COMMAND_TYPES.CREATE_ENVIRONMENT_VARIABLE_GROUP:
+        case CommandTypes.CREATE_ENVIRONMENT_VARIABLE_GROUP:
             createEnvironmentVariableGroup(params);
             break;
-        case COMMAND_TYPES.LIST_ENVIRONMENT_VARIABLES:
+        case CommandTypes.LIST_ENVIRONMENT_VARIABLES:
             getEnvironmentVariables(params);
             break;
-        case COMMAND_TYPES.CREATE_ENVIRONMENT_VARIABLE:
-            createEnvironmentVariable(params);
+        case CommandTypes.CREATE_ENVIRONMENT_VARIABLE:
+            createEnvironmentVariable((params as any));
             break;
         default:
             console.error('Command not found');

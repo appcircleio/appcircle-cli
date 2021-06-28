@@ -2,19 +2,20 @@ import https from 'https';
 import qs from 'querystring';
 import fs from 'fs';
 import FormData from 'form-data';
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import moment from 'moment';
 import chalk from 'chalk';
 import ora from 'ora';
 import path from 'path';
 import os from 'os';
 
-const API_HOSTNAME = process.env.API_HOSTNAME || "https://api.appcircle.io";
-const AUTH_HOSTNAME = process.env.AUTH_HOSTNAME || "https://auth.appcircle.io";
+import { readVariable, writeVariable, EnvironmentVariables } from './data';
 
-const sleep = (waitTimeInMs) => new Promise(resolve => setTimeout(resolve, waitTimeInMs));
 
-const buildStatus = {
+const API_HOSTNAME = readVariable(EnvironmentVariables.API_HOSTNAME);
+const AUTH_HOSTNAME = readVariable(EnvironmentVariables.AUTH_HOSTNAME);
+
+const BuildStatus = {
     "0": "Success",
     "1": "Failed",
     "2": "Canceled",
@@ -24,16 +25,16 @@ const buildStatus = {
     "92": "Completing",
     "99": "Unknown"
 };
-const authenticationTypes = {
+const AuthenticationTypes = {
     1: "None",
     2: "Individual Enrollment",
     3: "Static Username and Password"
 };
-const operatingSystems = {
+const OperatingSystems = {
     1: 'iOS',
     2: 'Android'
 };
-const platformTypes = {
+const PlatformTypes = {
     0: "None",
     1: "Swift/Objective-C",
     2: "Java/Kotlin",
@@ -42,22 +43,32 @@ const platformTypes = {
     5: "Xamarin",
     6: "Flutter"
 };
-const environmentVariableTypes = {
+const EnvironmentVariableTypes = {
     TEXT: 'text',
     FILE: 'file'
 };
 
-function genericRequest(args) {
+function getHeaders(withToken = true): AxiosRequestConfig['headers'] {
+    let response: AxiosRequestConfig['headers'] = {
+        accept: "application/json"
+    }
+    if (withToken) {
+        response.Authorization = `Bearer ${readVariable(EnvironmentVariables.AC_ACCESS_TOKEN)}`
+    }
+    return response;
+}
+
+function genericRequest(args: any) {
     let { options, data, onSuccess, onError } = args
     const req = https.request(options, function (res) {
-        var chunks = [];
+        const chunks: any[] = [];
 
         res.on("data", function (chunk) {
             chunks.push(chunk);
         });
 
         res.on("end", function () {
-            var body = Buffer.concat(chunks);
+            const body = Buffer.concat(chunks);
             onSuccess && onSuccess(body.toString());
         });
 
@@ -72,7 +83,7 @@ function genericRequest(args) {
     req.end();
 }
 
-export async function getToken(options) {
+export async function getToken(options: {[key:string]: any }) {
     const requestOptions = {
         "method": "POST",
         "hostname": removeHttp(AUTH_HOSTNAME),
@@ -86,29 +97,27 @@ export async function getToken(options) {
     genericRequest({
         options: requestOptions,
         data: qs.stringify({ pat: options.pat }),
-        onSuccess: (bodyString) => {
+        onSuccess: (bodyString: string) => {
             const response = JSON.parse(bodyString);
             if (response.access_token) {
-                console.info(`Login successful.\n\nAppCircle has generated a token for you.\nYou should add this token to your environment variables.\n\nYou can add like this:\n`);
-                console.log(chalk.bold(`export AC_ACCESS_TOKEN="${response.access_token}"`));
+                writeVariable(EnvironmentVariables.AC_ACCESS_TOKEN, response.access_token);
+                console.info(chalk.green(`Login is successful. If you keep getting 401 error, launch the following command to set your token manually to your environment variable:\n`));
+                console.log(chalk.italic(`export AC_ACCESS_TOKEN="${response.access_token}"`));
             } else {
                 console.error(`An error occurred during login.\nDetails: ${JSON.stringify(response)}`);
             }
         },
-        onFailure: (error) => {
+        onFailure: (error: any) => {
             console.error(error);
         }
     });
 }
 
-export async function getDistributionProfiles(options) {
+export async function getDistributionProfiles(options: {[key:string]: any }) {
     try {
         const distributionProfiles = await axios.get(`${API_HOSTNAME}/distribution/v2/profiles`,
             {
-                headers: {
-                    "accept": "application/json",
-                    "Authorization": `Bearer ${options.access_token}`
-                }
+                headers: getHeaders()
             });
 
         if (distributionProfiles.data.length === 0) {
@@ -117,7 +126,7 @@ export async function getDistributionProfiles(options) {
         }
 
         console.table(distributionProfiles.data
-            .map(distributionProfile => ({
+            .map((distributionProfile: any) => ({
                 'Profile Id': distributionProfile.id,
                 'Profile Name': distributionProfile.name,
                 'Pinned': distributionProfile.pinned,
@@ -126,7 +135,7 @@ export async function getDistributionProfiles(options) {
                 'Last Updated': moment(distributionProfile.updateDate).fromNow(),
                 'Last Shared': distributionProfile.lastAppVersionSharedDate ?
                     moment(distributionProfile.lastAppVersionSharedDate).fromNow() : 'Not Shared',
-                'Authentication': authenticationTypes[distributionProfile.settings.authenticationType],
+                'Authentication': (AuthenticationTypes as any)[distributionProfile.settings.authenticationType],
                 'Auto Send': distributionProfile.testingGroupIds ? 'Enabled' : 'Disabled'
             }))
         );
@@ -135,15 +144,12 @@ export async function getDistributionProfiles(options) {
     }
 }
 
-export async function createDistributionProfile(options) {
+export async function createDistributionProfile(options: {[key:string]: any }) {
     try {
         await axios.post(`${API_HOSTNAME}/distribution/v1/profiles`,
             { name: options.name },
             {
-                headers: {
-                    "content-type": "application/json-patch+json",
-                    "Authorization": `Bearer ${options.access_token}`
-                }
+                headers: getHeaders()
             }
         );
         console.info(`\n${options.name} distribution profile created successfully!`);
@@ -152,35 +158,29 @@ export async function createDistributionProfile(options) {
     }
 }
 
-export function getTestingGroups(options) {
+export function getTestingGroups(options: {[key:string]: any }) {
     const requestOptions = {
         "hostname": removeHttp(AUTH_HOSTNAME),
         "path": "/distribution/v2/testing-groups",
-        "headers": {
-            "accept": "application/json",
-            "Authorization": `Bearer ${options.access_token}`
-        }
+        headers: getHeaders()
     };
     genericRequest({
         options: requestOptions,
-        onSuccess: (bodyString) => {
+        onSuccess: (bodyString: string) => {
             console.log('\x1b[36m', 'Testing Groups: ', '\x1b[0m');
             console.log((JSON.parse(bodyString)));
         },
-        onFailure: (error) => {
+        onFailure: (error: any) => {
             console.log(error);
         }
     });
 }
 
-export async function getBuildProfiles(options) {
+export async function getBuildProfiles(options: {[key:string]: any }) {
     try {
         const buildProfiles = await axios.get(`${API_HOSTNAME}/build/v2/profiles`,
             {
-                headers: {
-                    "accept": "application/json",
-                    "Authorization": `Bearer ${options.access_token}`
-                }
+                headers: getHeaders()
             });
 
         if (buildProfiles.data.length === 0) {
@@ -189,12 +189,12 @@ export async function getBuildProfiles(options) {
         }
 
         console.table(buildProfiles.data
-            .map(buildProfile => ({
+            .map((buildProfile: any) => ({
                 'Profile Id': buildProfile.id,
                 'Profile Name': buildProfile.name,
                 'Pinned': buildProfile.pinned,
-                'Target OS': operatingSystems[buildProfile.os],
-                'Target Platform': platformTypes[buildProfile.buildPlatformType],
+                'Target OS': (OperatingSystems as any)[buildProfile.os],
+                'Target Platform': (PlatformTypes as any)[buildProfile.buildPlatformType],
                 'Repository': buildProfile.repositoryName ? buildProfile.repositoryName : 'No repository connected',
                 'Last Build': buildProfile.lastBuildDate ? moment(buildProfile.lastBuildDate).calendar() : 'No previous builds',
                 'Auto Distribute': buildProfile.autoDistributeCount === 0 ? 'Disabled' : `Enabled in ${buildProfile.autoDistributeCount} branch(es)`,
@@ -209,20 +209,17 @@ export async function getBuildProfiles(options) {
 // branch: args.branch,
 // profileId: args.id,
 // access_token: access_token
-export async function startBuild(options) {
+export async function startBuild(options: {[key:string]: any }) {
     try {
         const spinner = ora('Try to start a new build').start();
 
         const branches = await getBranches({ access_token: options.access_token, profileId: options.profileId });
-        const index = branches.findIndex(element => element.name === options.branch);
+        const index = branches.findIndex((element: {[key:string]: any }) => element.name === options.branch);
         const branchId = branches[index].id;
 
         const allCommitsByBranchId = await axios.get(`${API_HOSTNAME}/build/v2/commits?branchId=${branchId}`,
             {
-                headers: {
-                    "accept": "application/json",
-                    "Authorization": `Bearer ${options.access_token}`
-                }
+                headers: getHeaders()
             });
         const latestCommitId = allCommitsByBranchId.data[0].id;
 
@@ -230,8 +227,8 @@ export async function startBuild(options) {
             qs.stringify({ sample: 'test' }),
             {
                 headers: {
+                    ...getHeaders(),
                     "accept": "*/*",
-                    "authorization": `Bearer ${options.access_token}`,
                     "content-type": "application/x-www-form-urlencoded"
                 }
             }
@@ -243,7 +240,7 @@ export async function startBuild(options) {
     }
 }
 
-export async function downloadArtifact(options) {
+export async function downloadArtifact(options: {[key:string]: any }) {
     try {
         const downloadPath = path.resolve((options.path || '').replace('~', `${os.homedir}`));
         const spinner = ora(`Downloading file artifact.zip under ${downloadPath}`).start();
@@ -259,14 +256,14 @@ export async function downloadArtifact(options) {
             {
                 responseType: 'stream',
                 headers: {
-                    'Authorization': `Bearer ${options.access_token}`,
+                    ...getHeaders(),
                     ...data.getHeaders()
                 }
             }
         );
         return new Promise((resolve, reject) => {
             downloadResponse.data.pipe(writer);
-            let error = null;
+            let error: any = null;
             writer.on('error', err => {
                 error = err;
                 writer.close();
@@ -290,7 +287,7 @@ export async function downloadArtifact(options) {
     }
 }
 
-export async function uploadArtifact(options) {
+export async function uploadArtifact(options: {[key:string]: any }) {
     try {
         const spinner = ora('Try to upload the app').start();
 
@@ -303,7 +300,7 @@ export async function uploadArtifact(options) {
             data,
             {
                 headers: {
-                    'Authorization': `Bearer ${options.access_token}`,
+                    ...getHeaders(),
                     ...data.getHeaders()
                 }
             }
@@ -315,31 +312,27 @@ export async function uploadArtifact(options) {
     }
 }
 
-export async function getEnvironmentVariableGroups(options) {
+export async function getEnvironmentVariableGroups(options: {[key:string]: any }) {
     try {
         const environmentVariableGroups = await axios.get(`${API_HOSTNAME}/build/v1/variable-groups`,
             {
-                headers: {
-                    "Authorization": `Bearer ${options.access_token}`
-                }
+                headers: getHeaders()
             }
         );
         console.table(environmentVariableGroups.data
-            .map(x => ({ 'Variable Groups ID': x.id, 'Variable Groups Name': x.name }))
+            .map((x: any) => ({ 'Variable Groups ID': x.id, 'Variable Groups Name': x.name }))
         );
     } catch (error) {
         handleError(error);
     }
 }
 
-export async function createEnvironmentVariableGroup(options) {
+export async function createEnvironmentVariableGroup(options: {[key:string]: any }) {
     try {
         await axios.post(`${API_HOSTNAME}/build/v1/variable-groups`,
             { name: options.name, variables: [] },
             {
-                headers: {
-                    "Authorization": `Bearer ${options.access_token}`
-                }
+                headers: getHeaders()
             }
         );
         console.info(`\n${options.name} environment variable group created successfully!`);
@@ -348,18 +341,16 @@ export async function createEnvironmentVariableGroup(options) {
     }
 }
 
-export async function getEnvironmentVariables(options) {
+export async function getEnvironmentVariables(options: {[key:string]: any }) {
     try {
         const environmentVariables =
             await axios.get(`${API_HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
                 {
-                    headers: {
-                        "Authorization": `Bearer ${options.access_token}`
-                    }
+                    headers: getHeaders()
                 }
             );
         console.table(environmentVariables.data
-            .map(environmentVariable => (
+            .map((environmentVariable: any) => (
                 {
                     'Key Name': environmentVariable.key,
                     'Key Value': environmentVariable.isSecret ? '********' : environmentVariable.value
@@ -371,14 +362,12 @@ export async function getEnvironmentVariables(options) {
     }
 }
 
-async function createTextEnvironmentVariable(options) {
+async function createTextEnvironmentVariable(options: {[key:string]: any }) {
     try {
         await axios.post(`${API_HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
             { Key: options.key, Value: options.value, IsSecret: options.isSecret },
             {
-                headers: {
-                    "Authorization": `Bearer ${options.access_token}`
-                }
+                headers: getHeaders()
             }
         );
         console.info(`\n${options.key} environment variable created successfully!`);
@@ -387,7 +376,7 @@ async function createTextEnvironmentVariable(options) {
     }
 }
 
-async function createFileEnvironmentVariable(options) {
+async function createFileEnvironmentVariable(options: {key: string, value: string, isSecret: boolean, filePath: string, access_token: string, variableGroupId: string }) {
     try {
         const form = new FormData();
         const file = fs.createReadStream(options.filePath);
@@ -403,9 +392,9 @@ async function createFileEnvironmentVariable(options) {
                 path: `/build/v1/variable-groups/${options.variableGroupId}/variables/files`,
                 method: 'POST',
                 headers: {
+                    ...getHeaders(),
                     ...form.getHeaders(),
                     "accept": "*/*",
-                    "authorization": `Bearer ${options.access_token}`
                 },
             },
             () => {
@@ -419,8 +408,8 @@ async function createFileEnvironmentVariable(options) {
     }
 }
 
-export async function createEnvironmentVariable(options) {
-    if (options.type && options.type === environmentVariableTypes.FILE) {
+export async function createEnvironmentVariable(options: { type: keyof typeof EnvironmentVariableTypes, access_token: string, variableGroupId: string, key: string, value: string, filePath: string, isSecret: boolean }) {
+    if (options.type === EnvironmentVariableTypes.FILE) {
         createFileEnvironmentVariable({
             access_token: options.access_token,
             variableGroupId: options.variableGroupId,
@@ -429,7 +418,7 @@ export async function createEnvironmentVariable(options) {
             filePath: options.filePath,
             isSecret: options.isSecret,
         });
-    } else if (options.type && options.type === environmentVariableTypes.TEXT) {
+    } else if (options.type && options.type === EnvironmentVariableTypes.TEXT) {
         createTextEnvironmentVariable({
             access_token: options.access_token,
             variableGroupId: options.variableGroupId,
@@ -444,14 +433,11 @@ export async function createEnvironmentVariable(options) {
     }
 }
 
-export async function getBranches(options) {
+export async function getBranches(options: { profileId: string, access_token: string }) {
     try {
         const branches = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
             {
-                headers: {
-                    "accept": "application/json",
-                    "Authorization": `Bearer ${options.access_token}`
-                }
+                headers: getHeaders()
             });
         return branches.data.branches;
     } catch (error) {
@@ -463,14 +449,11 @@ export async function getBranches(options) {
     }
 }
 
-export async function getBuildTaskStatus(options) {
+export async function getBuildTaskStatus(options: { latestCommitId: string, taskId: string, access_token: string}) {
     try {
-        const taskStatus = await axios.get(`${HOSTNAME}/build/v2/commits/${options.latestCommitId}/builds/${options.taskId}/status`,
+        const taskStatus = await axios.get(`${API_HOSTNAME}/build/v2/commits/${options.latestCommitId}/builds/${options.taskId}/status`,
             {
-                headers: {
-                    "accept": "application/json",
-                    "Authorization": `Bearer ${options.access_token}`
-                }
+                headers: getHeaders()
             });
         return taskStatus.data;
     } catch (error) {
@@ -478,7 +461,7 @@ export async function getBuildTaskStatus(options) {
     }
 }
 
-function handleError(error) {
+function handleError(error: {[key:string]: any}) {
     if (error.response) {
         if (error.response.data) {
             if (error.response.data.message) {
@@ -496,6 +479,6 @@ function handleError(error) {
     }
 }
 
-function removeHttp(url) {
+function removeHttp(url: string) {
     return url.replace(/(^\w+:|^)\/\//, '');
 }
