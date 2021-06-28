@@ -7,7 +7,8 @@
     "appcircle": "bin/appcircle"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "watch": "rm -rf dist && tsc -w",
+    "build": "rm -rf dist && tsc"
   },
   "repository": {
     "type": "git",
@@ -33,6 +34,7 @@
     "enquirer": "^2.3.6",
     "esm": "^3.2.25",
     "form-data": "^4.0.0",
+    "jsonfile": "^6.1.0",
     "minimist": "^1.2.5",
     "moment": "^2.29.1",
     "ora": "^5.4.0",
@@ -41,5 +43,11 @@
   "files": [
     "bin/",
     "src/"
-  ]
+  ],
+  "devDependencies": {
+    "@types/jsonfile": "^6.0.0",
+    "@types/minimist": "^1.2.1",
+    "@types/node": "^15.12.5",
+    "typescript": "^4.3.4"
+  }
 }
