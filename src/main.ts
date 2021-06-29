@@ -211,15 +211,10 @@ const Commands = [
     }
 ];
 
-type CommandParams = {
-    access_token: string;
-    profileId?: string;
-    isSecret?: boolean;
-}
 
 (async () => {
     const accessToken = readVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
-    let params: CommandParams = { access_token: accessToken };
+    let params: any = {};
     let selectedCommand: typeof Commands[number];
     let selectedCommandDescription = '';
     let selectedCommandIndex = -1;
@@ -254,7 +249,7 @@ type CommandParams = {
             if (param.name === 'branch') {
                 const spinner = ora('Branches fetching').start();
 
-                const branches = await getBranches({ access_token: accessToken, profileId: params.profileId || '' });
+                const branches = await getBranches({ profileId: params.profileId || '' });
                 if (!branches || branches.length === 0) {
                     spinner.text = 'No branches available';
                     spinner.fail();

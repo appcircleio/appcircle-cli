@@ -83,7 +83,7 @@ function genericRequest(args: any) {
     req.end();
 }
 
-export async function getToken(options: {[key:string]: any }) {
+export async function getToken(options: { pat: string }) {
     const requestOptions = {
         "method": "POST",
         "hostname": removeHttp(AUTH_HOSTNAME),
@@ -113,7 +113,7 @@ export async function getToken(options: {[key:string]: any }) {
     });
 }
 
-export async function getDistributionProfiles(options: {[key:string]: any }) {
+export async function getDistributionProfiles(options: { }) {
     try {
         const distributionProfiles = await axios.get(`${API_HOSTNAME}/distribution/v2/profiles`,
             {
@@ -144,7 +144,7 @@ export async function getDistributionProfiles(options: {[key:string]: any }) {
     }
 }
 
-export async function createDistributionProfile(options: {[key:string]: any }) {
+export async function createDistributionProfile(options: { name: string }) {
     try {
         await axios.post(`${API_HOSTNAME}/distribution/v1/profiles`,
             { name: options.name },
@@ -158,7 +158,7 @@ export async function createDistributionProfile(options: {[key:string]: any }) {
     }
 }
 
-export function getTestingGroups(options: {[key:string]: any }) {
+export function getTestingGroups(options: { }) {
     const requestOptions = {
         "hostname": removeHttp(AUTH_HOSTNAME),
         "path": "/distribution/v2/testing-groups",
@@ -176,7 +176,7 @@ export function getTestingGroups(options: {[key:string]: any }) {
     });
 }
 
-export async function getBuildProfiles(options: {[key:string]: any }) {
+export async function getBuildProfiles(options: { }) {
     try {
         const buildProfiles = await axios.get(`${API_HOSTNAME}/build/v2/profiles`,
             {
@@ -206,14 +206,12 @@ export async function getBuildProfiles(options: {[key:string]: any }) {
     }
 }
 
-// branch: args.branch,
-// profileId: args.id,
-// access_token: access_token
-export async function startBuild(options: {[key:string]: any }) {
+export async function startBuild(options: { profileId: string, branch: string }) {
     try {
         const spinner = ora('Try to start a new build').start();
 
-        const branches = await getBranches({ access_token: options.access_token, profileId: options.profileId });
+        const accessToken = readVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
+        const branches = await getBranches({ profileId: options.profileId || '' });
         const index = branches.findIndex((element: {[key:string]: any }) => element.name === options.branch);
         const branchId = branches[index].id;
 
@@ -240,7 +238,7 @@ export async function startBuild(options: {[key:string]: any }) {
     }
 }
 
-export async function downloadArtifact(options: {[key:string]: any }) {
+export async function downloadArtifact(options: { path: string, buildId: string, commitId: string}) {
     try {
         const downloadPath = path.resolve((options.path || '').replace('~', `${os.homedir}`));
         const spinner = ora(`Downloading file artifact.zip under ${downloadPath}`).start();
@@ -287,7 +285,7 @@ export async function downloadArtifact(options: {[key:string]: any }) {
     }
 }
 
-export async function uploadArtifact(options: {[key:string]: any }) {
+export async function uploadArtifact(options: { message: string, app: string, profileId: string }) {
     try {
         const spinner = ora('Try to upload the app').start();
 
@@ -312,7 +310,7 @@ export async function uploadArtifact(options: {[key:string]: any }) {
     }
 }
 
-export async function getEnvironmentVariableGroups(options: {[key:string]: any }) {
+export async function getEnvironmentVariableGroups(options: {}) {
     try {
         const environmentVariableGroups = await axios.get(`${API_HOSTNAME}/build/v1/variable-groups`,
             {
@@ -327,7 +325,7 @@ export async function getEnvironmentVariableGroups(options: {[key:string]: any }
     }
 }
 
-export async function createEnvironmentVariableGroup(options: {[key:string]: any }) {
+export async function createEnvironmentVariableGroup(options: { name: string }) {
     try {
         await axios.post(`${API_HOSTNAME}/build/v1/variable-groups`,
             { name: options.name, variables: [] },
@@ -341,7 +339,7 @@ export async function createEnvironmentVariableGroup(options: {[key:string]: any
     }
 }
 
-export async function getEnvironmentVariables(options: {[key:string]: any }) {
+export async function getEnvironmentVariables(options: { variableGroupId: string }) {
     try {
         const environmentVariables =
             await axios.get(`${API_HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
@@ -362,7 +360,7 @@ export async function getEnvironmentVariables(options: {[key:string]: any }) {
     }
 }
 
-async function createTextEnvironmentVariable(options: {[key:string]: any }) {
+async function createTextEnvironmentVariable(options: { variableGroupId: string, value: string, isSecret: boolean, key: string }) {
     try {
         await axios.post(`${API_HOSTNAME}/build/v1/variable-groups/${options.variableGroupId}/variables`,
             { Key: options.key, Value: options.value, IsSecret: options.isSecret },
@@ -376,7 +374,7 @@ async function createTextEnvironmentVariable(options: {[key:string]: any }) {
     }
 }
 
-async function createFileEnvironmentVariable(options: {key: string, value: string, isSecret: boolean, filePath: string, access_token: string, variableGroupId: string }) {
+async function createFileEnvironmentVariable(options: {key: string, value: string, isSecret: boolean, filePath: string, variableGroupId: string }) {
     try {
         const form = new FormData();
         const file = fs.createReadStream(options.filePath);
@@ -408,10 +406,9 @@ async function createFileEnvironmentVariable(options: {key: string, value: strin
     }
 }
 
-export async function createEnvironmentVariable(options: { type: keyof typeof EnvironmentVariableTypes, access_token: string, variableGroupId: string, key: string, value: string, filePath: string, isSecret: boolean }) {
+export async function createEnvironmentVariable(options: { type: keyof typeof EnvironmentVariableTypes, variableGroupId: string, key: string, value: string, filePath: string, isSecret: boolean }) {
     if (options.type === EnvironmentVariableTypes.FILE) {
         createFileEnvironmentVariable({
-            access_token: options.access_token,
             variableGroupId: options.variableGroupId,
             key: options.key,
             value: options.value,
@@ -420,7 +417,6 @@ export async function createEnvironmentVariable(options: { type: keyof typeof En
         });
     } else if (options.type && options.type === EnvironmentVariableTypes.TEXT) {
         createTextEnvironmentVariable({
-            access_token: options.access_token,
             variableGroupId: options.variableGroupId,
             key: options.key,
             value: options.value,
@@ -433,7 +429,7 @@ export async function createEnvironmentVariable(options: { type: keyof typeof En
     }
 }
 
-export async function getBranches(options: { profileId: string, access_token: string }) {
+export async function getBranches(options: { profileId: string }) {
     try {
         const branches = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
             {
@@ -449,7 +445,7 @@ export async function getBranches(options: { profileId: string, access_token: st
     }
 }
 
-export async function getBuildTaskStatus(options: { latestCommitId: string, taskId: string, access_token: string}) {
+export async function getBuildTaskStatus(options: { latestCommitId: string, taskId: string }) {
     try {
         const taskStatus = await axios.get(`${API_HOSTNAME}/build/v2/commits/${options.latestCommitId}/builds/${options.taskId}/status`,
             {
