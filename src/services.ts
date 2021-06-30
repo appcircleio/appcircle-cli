@@ -58,59 +58,26 @@ function getHeaders(withToken = true): AxiosRequestConfig['headers'] {
     return response;
 }
 
-function genericRequest(args: any) {
-    let { options, data, onSuccess, onError } = args
-    const req = https.request(options, function (res) {
-        const chunks: any[] = [];
-
-        res.on("data", function (chunk) {
-            chunks.push(chunk);
-        });
-
-        res.on("end", function () {
-            const body = Buffer.concat(chunks);
-            onSuccess && onSuccess(body.toString());
-        });
-
-        req.on('error', error => {
-            onError && onError(error);
-        });
-    });
-
-    if (data) {
-        req.write(data);
-    }
-    req.end();
-}
-
 export async function getToken(options: { pat: string }) {
-    const requestOptions = {
-        "method": "POST",
-        "hostname": removeHttp(AUTH_HOSTNAME),
-        "path": "/auth/v1/token",
-        "headers": {
-            "accept": "application/json",
-            "content-type": "application/x-www-form-urlencoded"
-        }
-    };
-
-    genericRequest({
-        options: requestOptions,
-        data: qs.stringify({ pat: options.pat }),
-        onSuccess: (bodyString: string) => {
-            const response = JSON.parse(bodyString);
-            if (response.access_token) {
-                writeVariable(EnvironmentVariables.AC_ACCESS_TOKEN, response.access_token);
-                console.info(chalk.green(`Login is successful. If you keep getting 401 error, launch the following command to set your token manually to your environment variable:\n`));
-                console.log(chalk.italic(`export AC_ACCESS_TOKEN="${response.access_token}"`));
-            } else {
-                console.error(`An error occurred during login.\nDetails: ${JSON.stringify(response)}`);
+    try {
+        const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, qs.stringify(options), {
+            headers: {
+                "accept": "application/json",
+                "content-type": "application/x-www-form-urlencoded"
             }
-        },
-        onFailure: (error: any) => {
-            console.error(error);
+        });
+        if (response.data.access_token) {
+            writeVariable(EnvironmentVariables.AC_ACCESS_TOKEN, response.data.access_token);
+            console.log(chalk.italic(`export AC_ACCESS_TOKEN="${response.data.access_token}"\n`));
+            console.info(chalk.green(`Login is successful. If you keep getting 401 error, execute the command above to set your token manually to your environment variable`));
+        } else {
+            console.error(`An error occurred during login.\nDetails: ${JSON.stringify(response)}`);
         }
-    });
+        return response.data;
+    }
+    catch (error) {
+        handleError(error);
+    }
 }
 
 export async function getDistributionProfiles(options: { }) {
@@ -139,6 +106,8 @@ export async function getDistributionProfiles(options: { }) {
                 'Auto Send': distributionProfile.testingGroupIds ? 'Enabled' : 'Disabled'
             }))
         );
+
+        return distributionProfiles.data
     } catch (error) {
         handleError(error);
     }
@@ -158,22 +127,25 @@ export async function createDistributionProfile(options: { name: string }) {
     }
 }
 
-export function getTestingGroups(options: { }) {
-    const requestOptions = {
-        "hostname": removeHttp(AUTH_HOSTNAME),
-        "path": "/distribution/v2/testing-groups",
-        headers: getHeaders()
-    };
-    genericRequest({
-        options: requestOptions,
-        onSuccess: (bodyString: string) => {
-            console.log('\x1b[36m', 'Testing Groups: ', '\x1b[0m');
-            console.log((JSON.parse(bodyString)));
-        },
-        onFailure: (error: any) => {
-            console.log(error);
-        }
-    });
+export async function getTestingGroups(options: { }) {
+    try {
+        const response = await axios.get(`${API_HOSTNAME}/distribution/v2/testing-groups`, {
+            headers: getHeaders()
+        });
+        console.table(response.data
+            .map((testingGroup: any) => ({
+                'ID': testingGroup.id,
+                'Name': testingGroup.name,
+                'Organization ID': testingGroup.organizationId,
+                'Created': testingGroup.createDate ? moment(testingGroup.createDate).calendar() : 'No created data',
+                'Last Updated': testingGroup.createDate ? moment(testingGroup.createDate).fromNow() : 'No update data',
+            }))
+        );
+        return response.data;
+    }
+    catch (error) {
+        handleError(error);
+    }
 }
 
 export async function getBuildProfiles(options: { }) {
@@ -201,7 +173,34 @@ export async function getBuildProfiles(options: { }) {
                 'Auto Build': buildProfile.autoBuildCount === 0 ? 'Disabled' : 'Enabled'
             }))
         );
+        return buildProfiles.data;
     } catch (error) {
+        handleError(error);
+    }
+}
+
+export async function getCommits(options: { branchId: string }) {
+    try {
+        const commits = await axios.get(`${API_HOSTNAME}/build/v2/commits?branchId=${options.branchId}`, {
+            headers: getHeaders()
+        });
+        if (commits.data.length === 0) {
+            console.info('No commits available.');
+            return;
+        }
+
+        console.table(commits.data
+            .map((commit: any) => ({
+                'Commit Id': commit.id,
+                'Hash': commit.hash,
+                'Date': commit.commitDate ? moment(commit.commitDate).calendar() : 'Could not find date',
+                'Author': commit.author || '',
+                'Message': commit.message || ''
+            }))
+        );
+        return commits.data;
+    }
+    catch (error) {
         handleError(error);
     }
 }
@@ -320,6 +319,7 @@ export async function getEnvironmentVariableGroups(options: {}) {
         console.table(environmentVariableGroups.data
             .map((x: any) => ({ 'Variable Groups ID': x.id, 'Variable Groups Name': x.name }))
         );
+        return environmentVariableGroups.data;
     } catch (error) {
         handleError(error);
     }
@@ -355,6 +355,7 @@ export async function getEnvironmentVariables(options: { variableGroupId: string
                 }
             ))
         );
+        return environmentVariables.data;
     } catch (error) {
         handleError(error);
     }
@@ -431,11 +432,21 @@ export async function createEnvironmentVariable(options: { type: keyof typeof En
 
 export async function getBranches(options: { profileId: string }) {
     try {
-        const branches = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
+        const branchResponse = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
             {
                 headers: getHeaders()
             });
-        return branches.data.branches;
+        
+        console.table(branchResponse.data.branches
+            .map((branch: any) => ({
+                'Branch Id': branch.id,
+                'Branch Name': branch.name,
+                'Last Build': branch.lastBuildDate ? moment(branch.lastBuildDate).calendar() : 'No previous builds',
+                //@ts-ignore
+                'Build Status': BuildStatus[String(branch.buildStatus)] || 'No previous builds'
+            }))
+        );
+        return branchResponse.data.branches;
     } catch (error) {
         if (error.response && error.response.status === 404) {
             return [];
