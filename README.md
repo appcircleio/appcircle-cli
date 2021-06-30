@@ -4,17 +4,27 @@ Appcircle CLI is a unified tool for accessing the Appcircle platform features fr
 
 # Installation
 
-It is recommended to install node modules locally (requires npx to use). To install Appcircle CLI, simply launch:
+To install Appcircle CLI globally, simply launch:
 
 ```
-npm install appcircle-cli
+npm install -g @appcircle/cli
 ```
-or you can install globally
+
+alternatively, you can install Appcircle CLI locally:
+
 ```
-npm install -g appcircle-cli
+npm install @appcircle/cli
 ```
 
 # Usage & Commands
+
+Simply launch the command on your Terminal/Command Line
+
+```
+appcircle
+```
+
+> If you have installed it locally, you should run `npx appcircle` 
 
 Below is the list of commands currently supported by Appcircle CLI:
 
@@ -59,3 +69,8 @@ Below is the list of commands currently supported by Appcircle CLI:
 - Launch `yarn run watch` to compile & open the project on watch mode
 - Make your changes
 - Submit a PR
+
+# Publishing
+
+- After changes, run the command `yarn run postversion`. It will push a new tag to the repository.
+- GitHub Actions will take care of the rest.
