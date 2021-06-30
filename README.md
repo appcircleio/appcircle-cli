@@ -51,3 +51,11 @@ Below is the list of commands currently supported by Appcircle CLI:
 - Enable [auto sending](https://docs.appcircle.io/distribute/create-or-select-a-distribution-profile#auto-send-your-build-to-the-testers) of the build to the testers
 - Get the distribution profile ID using `appcircle listDistributionProfiles`
 - Upload your app binary to the selected distribution profile using `appcircle upload --app="YOUR APP PATH" --profileId="YOUR PROFILE ID" --message="YOUR RELEASE NOTES"`
+
+# Contribution
+
+- Clone this repository
+- Install dependencies by using `yarn` command
+- Launch `yarn run watch` to compile & open the project on watch mode
+- Make your changes
+- Submit a PR
