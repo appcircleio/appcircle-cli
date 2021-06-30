@@ -16,7 +16,8 @@ import {
     createEnvironmentVariableGroup,
     getEnvironmentVariables,
     createEnvironmentVariable,
-    getBranches
+    getBranches,
+    getCommits
 } from './services';
 
 import { readVariable, EnvironmentVariables } from './data';
@@ -32,6 +33,8 @@ const CommandParameterTypes = {
 const CommandTypes = {
     LOGIN: 'login',
     LIST_BUILD_PROFILES: 'listBuildProfiles',
+    LIST_BUILD_PROFILE_BRANCHES: 'listBuildProfileBranches',
+    LIST_BUILD_PROFILE_COMMITS: 'listBuildProfileCommits',
     LIST_DISTRIBUTION_PROFILES: 'listDistributionProfiles',
     BUILD: 'build',
     DOWNLOAD: 'download',
@@ -59,6 +62,28 @@ const Commands = [
         command: CommandTypes.LIST_BUILD_PROFILES,
         description: 'Get list of build profiles',
         params: []
+    },
+    {
+        command: CommandTypes.LIST_BUILD_PROFILE_BRANCHES,
+        description: 'Get list of branches of a build profile',
+        params: [
+            {
+                name: 'profileId',
+                description: 'Build profile ID',
+                type: CommandParameterTypes.STRING
+            }
+        ]
+    },
+    {
+        command: CommandTypes.LIST_BUILD_PROFILE_COMMITS,
+        description: 'Get list of commits of a branch',
+        params: [
+            {
+                name: 'branchId',
+                description: 'Branch ID',
+                type: CommandParameterTypes.STRING
+            }
+        ]
     },
     {
         command: CommandTypes.LIST_DISTRIBUTION_PROFILES,
@@ -322,6 +347,12 @@ const Commands = [
             break;
         case CommandTypes.LIST_BUILD_PROFILES:
             getBuildProfiles(params);
+            break;
+        case CommandTypes.LIST_BUILD_PROFILE_BRANCHES:
+            getBranches(params);
+            break;
+        case CommandTypes.LIST_BUILD_PROFILE_COMMITS:
+            getCommits(params);
             break;
         case CommandTypes.LIST_DISTRIBUTION_PROFILES:
             getDistributionProfiles(params);
