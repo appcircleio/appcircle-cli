@@ -7,13 +7,13 @@ Appcircle CLI is a unified tool for accessing the Appcircle platform features fr
 To install Appcircle CLI globally, simply launch:
 
 ```
-npm install -g @appcircle/cli
+npm install -g @appcircle/appcircle-cli
 ```
 
 alternatively, you can install Appcircle CLI locally:
 
 ```
-npm install @appcircle/cli
+npm install @appcircle/appcircle-cli
 ```
 
 # Usage & Commands
