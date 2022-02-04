@@ -34,8 +34,9 @@ Below is the list of commands currently supported by Appcircle CLI:
 | `appcircle login [--pat]`                                                                                                   | Get an access token for the session                     |
 | `appcircle listBuildProfiles`                                                                                               | Get the list of build profiles                          |
 | `appcircle listDistributionProfiles`                                                                                        | Get the list of distribution profiles                   |
-| `appcircle build [--profileId] [--branch]`                                                                                  | Start a new build                                       |
-| `appcircle download [--path] [--commitId] [--buildId]`                                                                        | Download the artifact under the selected path |
+| `appcircle listBuildProfileWorkflows [--profileId]`                                                                         | Get the list of workflows for the profile               |
+| `appcircle build [--profileId] [--branch] [--workflow]`                                                                     | Start a new build                                       |
+| `appcircle download [--path] [--commitId] [--buildId]`                                                                      | Download the artifact under the selected path           |
 | `appcircle upload [--app] [--message] [--profileId]`                                                                        | Upload your app binary to selected distribution profile |
 | `appcircle createDistributionProfile [--name]`                                                                              | Create a distribution profile                           |
 | `appcircle listEnvironmentVariableGroups`                                                                                   | Get list of environment variable groups                 |
@@ -53,7 +54,8 @@ Below is the list of commands currently supported by Appcircle CLI:
 - Add a build profile and [connect a repository](https://docs.appcircle.io/build/adding-a-build-profile#connect-your-repository)
 
 - Get the build profile ID using `appcircle listBuildProfiles`
-- Start a new build using `appcircle build --profileId="YOUR PROFILE ID" --branch="YOUR BRANCH"`
+- Get the workflows of that build profile `appcircle listBuildProfileWorkflows --profileId="YOUR PROFILE ID"`
+- Start a new build using `appcircle build --profileId="YOUR PROFILE ID" --branch="YOUR BRANCH" --workflow="YOUR WORKFLOW ID"`
 
 ## How to distribute an app via the Appcircle CLI?
 

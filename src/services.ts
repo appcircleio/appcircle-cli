@@ -205,24 +205,24 @@ export async function getCommits(options: { branchId: string }) {
     }
 }
 
-export async function startBuild(options: { profileId: string, branch: string }) {
+export async function startBuild(options: { profileId: string, branch: string,workflow: string }) {
+    const spinner = ora(`Try to start a new build with ${options.workflow}`).start();
     try {
-        const spinner = ora('Try to start a new build').start();
-
-        const accessToken = readVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
-        const branches = await getBranches({ profileId: options.profileId || '' });
-        const index = branches.findIndex((element: {[key:string]: any }) => element.name === options.branch);
-        const branchId = branches[index].id;
+        const branches = await getBranches({ profileId: options.profileId || '' }, false);
+        const workflows = await getWorkflows({ profileId: options.profileId || '' }, false);
+        const branchIndex = branches.findIndex((element: {[key:string]: any }) => element.name === options.branch);
+        const branchId = branches[branchIndex].id;
+        const workflowIndex = workflows.findIndex((element: {[key:string]: any }) => element.workflowName === options.workflow);
+        const workflowId = workflows[workflowIndex].id;
 
         const allCommitsByBranchId = await axios.get(`${API_HOSTNAME}/build/v2/commits?branchId=${branchId}`,
             {
                 headers: getHeaders()
             });
         const latestCommitId = allCommitsByBranchId.data[0].id;
-
-        const buildResponse = await axios.post(`${API_HOSTNAME}/build/v2/commits/${latestCommitId}?purpose=1`,
+        const buildResponse = await axios.post(`${API_HOSTNAME}/build/v2/commits/${latestCommitId}?workflowId=${workflowId}`,
             qs.stringify({ sample: 'test' }),
-            {
+        {
                 headers: {
                     ...getHeaders(),
                     "accept": "*/*",
@@ -233,6 +233,7 @@ export async function startBuild(options: { profileId: string, branch: string })
         spinner.text = `Build added to queue successfully.\n\nTaskId: ${buildResponse.data.taskId}\nQueueItemId: ${buildResponse.data.queueItemId}`;
         spinner.succeed();
     } catch (error) {
+        spinner.fail('Build failed');
         console.error(error);
     }
 }
@@ -430,23 +431,49 @@ export async function createEnvironmentVariable(options: { type: keyof typeof En
     }
 }
 
-export async function getBranches(options: { profileId: string }) {
+export async function getBranches(options: { profileId: string }, showConsole: boolean = true) {
     try {
         const branchResponse = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}`,
             {
                 headers: getHeaders()
             });
-        
-        console.table(branchResponse.data.branches
-            .map((branch: any) => ({
-                'Branch Id': branch.id,
-                'Branch Name': branch.name,
-                'Last Build': branch.lastBuildDate ? moment(branch.lastBuildDate).calendar() : 'No previous builds',
-                //@ts-ignore
-                'Build Status': BuildStatus[String(branch.buildStatus)] || 'No previous builds'
-            }))
-        );
+        if (showConsole) {
+            console.table(branchResponse.data.branches
+                .map((branch: any) => ({
+                    'Branch Id': branch.id,
+                    'Branch Name': branch.name,
+                    'Last Build': branch.lastBuildDate ? moment(branch.lastBuildDate).calendar() : 'No previous builds',
+                    //@ts-ignore
+                    'Build Status': BuildStatus[String(branch.buildStatus)] || 'No previous builds'
+                }))
+            );
+        }
         return branchResponse.data.branches;
+    } catch (error) {
+        if (error.response && error.response.status === 404) {
+            return [];
+        } else {
+            handleError(error);
+        }
+    }
+}
+
+export async function getWorkflows(options: { profileId: string }, showConsole: boolean = true) {
+    try {
+        const workflowResponse = await axios.get(`${API_HOSTNAME}/build/v2/profiles/${options.profileId}/workflows`,
+            {
+                headers: getHeaders(),
+            });
+        if (showConsole) {
+            console.table(workflowResponse.data
+                .map((workflow: any) => ({
+                    'Workflow Id': workflow.id,
+                    'Workflow Name': workflow.workflowName,
+                    'Last Used': workflow.lastUsedTime ? moment(workflow.lastUsedTime).calendar() : 'No previous builds',
+                }))
+            );    
+        }
+        return workflowResponse.data;
     } catch (error) {
         if (error.response && error.response.status === 404) {
             return [];

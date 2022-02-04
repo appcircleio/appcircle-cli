@@ -17,6 +17,7 @@ import {
     getEnvironmentVariables,
     createEnvironmentVariable,
     getBranches,
+    getWorkflows,
     getCommits
 } from './services';
 
@@ -34,6 +35,7 @@ const CommandTypes = {
     LOGIN: 'login',
     LIST_BUILD_PROFILES: 'listBuildProfiles',
     LIST_BUILD_PROFILE_BRANCHES: 'listBuildProfileBranches',
+    LIST_BUILD_PROFILE_WORKFLOWS: 'listBuildProfileWorkflows',
     LIST_BUILD_PROFILE_COMMITS: 'listBuildProfileCommits',
     LIST_DISTRIBUTION_PROFILES: 'listDistributionProfiles',
     BUILD: 'build',
@@ -75,6 +77,17 @@ const Commands = [
         ]
     },
     {
+        command: CommandTypes.LIST_BUILD_PROFILE_WORKFLOWS,
+        description: 'Get list of workflows of a build profile',
+        params: [
+            {
+                name: 'profileId',
+                description: 'Build profile ID',
+                type: CommandParameterTypes.STRING
+            }
+        ]
+    },
+    {
         command: CommandTypes.LIST_BUILD_PROFILE_COMMITS,
         description: 'Get list of commits of a branch',
         params: [
@@ -102,6 +115,12 @@ const Commands = [
             {
                 name: 'branch',
                 description: 'Branch',
+                type: CommandParameterTypes.SELECT,
+                params: []
+            },
+            {
+                name: 'workflow',
+                description: 'Workflow',
                 type: CommandParameterTypes.SELECT,
                 params: []
             }
@@ -285,6 +304,18 @@ const Commands = [
 
                 spinner.text = 'Branches fetched';
                 spinner.succeed();
+            } else if (param.name === 'workflow') {
+                const spinner = ora('Workflow fetching').start();
+                const workflows = await getWorkflows({ profileId: params.profileId || '' });
+                if (!workflows || workflows.length === 0) {
+                    spinner.text = 'No workflows available';
+                    spinner.fail();
+                    return;
+                }
+                //@ts-ignore
+                param.params = workflows.map((workflow: any) => ({ name: workflow.workflowName, description: workflow.workflowName }));
+                spinner.text = 'Workflows fetched';
+                spinner.succeed();
             } else if (param.name === 'value' && params.isSecret) {
                 param.type = CommandParameterTypes.PASSWORD;
             }
@@ -350,6 +381,9 @@ const Commands = [
             break;
         case CommandTypes.LIST_BUILD_PROFILE_BRANCHES:
             getBranches(params);
+            break;
+        case CommandTypes.LIST_BUILD_PROFILE_WORKFLOWS:
+            getWorkflows(params);
             break;
         case CommandTypes.LIST_BUILD_PROFILE_COMMITS:
             getCommits(params);
