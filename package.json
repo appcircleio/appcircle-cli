@@ -1,6 +1,6 @@
 {
   "name": "@appcircle/cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI tool for running Appcircle services from the command line",
   "main": "bin/appcircle",
   "bin": {
@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/appcircleio/appcircle-cli#readme",
   "dependencies": {
-    "axios": "^0.21.1",
+    "axios": "^0.25.0",
     "chalk": "^4.1.1",
     "commander": "^7.1.0",
     "enquirer": "^2.3.6",
