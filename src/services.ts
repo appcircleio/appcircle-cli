@@ -8,9 +8,17 @@ import chalk from 'chalk';
 import ora from 'ora';
 import path from 'path';
 import os from 'os';
-
+import CurlHelper from './curlhelper';
 import { readVariable, writeVariable, EnvironmentVariables } from './data';
 
+if (process.env.CURL_LOGGING) {
+    axios.interceptors.request.use((config) => {
+        const data = new CurlHelper(config);
+        let curl = data.generateCommand();
+        console.log(chalk.green(curl));
+        return config;
+    });
+}
 
 const API_HOSTNAME = readVariable(EnvironmentVariables.API_HOSTNAME);
 const AUTH_HOSTNAME = readVariable(EnvironmentVariables.AUTH_HOSTNAME);
@@ -31,6 +39,7 @@ const AuthenticationTypes = {
     3: "Static Username and Password"
 };
 const OperatingSystems = {
+    0: 'None',
     1: 'iOS',
     2: 'Android'
 };
@@ -43,6 +52,11 @@ const PlatformTypes = {
     5: "Xamarin",
     6: "Flutter"
 };
+const PublishTypes = {
+    0: "None",
+    1: "Beta",
+    2: "Live"
+};
 const EnvironmentVariableTypes = {
     TEXT: 'text',
     FILE: 'file'
@@ -50,7 +64,8 @@ const EnvironmentVariableTypes = {
 
 function getHeaders(withToken = true): AxiosRequestConfig['headers'] {
     let response: AxiosRequestConfig['headers'] = {
-        accept: "application/json"
+        accept: "application/json",
+        "User-Agent": "Appcircle CLI/1.0.3"
     }
     if (withToken) {
         response.Authorization = `Bearer ${readVariable(EnvironmentVariables.AC_ACCESS_TOKEN)}`
@@ -234,7 +249,7 @@ export async function startBuild(options: { profileId: string, branch: string,wo
         spinner.succeed();
     } catch (error) {
         spinner.fail('Build failed');
-        console.error(error);
+        handleError(error);
     }
 }
 
@@ -450,7 +465,7 @@ export async function getBranches(options: { profileId: string }, showConsole: b
         }
         return branchResponse.data.branches;
     } catch (error) {
-        if (error.response && error.response.status === 404) {
+        if (axios.isAxiosError(error) && error.response && error.response.status === 404) {
             return [];
         } else {
             handleError(error);
@@ -475,7 +490,7 @@ export async function getWorkflows(options: { profileId: string }, showConsole: 
         }
         return workflowResponse.data;
     } catch (error) {
-        if (error.response && error.response.status === 404) {
+        if (axios.isAxiosError(error) && error.response && error.response.status === 404) {
             return [];
         } else {
             handleError(error);
@@ -495,24 +510,234 @@ export async function getBuildTaskStatus(options: { latestCommitId: string, task
     }
 }
 
-function handleError(error: {[key:string]: any}) {
-    if (error.response) {
-        if (error.response.data) {
-            if (error.response.data.message) {
-                console.error(`${error.response.data.message} ${error.response.data.code}`);
-            } else if (error.response.data.innerErrors && error.response.data.innerErrors.length > 0) {
-                console.error(`${error.response.data.innerErrors[0].message} ${error.response.data.innerErrors[0].code}`);
-            } else {
-                console.error(error.response.data);
-            }
-        } else {
-            console.error(error.response);
-        }
-    } else {
+function handleError(error: unknown) {
+    if (axios.isAxiosError(error)) {
+        console.error(`${error.message} ${error.code}`)
+   } else {
         console.error(error);
     }
 }
 
 function removeHttp(url: string) {
     return url.replace(/(^\w+:|^)\/\//, '');
+}
+
+export async function getEnterpriseProfiles() {
+    try {
+        const buildProfiles = await axios.get(`${API_HOSTNAME}/store/v2/profiles`,
+            {
+                headers: getHeaders()
+            });
+        if (buildProfiles.data.length === 0) {
+            console.info('No build profiles available.');
+            return;
+        }
+        console.table(buildProfiles.data
+            .map((buildProfile: any) => ({
+                'Profile Id': buildProfile.id,
+                'Profile Name': buildProfile.name,
+                'Version': buildProfile.version,
+                'Downloads': buildProfile.totalDownloadCount,
+                'Latest Publish': buildProfile.latestPublishDate ? moment(buildProfile.latestPublishDate).calendar() :  '-',
+                'Last Received': buildProfile.lastBinaryReceivedDate ? moment(buildProfile.lastBinaryReceivedDate).calendar() :  '-',
+            }))
+        );
+        return buildProfiles.data;
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+export async function getEnterpriseAppVersions(options: { entProfileId: string }) {
+    try {
+        const profileResponse = await axios.get(`${API_HOSTNAME}/store/v2/profiles/${options.entProfileId}/app-versions`,
+            {
+                headers: getHeaders()
+            });
+        if (profileResponse.data.length === 0) {
+            console.info('No app versions available.');
+            return;
+        }
+        console.table(profileResponse.data
+            .map((buildProfile: any) => ({
+                'Version Name': buildProfile.name,
+                'Summary': buildProfile.summary,
+                'Version': buildProfile.version,
+                'Version Code': buildProfile.versionCode,
+                'Publish Type':  (PublishTypes as any)[buildProfile.publishType],
+                'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() :  '-',
+                'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
+                'Downloads': buildProfile.downloadCount,
+                'Created': buildProfile.createDate ? moment(buildProfile.createDate).calendar() :  '-',
+                'Updated': buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() :  '-',
+            }))
+        );
+        return profileResponse.data;
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+export async function publishEnterpriseAppVersion(options: { entProfileId: string, entVersionId: string, summary: string, releaseNotes: string, publishType: string }) {
+    try {
+        const versionResponse = await axios.patch(`${API_HOSTNAME}/store/v2/profiles/${options.entProfileId}/app-versions/${options.entVersionId}?action=publish`,
+        { summary: options.summary, releaseNotes: options.releaseNotes, publishType: options.publishType },    
+        {
+                headers: getHeaders()
+            });
+        if (versionResponse.data.length === 0) {
+            console.info('No app versions available.');
+            return;
+        }
+        console.table([versionResponse.data]
+            .map((buildProfile: any) => ({
+                'Profile Name': buildProfile.name,
+                'Summary': buildProfile.summary,
+                'Version': buildProfile.version,
+                'Version Code': buildProfile.versionCode,
+                'Publish Type':  (PublishTypes as any)[buildProfile.publishType],
+                'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() :  '-',
+                'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
+                'Downloads': buildProfile.downloadCount,
+                'Created': buildProfile.createDate ? moment(buildProfile.createDate).calendar() :  '-',
+                'Updated': buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() :  '-',
+            }))
+        );
+        return versionResponse.data;
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+export async function unpublishEnterpriseAppVersion(options: { entProfileId: string, entVersionId: string }) {
+    try {
+        const versionResponse = await axios.patch(`${API_HOSTNAME}/store/v2/profiles/${options.entProfileId}/app-versions/${options.entVersionId}?action=unpublish`,
+        {  },    
+        {
+                headers: getHeaders()
+            });
+        if (versionResponse.data.length === 0) {
+            console.info('No app versions available.');
+            return;
+        }
+        console.table([versionResponse.data]
+            .map((buildProfile: any) => ({
+                'Profile Name': buildProfile.name,
+                'Summary': buildProfile.summary,
+                'Version': buildProfile.version,
+                'Version Code': buildProfile.versionCode,
+                'Publish Type':  (PublishTypes as any)[buildProfile.publishType],
+                'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() :  '-',
+                'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
+                'Downloads': buildProfile.downloadCount,
+                'Created': buildProfile.createDate ? moment(buildProfile.createDate).calendar() :  '-',
+                'Updated': buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() :  '-',
+            }))
+        );
+        return versionResponse.data;
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+export async function removeEnterpriseAppVersion(options: { entProfileId: string, entVersionId: string }) {
+    const spinner = ora('Try to delete the app version').start();
+    try {
+        const versionResponse = await axios.delete(`${API_HOSTNAME}/store/v2/profiles/${options.entProfileId}/app-versions/${options.entVersionId}`,
+        {
+                headers: getHeaders()
+            });
+        if (versionResponse.data.length === 0) {
+            console.info('No app versions available.');
+            return;
+        }
+        spinner.text = `App version deleted successfully.\n\nTaskId: ${versionResponse.data.taskId}`;
+        spinner.succeed();
+        return versionResponse.data;
+    } catch (error) {
+        spinner.fail('App version delete failed');
+        handleError(error);
+    }
+}
+
+export async function notifyEnterpriseAppVersion(options: { entProfileId: string, entVersionId: string, subject:string, message: string }) {
+    const spinner = ora(`Notifying users with new version for ${options.entVersionId}`).start();
+    try {
+        const versionResponse = await axios.post(`${API_HOSTNAME}/store/v2/profiles/${options.entProfileId}/app-versions/${options.entVersionId}?action=notify`,
+        { subject: options.subject, message: options.message },    
+        {
+                headers: getHeaders()
+            });
+        if (versionResponse.data.length === 0) {
+            console.info('No app versions available.');
+            return;
+        }
+        spinner.text = `Version notification sent successfully.\n\nTaskId: ${versionResponse.data.taskId}`;
+        spinner.succeed();
+        return versionResponse.data;
+    } catch (error) {
+        spinner.fail('Notification failed');
+        handleError(error);
+    }
+}
+
+export async function uploadEnterpriseAppVersion(options: { entProfileId: string, app: string }) {
+    try {
+        const spinner = ora('Try to upload the app').start();
+
+        const data = new FormData();
+        data.append('File', fs.createReadStream(options.app));
+
+        const uploadResponse = await axios.post(
+            `${API_HOSTNAME}/store/v2/profiles/${options.entProfileId}/app-versions`,
+            data,
+            {
+                headers: {
+                    ...getHeaders(),
+                    ...data.getHeaders()
+                }
+            }
+        );
+        spinner.text = `App uploaded successfully.\n\nTaskId: ${uploadResponse.data.taskId}`;
+        spinner.succeed();
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+export async function uploadEnterpriseApp(options: { app: string }) {
+    try {
+        const spinner = ora('Try to upload the app').start();
+
+        const data = new FormData();
+        data.append('File', fs.createReadStream(options.app));
+
+        const uploadResponse = await axios.post(
+            `${API_HOSTNAME}/store/v2/profiles/app-versions`,
+            data,
+            {
+                headers: {
+                    ...getHeaders(),
+                    ...data.getHeaders()
+                }
+            }
+        );
+        spinner.text = `New profile created and app uploaded successfully.\n\nTaskId: ${uploadResponse.data.taskId}`;
+        spinner.succeed();
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+export async function getEnterpriseDownloadLink(options: { entProfileId: string, entVersionId: string }) {
+    try {
+        const qrcodeStatus = await axios.get(`${API_HOSTNAME}/store/v2/profiles/${options.entProfileId}/app-versions/${options.entVersionId}?action=download`,
+            {
+                headers: getHeaders()
+            });
+        console.log(`Download Link: ${qrcodeStatus.data}`);
+        return qrcodeStatus.data;
+    } catch (error) {
+        handleError(error);
+    }
 }

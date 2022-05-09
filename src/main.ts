@@ -18,7 +18,16 @@ import {
     createEnvironmentVariable,
     getBranches,
     getWorkflows,
-    getCommits
+    getCommits,
+    getEnterpriseProfiles,
+    getEnterpriseAppVersions,
+    publishEnterpriseAppVersion,
+    unpublishEnterpriseAppVersion,
+    removeEnterpriseAppVersion,
+    notifyEnterpriseAppVersion,
+    uploadEnterpriseApp,
+    uploadEnterpriseAppVersion,
+    getEnterpriseDownloadLink
 } from './services';
 
 import { readVariable, EnvironmentVariables } from './data';
@@ -45,7 +54,16 @@ const CommandTypes = {
     LIST_ENVIRONMENT_VARIABLE_GROUPS: 'listEnvironmentVariableGroups',
     CREATE_ENVIRONMENT_VARIABLE_GROUP: 'createEnvironmentVariableGroup',
     LIST_ENVIRONMENT_VARIABLES: 'listEnvironmentVariables',
-    CREATE_ENVIRONMENT_VARIABLE: 'createEnvironmentVariable'
+    CREATE_ENVIRONMENT_VARIABLE: 'createEnvironmentVariable',
+    LIST_ENTERPRISE_PROFILES: 'listEnterpriseProfiles',
+    LIST_ENTERPRISE_APP_VERSIONS: 'listEnterpriseAppVersions',
+    PUBLISH_ENTERPRISE_APP_VERSION: 'publishEnterpriseAppVersion',
+    UNPUBLISH_ENTERPRISE_APP_VERSION: 'unpublishEnterpriseAppVersion',
+    REMOVE_ENTERPRISE_APP_VERSION: 'removeEnterpriseAppVersion',
+    NOTIFY_ENTERPRISE_APP_VERSION: 'notifyEnterpriseAppVersion',
+    UPLOAD_ENTERPRISE_APP: 'uploadEnterpriseApp',
+    UPLOAD_ENTERPRISE_APP_VERSION: 'uploadEnterpriseAppVersion',
+    GET_ENTERPRISE_DOWNLOAD_LINK: 'getEnterpriseDownloadLink'
 };
 
 const Commands = [
@@ -252,7 +270,155 @@ const Commands = [
                 type: CommandParameterTypes.STRING
             }
         ]
-    }
+    },
+    {
+        command: CommandTypes.LIST_ENTERPRISE_PROFILES,
+        description: 'Get list of enterprise profiles',
+        params: []
+    },
+    {
+        command: CommandTypes.LIST_ENTERPRISE_APP_VERSIONS,
+        description: 'Get list of enterprise app versions',
+        params: [
+            {
+                name: 'entProfileId',
+                description: 'Enterprise Profile ID',
+                type: CommandParameterTypes.SELECT
+            }
+        ]
+    },
+    {
+        command: CommandTypes.PUBLISH_ENTERPRISE_APP_VERSION,
+        description: 'Publish enterprise app version',
+        params: [
+            {
+                name: 'entProfileId',
+                description: 'Enterprise Profile ID',
+                type: CommandParameterTypes.SELECT
+            },
+            {
+                name: 'entVersionId',
+                description: 'App Version ID',
+                type: CommandParameterTypes.SELECT
+            },
+            {
+                name: 'summary',
+                description: 'Summary',
+                type: CommandParameterTypes.STRING
+            },
+            {
+                name: 'releaseNotes',
+                description: 'Release Notes',
+                type: CommandParameterTypes.STRING
+            },
+            {
+                name: 'publishType',
+                description: 'Publish Type 0=None,1=Beta,2=Live',
+                type: CommandParameterTypes.STRING
+            }
+        ]
+    },
+    {
+        command: CommandTypes.UNPUBLISH_ENTERPRISE_APP_VERSION,
+        description: 'Unpublish enterprise app version',
+        params: [
+            {
+                name: 'entProfileId',
+                description: 'Enterprise Profile ID',
+                type: CommandParameterTypes.SELECT
+            },
+            {
+                name: 'entVersionId',
+                description: 'App Version ID',
+                type: CommandParameterTypes.SELECT
+            },
+        ]
+    },
+    {
+        command: CommandTypes.REMOVE_ENTERPRISE_APP_VERSION,
+        description: 'Remove enterprise app version',
+        params: [
+            {
+                name: 'entProfileId',
+                description: 'Enterprise Profile ID',
+                type: CommandParameterTypes.SELECT
+            },
+            {
+                name: 'entVersionId',
+                description: 'App Version ID',
+                type: CommandParameterTypes.SELECT
+            },
+        ]
+    },
+    {
+        command: CommandTypes.NOTIFY_ENTERPRISE_APP_VERSION,
+        description: 'Notify enterprise app version',
+        params: [
+            {
+                name: 'entProfileId',
+                description: 'Enterprise Profile ID',
+                type: CommandParameterTypes.SELECT
+            },
+            {
+                name: 'entVersionId',
+                description: 'App Version ID',
+                type: CommandParameterTypes.SELECT
+            },
+            {
+                name: 'subject',
+                description: 'Subject',
+                type: CommandParameterTypes.STRING
+            },
+            {
+                name: 'message',
+                description: 'Message',
+                type: CommandParameterTypes.STRING
+            },
+        ]
+    },
+    {
+        command: CommandTypes.UPLOAD_ENTERPRISE_APP_VERSION,
+        description: 'Upload enterprise app version for a profile',
+        params: [
+            {
+                name: 'entProfileId',
+                description: 'Enterprise Profile Id',
+                type: CommandParameterTypes.SELECT,
+            },
+            {
+                name: 'app',
+                description: 'App path',
+                type: CommandParameterTypes.STRING
+            },
+        ]
+    },
+    {
+        command: CommandTypes.UPLOAD_ENTERPRISE_APP,
+        description: 'Upload enterprise app version without a profile',
+        params: [
+            {
+                name: 'app',
+                description: 'App path',
+                type: CommandParameterTypes.STRING
+            },
+        ]
+    },
+    {
+        command: CommandTypes.GET_ENTERPRISE_DOWNLOAD_LINK,
+        description: 'Get enterprise app download link',
+        params: [
+            {
+                name: 'entProfileId',
+                description: 'Enterprise Profile Id',
+                type: CommandParameterTypes.SELECT,
+            },
+            {
+                name: 'entVersionId',
+                description: 'App Version ID',
+                type: CommandParameterTypes.SELECT
+            },
+        ]
+    },
 ];
 
 
@@ -304,7 +470,32 @@ const Commands = [
 
                 spinner.text = 'Branches fetched';
                 spinner.succeed();
-            } else if (param.name === 'workflow') {
+            } else if (param.name === 'entProfileId') {
+                const spinner = ora('Enterprise Profiles fetching').start();
+                const profiles = await getEnterpriseProfiles();
+                if (!profiles || profiles.length === 0) {
+                    spinner.text = 'No enterprise profile available';
+                    spinner.fail();
+                    return;
+                }
+                //@ts-ignore
+                param.params = profiles.map((profile: any) => ({ name: profile.id, message: profile.name }));
+                spinner.text = 'Enterprise Profiles fetched';
+                spinner.succeed();
+            } else if (param.name === 'entVersionId') {
+                const spinner = ora('Enterprise Versions fetching').start();
+                const profiles = await getEnterpriseAppVersions({entProfileId: params.entProfileId});
+                if (!profiles || profiles.length === 0) {
+                    spinner.text = 'No version available';
+                    spinner.fail();
+                    return;
+                }
+                //@ts-ignore
+                param.params = profiles.map((profile: any) => ({ name: profile.id, message: `${profile.version} (${profile.versionCode})` }));
+                spinner.text = 'Enterprise Versions fetched';
+                spinner.succeed();
+            }
+            else if (param.name === 'workflow') {
                 const spinner = ora('Workflow fetching').start();
                 const workflows = await getWorkflows({ profileId: params.profileId || '' });
                 if (!workflows || workflows.length === 0) {
@@ -414,6 +605,33 @@ const Commands = [
             break;
         case CommandTypes.CREATE_ENVIRONMENT_VARIABLE:
             createEnvironmentVariable((params as any));
+            break;
+        case CommandTypes.LIST_ENTERPRISE_PROFILES:
+            getEnterpriseProfiles();
+            break;
+        case CommandTypes.LIST_ENTERPRISE_APP_VERSIONS:
+            getEnterpriseAppVersions(params);
+            break;
+        case CommandTypes.PUBLISH_ENTERPRISE_APP_VERSION:
+            publishEnterpriseAppVersion(params);
+            break;
+        case CommandTypes.UNPUBLISH_ENTERPRISE_APP_VERSION:
+            unpublishEnterpriseAppVersion(params);
+            break;
+        case CommandTypes.REMOVE_ENTERPRISE_APP_VERSION:
+            removeEnterpriseAppVersion(params);
+            break;
+        case CommandTypes.NOTIFY_ENTERPRISE_APP_VERSION:
+            notifyEnterpriseAppVersion(params);
+            break;
+        case CommandTypes.UPLOAD_ENTERPRISE_APP:
+            uploadEnterpriseApp(params);
+            break;
+        case CommandTypes.UPLOAD_ENTERPRISE_APP_VERSION:
+            uploadEnterpriseAppVersion(params);
+            break;
+        case CommandTypes.GET_ENTERPRISE_DOWNLOAD_LINK:
+            getEnterpriseDownloadLink(params);
             break;
         default:
             console.error('Command not found');
