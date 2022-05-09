@@ -1,6 +1,6 @@
 {
   "name": "@appcircle/cli",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "CLI tool for running Appcircle services from the command line",
   "main": "bin/appcircle",
   "bin": {
@@ -29,22 +29,24 @@
   },
   "homepage": "https://github.com/appcircleio/appcircle-cli#readme",
   "dependencies": {
-    "axios": "^0.25.0",
+    "axios": "^0.27.1",
     "chalk": "^4.1.1",
     "commander": "^7.1.0",
     "enquirer": "^2.3.6",
     "esm": "^3.2.25",
     "form-data": "^4.0.0",
     "jsonfile": "^6.1.0",
-    "minimist": "^1.2.5",
-    "moment": "^2.29.1",
-    "ora": "^5.4.0",
-    "yargs": "^16.2.0"
+    "minimist": "^1.2.6",
+    "moment": "^2.29.3",
+    "ora": "^5.4.0"
   },
   "files": [
     "bin/",
     "dist/"
   ],
+  "resolutions": {
+    "ora/strip-ansi": "6.0.1"
+  },
   "devDependencies": {
     "@types/jsonfile": "^6.0.0",
     "@types/minimist": "^1.2.1",

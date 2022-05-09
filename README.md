@@ -43,6 +43,24 @@ Below is the list of commands currently supported by Appcircle CLI:
 | `appcircle createEnvironmentVariableGroup [--name]`                                                                         | Create an environment variable group                    |
 | `appcircle listEnvironmentVariables [--variableGroupId]`                                                                    | Get list of environment variables                       |
 | `appcircle createEnvironmentVariable [--type] [-isSecret, --isSecret] [--variableGroupId] [--key] [--value] [--filePath]`   | Create a file or text environment variable              |
+| `appcircle listEnterpriseProfiles`   | List Enterprise profiles          |
+| `appcircle listEnterpriseAppVersions [--entProfileId] `   | List Enterprise app versions              |
+| `appcircle publishEnterpriseAppVersion [--entProfileId] [--entVersionId] [--entVersionId] [--summary] [--releaseNotes] [--publishType]`   | Publish Enterprise app version              |
+| `appcircle publishEnterpriseAppVersion [--entProfileId] [--entVersionId]`   | Unpublish Enterprise app version              |
+| `appcircle removeEnterpriseAppVersion [--entProfileId] [--entVersionId]`   | Remove Enterprise app version              |
+| `appcircle notifyEnterpriseAppVersion [--entProfileId] [--entVersionId] [--subject] [--message]`   | Notify Enterprise app version              |
+| `appcircle uploadEnterpriseApp [--app] `   | Upload Enterprise app version without a profile             |
+| `appcircle uploadEnterpriseAppVersion [--entProfileId] [--app] `   |Upload enterprise app version for a profile              |
+| `appcircle getEnterpriseDownloadLink  [--entProfileId] [--entVersionId]`   |Get enterprise app download link              |
+
+## Logging requests
+If you want to log the requests as `curl` commands you can start appcircle CLI by setting the `CURL_LOGGING` environment variable.
+
+Example:
+
+```
+CURL_LOGGING= appcircle
+```
 
 ## How to Connect your Appcircle Account within CLI?
 - [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication)
