@@ -284,6 +284,12 @@ const Commands = [
                 name: 'entProfileId',
                 description: 'Enterprise Profile ID',
                 type: CommandParameterTypes.SELECT
+            },
+            {
+                name: 'publishType',
+                description: '[OPTIONAL] Publish Type Empty,0=All,1=Beta,2=Live',
+                type: CommandParameterTypes.STRING,
+                required: false
             }
         ]
     },
@@ -484,7 +490,7 @@ const Commands = [
                 spinner.succeed();
             } else if (param.name === 'entVersionId') {
                 const spinner = ora('Enterprise Versions fetching').start();
-                const profiles = await getEnterpriseAppVersions({entProfileId: params.entProfileId});
+                const profiles = await getEnterpriseAppVersions({entProfileId: params.entProfileId, publishType: ''});
                 if (!profiles || profiles.length === 0) {
                     spinner.text = 'No version available';
                     spinner.fail();

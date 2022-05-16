@@ -44,7 +44,7 @@ Below is the list of commands currently supported by Appcircle CLI:
 | `appcircle listEnvironmentVariables [--variableGroupId]`                                                                    | Get list of environment variables                       |
 | `appcircle createEnvironmentVariable [--type] [-isSecret, --isSecret] [--variableGroupId] [--key] [--value] [--filePath]`   | Create a file or text environment variable              |
 | `appcircle listEnterpriseProfiles`   | List Enterprise profiles          |
-| `appcircle listEnterpriseAppVersions [--entProfileId] `   | List Enterprise app versions              |
+| `appcircle listEnterpriseAppVersions [--entProfileId] [--publishType]`   | List Enterprise app versions              |
 | `appcircle publishEnterpriseAppVersion [--entProfileId] [--entVersionId] [--entVersionId] [--summary] [--releaseNotes] [--publishType]`   | Publish Enterprise app version              |
 | `appcircle publishEnterpriseAppVersion [--entProfileId] [--entVersionId]`   | Unpublish Enterprise app version              |
 | `appcircle removeEnterpriseAppVersion [--entProfileId] [--entVersionId]`   | Remove Enterprise app version              |

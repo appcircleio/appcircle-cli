@@ -548,9 +548,20 @@ export async function getEnterpriseProfiles() {
     }
 }
 
-export async function getEnterpriseAppVersions(options: { entProfileId: string }) {
+export async function getEnterpriseAppVersions(options: { entProfileId: string,publishType: string }) {
+    let versionType = '';
+    switch (options.publishType) {
+        case '1':
+            versionType = '?publishtype=Beta';
+            break;
+        case '2':
+            versionType = '?publishtype=Live';
+        default:
+            break;
+    }
+
     try {
-        const profileResponse = await axios.get(`${API_HOSTNAME}/store/v2/profiles/${options.entProfileId}/app-versions`,
+        const profileResponse = await axios.get(`${API_HOSTNAME}/store/v2/profiles/${options.entProfileId}/app-versions${versionType}`,
             {
                 headers: getHeaders()
             });
