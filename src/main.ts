@@ -19,6 +19,7 @@ import {
     getBranches,
     getWorkflows,
     getCommits,
+    getBuildsOfCommit,
     getEnterpriseProfiles,
     getEnterpriseAppVersions,
     publishEnterpriseAppVersion,
@@ -46,6 +47,7 @@ const CommandTypes = {
     LIST_BUILD_PROFILE_BRANCHES: 'listBuildProfileBranches',
     LIST_BUILD_PROFILE_WORKFLOWS: 'listBuildProfileWorkflows',
     LIST_BUILD_PROFILE_COMMITS: 'listBuildProfileCommits',
+    LIST_BUILD_PROFILE_BUILDS_OF_COMMIT: 'listBuildProfileBuildsOfCommit',
     LIST_DISTRIBUTION_PROFILES: 'listDistributionProfiles',
     BUILD: 'build',
     DOWNLOAD: 'download',
@@ -117,6 +119,17 @@ const Commands = [
         ]
     },
     {
+        command: CommandTypes.LIST_BUILD_PROFILE_BUILDS_OF_COMMIT,
+        description: 'Get list of builds of a commit',
+        params: [
+            {
+                name: 'commitId',
+                description: 'Commit ID',
+                type: CommandParameterTypes.STRING
+            }
+        ]
+    },
+    {
         command: CommandTypes.LIST_DISTRIBUTION_PROFILES,
         description: 'Get list of distribution profiles',
         params: []
@@ -155,15 +168,15 @@ const Commands = [
                 required: false
             },
             {
-                name: 'buildId',
-                description: 'Build ID of your branch. This can be retrieved from profile list',
-                type: CommandParameterTypes.STRING
-            },
-            {
                 name: 'commitId',
                 description: 'Commit ID of your build',
                 type: CommandParameterTypes.STRING
-            }
+            },
+            {
+                name: 'buildId',
+                description: 'Build ID of your commit. This can be retrieved from builds of commit',
+                type: CommandParameterTypes.STRING
+            },
         ]
     },
     {
@@ -584,6 +597,9 @@ const Commands = [
             break;
         case CommandTypes.LIST_BUILD_PROFILE_COMMITS:
             getCommits(params);
+            break;
+        case CommandTypes.LIST_BUILD_PROFILE_BUILDS_OF_COMMIT:
+            getBuildsOfCommit(params);
             break;
         case CommandTypes.LIST_DISTRIBUTION_PROFILES:
             getDistributionProfiles(params);

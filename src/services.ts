@@ -220,6 +220,40 @@ export async function getCommits(options: { branchId: string }) {
     }
 }
 
+export async function getBuildsOfCommit(options: { commitId: string }) {
+    try {
+      const commits = await axios.get(
+        `${API_HOSTNAME}/build/v2/commits/${options.commitId}`,
+        {
+          headers: getHeaders(),
+        }
+      );
+      if (commits.data.builds.length === 0) {
+        console.info("No builds available.");
+        return;
+      }
+      console.log("\n");
+      console.table(
+        commits.data.builds?.map((build: any) => ({
+          "Build Id": build.id,
+          Hash: build.hash,
+  
+          "Has Warning": !!build.hasWarning,
+          Status: build.status,
+          "Start Date": build.startDate
+            ? moment(build.startDate).calendar()
+            : "Could not find date",
+          "End Date": build.endDate
+            ? moment(build.endDate).calendar()
+            : "Could not find date",
+        }))
+      );
+      return commits.data;
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
 export async function startBuild(options: { profileId: string, branch: string,workflow: string }) {
     const spinner = ora(`Try to start a new build with ${options.workflow}`).start();
     try {
