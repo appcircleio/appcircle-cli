@@ -73,7 +73,9 @@ function getHeaders(withToken = true): AxiosRequestConfig['headers'] {
     return response;
 }
 
-export async function getToken(options: { pat: string }) {
+export type OptionsType<T = {}> = Record<string, any> & { output?: 'json' | 'plain' } & T;
+
+export async function getToken(options: OptionsType<{ pat: string }> ) {
     try {
         const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, qs.stringify(options), {
             headers: {
@@ -106,7 +108,7 @@ export async function getDistributionProfiles(options: { }) {
             console.info('No distribution profiles available.');
             return;
         }
-
+        
         console.table(distributionProfiles.data
             .map((distributionProfile: any) => ({
                 'Profile Id': distributionProfile.id,
@@ -121,7 +123,6 @@ export async function getDistributionProfiles(options: { }) {
                 'Auto Send': distributionProfile.testingGroupIds ? 'Enabled' : 'Disabled'
             }))
         );
-
         return distributionProfiles.data
     } catch (error) {
         handleError(error);
@@ -163,7 +164,7 @@ export async function getTestingGroups(options: { }) {
     }
 }
 
-export async function getBuildProfiles(options: { }) {
+export async function getBuildProfiles(options:  OptionsType) {
     try {
         const buildProfiles = await axios.get(`${API_HOSTNAME}/build/v2/profiles`,
             {
@@ -174,7 +175,9 @@ export async function getBuildProfiles(options: { }) {
             console.info('No build profiles available.');
             return;
         }
-
+        if(options.output === 'json'){
+            console.log(JSON.stringify(buildProfiles.data));
+        }else{
         console.table(buildProfiles.data
             .map((buildProfile: any) => ({
                 'Profile Id': buildProfile.id,
@@ -188,6 +191,7 @@ export async function getBuildProfiles(options: { }) {
                 'Auto Build': buildProfile.autoBuildCount === 0 ? 'Disabled' : 'Enabled'
             }))
         );
+        }
         return buildProfiles.data;
     } catch (error) {
         handleError(error);
