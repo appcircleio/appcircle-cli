@@ -1,4 +1,4 @@
-import { Commands } from "./command";
+import { Commands } from "./core/commands";
 
 const { createCommand } = require("commander");
 
@@ -9,8 +9,8 @@ export const createProgram = () => {
   let actionCb = (cmd: ProgramCommand) => {};
 
   program.version(require("../package.json").version, "-v, --version", "output the version number");
-  program.option("-i, --interactive", "interactive mode");
-  program.option("-o, --output <type>", "output type", "plain");
+  program.option("-i, --interactive", "interactive mode (AppCircle GUI)");
+  program.option("-o, --output <type>", "output type (json, plain)", "plain");
 
   Commands.forEach((command) => {
     let comandPrg = program.command(command.command).description(command.description);
@@ -24,7 +24,11 @@ export const createProgram = () => {
 
   program.exitOverride();
   program.hook("preAction", (thisCommand: any, actionCommand: ProgramCommand) => {
-    actionCb({ name: () => actionCommand.name(), args: () => actionCommand.args(),  opts: () => ({ ...thisCommand.opts(), ...actionCommand.opts() }) });
+    actionCb({
+      name: () => actionCommand.name(),
+      args: () => actionCommand.args(),
+      opts: () => ({ ...thisCommand.opts(), ...actionCommand.opts() }),
+    });
   });
   return {
     parse: () => program.parse(process.argv),

@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { APPCIRCLE_COLOR } from "./constant";
+import { APPCIRCLE_COLOR } from "../constant";
 
 export const CommandParameterTypes = {
   SELECT: "select",
@@ -8,32 +8,32 @@ export const CommandParameterTypes = {
   PASSWORD: "password",
 };
 
-export const CommandTypes = {
-  LOGIN: "login",
-  LIST_BUILD_PROFILES: "listBuildProfiles",
-  LIST_BUILD_PROFILE_BRANCHES: "listBuildProfileBranches",
-  LIST_BUILD_PROFILE_WORKFLOWS: "listBuildProfileWorkflows",
-  LIST_BUILD_PROFILE_COMMITS: "listBuildProfileCommits",
-  LIST_BUILD_PROFILE_BUILDS_OF_COMMIT: "listBuildProfileBuildsOfCommit",
-  LIST_DISTRIBUTION_PROFILES: "listDistributionProfiles",
-  BUILD: "build",
-  DOWNLOAD: "download",
-  UPLOAD: "upload",
-  CREATE_DISTRIBUTION_PROFILE: "createDistributionProfile",
-  LIST_ENVIRONMENT_VARIABLE_GROUPS: "listEnvironmentVariableGroups",
-  CREATE_ENVIRONMENT_VARIABLE_GROUP: "createEnvironmentVariableGroup",
-  LIST_ENVIRONMENT_VARIABLES: "listEnvironmentVariables",
-  CREATE_ENVIRONMENT_VARIABLE: "createEnvironmentVariable",
-  LIST_ENTERPRISE_PROFILES: "listEnterpriseProfiles",
-  LIST_ENTERPRISE_APP_VERSIONS: "listEnterpriseAppVersions",
-  PUBLISH_ENTERPRISE_APP_VERSION: "publishEnterpriseAppVersion",
-  UNPUBLISH_ENTERPRISE_APP_VERSION: "unpublishEnterpriseAppVersion",
-  REMOVE_ENTERPRISE_APP_VERSION: "removeEnterpriseAppVersion",
-  NOTIFY_ENTERPRISE_APP_VERSION: "notifyEnterpriseAppVersion",
-  UPLOAD_ENTERPRISE_APP: "uploadEnterpriseApp",
-  UPLOAD_ENTERPRISE_APP_VERSION: "uploadEnterpriseAppVersion",
-  GET_ENTERPRISE_DOWNLOAD_LINK: "getEnterpriseDownloadLink",
-};
+export enum CommandTypes {
+  LOGIN = "login",
+  LIST_BUILD_PROFILES = "listBuildProfiles",
+  LIST_BUILD_PROFILE_BRANCHES = "listBuildProfileBranches",
+  LIST_BUILD_PROFILE_WORKFLOWS = "listBuildProfileWorkflows",
+  LIST_BUILD_PROFILE_COMMITS = "listBuildProfileCommits",
+  LIST_BUILD_PROFILE_BUILDS_OF_COMMIT = "listBuildProfileBuildsOfCommit",
+  LIST_DISTRIBUTION_PROFILES = "listDistributionProfiles",
+  BUILD = "build",
+  DOWNLOAD = "download",
+  UPLOAD = "upload",
+  CREATE_DISTRIBUTION_PROFILE = "createDistributionProfile",
+  LIST_ENVIRONMENT_VARIABLE_GROUPS = "listEnvironmentVariableGroups",
+  CREATE_ENVIRONMENT_VARIABLE_GROUP = "createEnvironmentVariableGroup",
+  LIST_ENVIRONMENT_VARIABLES = "listEnvironmentVariables",
+  CREATE_ENVIRONMENT_VARIABLE = "createEnvironmentVariable",
+  LIST_ENTERPRISE_PROFILES = "listEnterpriseProfiles",
+  LIST_ENTERPRISE_APP_VERSIONS = "listEnterpriseAppVersions",
+  PUBLISH_ENTERPRISE_APP_VERSION = "publishEnterpriseAppVersion",
+  UNPUBLISH_ENTERPRISE_APP_VERSION = "unpublishEnterpriseAppVersion",
+  REMOVE_ENTERPRISE_APP_VERSION = "removeEnterpriseAppVersion",
+  NOTIFY_ENTERPRISE_APP_VERSION = "notifyEnterpriseAppVersion",
+  UPLOAD_ENTERPRISE_APP = "uploadEnterpriseApp",
+  UPLOAD_ENTERPRISE_APP_VERSION = "uploadEnterpriseAppVersion",
+  GET_ENTERPRISE_DOWNLOAD_LINK = "getEnterpriseDownloadLink",
+}
 
 export const Commands: {
   command: string;
@@ -124,14 +124,14 @@ export const Commands: {
         name: "branch",
         description: "Branch",
         type: CommandParameterTypes.SELECT,
-        valueType: "uuid",
+        valueType: "string",
         params: [],
       },
       {
         name: "workflow",
         description: "Workflow",
         type: CommandParameterTypes.SELECT,
-        valueType: "uuid",
+        valueType: "string",
         params: [],
       },
     ],
