@@ -1,5 +1,6 @@
 import qs from "querystring";
 import fs from "fs";
+import path from "path";
 import FormData from "form-data";
 import axios, { AxiosRequestConfig } from "axios";
 import moment from "moment";
@@ -15,7 +16,7 @@ if (process.env.CURL_LOGGING) {
     if (getConsoleOutputType() === "json") {
       //Do nothing
       //console.log(JSON.stringify(curl));
-    }else{
+    } else {
       console.log(chalk.green(curl));
     }
     return config;
@@ -52,7 +53,7 @@ export async function getToken(options: OptionsType<{ pat: string }>) {
   return response.data;
 }
 
-export async function getDistributionProfiles(options: OptionsType) {
+export async function getDistributionProfiles(options: OptionsType = {}) {
   const distributionProfiles = await appcircleApi.get(`distribution/v2/profiles`, {
     headers: getHeaders(),
   });
@@ -90,7 +91,7 @@ export async function getTestingGroups(options: OptionsType) {
   return response.data;
 }
 
-export async function getBuildProfiles(options: OptionsType) {
+export async function getBuildProfiles(options: OptionsType = {}) {
   const buildProfiles = await appcircleApi.get(`build/v2/profiles`, {
     headers: getHeaders(),
   });
@@ -111,19 +112,28 @@ export async function getBuildsOfCommit(options: OptionsType<{ commitId: string 
   return commits.data;
 }
 
-export async function startBuild(options: OptionsType<{ profileId: string; branch: string; workflow: string }>) {
-  const branches = await getBranches({ profileId: options.profileId || "" });
-  const workflows = await getWorkflows({ profileId: options.profileId || "" });
-  const branchIndex = branches.findIndex((element: { [key: string]: any }) => element.name === options.branch);
-  const branchId = branches[branchIndex].id;
-  const workflowIndex = workflows.findIndex((element: { [key: string]: any }) => element.workflowName === options.workflow);
-  const workflowId = workflows[workflowIndex].id;
+export async function startBuild(
+  options: OptionsType<{ profileId: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string }>
+) {
+  let branchId = options.branchId || "";
+  let workflowId = options.workflowId || "";
+  let commitId = options.commitId || "";
 
-  const allCommitsByBranchId = await appcircleApi.get(`build/v2/commits?branchId=${branchId}`, {
-    headers: getHeaders(),
-  });
-  const latestCommitId = allCommitsByBranchId.data[0].id;
-  const buildResponse = await appcircleApi.post(`build/v2/commits/${latestCommitId}?workflowId=${workflowId}`, qs.stringify({ sample: "test" }), {
+  if (!branchId && options.branch) {
+    const branchesRes = await getBranches({ profileId: options.profileId || "" });
+    const branchIndex = branchesRes.branches.findIndex((element: { [key: string]: any }) => element.name === options.branch);
+    branchId = branchesRes.branches[branchIndex].id;
+  }
+  if (!workflowId && options.workflow) {
+    const workflowsRes = await getWorkflows({ profileId: options.profileId || "" });
+    const workflowIndex = workflowsRes.workflows.findIndex((element: { [key: string]: any }) => element.workflowName === options.workflow);
+    workflowId = workflowsRes.workflows[workflowIndex].id;
+  }
+  if (!commitId) {
+    const allCommitsByBranchId = await getCommits({ branchId });
+    commitId = allCommitsByBranchId[0].id;
+  }
+  const buildResponse = await appcircleApi.post(`build/v2/commits/${commitId}?workflowId=${workflowId}`, qs.stringify({ sample: "test" }), {
     headers: {
       ...getHeaders(),
       accept: "*/*",
@@ -133,7 +143,7 @@ export async function startBuild(options: OptionsType<{ profileId: string; branc
   return buildResponse.data;
 }
 
-export async function downloadArtifact(options: OptionsType<{ path: string; buildId: string; commitId: string }>, downloadPath: string) {
+export async function downloadArtifact(options: OptionsType<{ buildId: string; commitId: string }>, downloadPath: string) {
   const data = new FormData();
   data.append("Path", downloadPath);
   data.append("Build Id", options.buildId);
@@ -165,12 +175,12 @@ export async function downloadArtifact(options: OptionsType<{ path: string; buil
   });
 }
 
-export async function uploadArtifact(options: OptionsType<{ message: string; app: string; profileId: string }>) {
+export async function uploadArtifact(options: OptionsType<{ message: string; app: string; distProfileId: string }>) {
   const data = new FormData();
   data.append("Message", options.message);
   data.append("File", fs.createReadStream(options.app));
 
-  const uploadResponse = await appcircleApi.post(`distribution/v2/profiles/${options.profileId}/app-versions`, data, {
+  const uploadResponse = await appcircleApi.post(`distribution/v2/profiles/${options.distProfileId}/app-versions`, data, {
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
     headers: {
@@ -182,7 +192,7 @@ export async function uploadArtifact(options: OptionsType<{ message: string; app
   return uploadResponse.data;
 }
 
-export async function getEnvironmentVariableGroups(options: OptionsType) {
+export async function getEnvironmentVariableGroups(options: OptionsType = {}) {
   const environmentVariableGroups = await appcircleApi.get(`build/v1/variable-groups`, {
     headers: getHeaders(),
   });
@@ -210,7 +220,7 @@ export async function getEnvironmentVariables(options: OptionsType<{ variableGro
 async function createTextEnvironmentVariable(options: OptionsType<{ variableGroupId: string; value: string; isSecret: boolean; key: string }>) {
   const response = await appcircleApi.post(
     `build/v1/variable-groups/${options.variableGroupId}/variables`,
-    { Key: options.key, Value: options.value, IsSecret: options.isSecret },
+    { Key: options.key, Value: options.value, IsSecret: options.isSecret || "false" },
     {
       headers: getHeaders(),
     }
@@ -218,18 +228,16 @@ async function createTextEnvironmentVariable(options: OptionsType<{ variableGrou
   return response.data;
 }
 
-async function createFileEnvironmentVariable(
-  options: OptionsType<{ key: string; value: string; isSecret: boolean; filePath: string; variableGroupId: string }>
-) {
+async function createFileEnvironmentVariable(options: OptionsType<{ key: string; isSecret: boolean; filePath: string; variableGroupId: string }>) {
   const form = new FormData();
   const file = fs.createReadStream(options.filePath);
-
+  console.log("options.filePath): ", options.filePath);
   form.append("Key", options.key);
-  form.append("Value", options.value);
-  form.append("IsSecret", options.isSecret);
+  form.append("Value", path.basename(options.filePath));
+  form.append("IsSecret", options.isSecret || "false");
   form.append("Binary", file);
 
-  const uploadResponse = await appcircleApi.post(`/build/v1/variable-groups/${options.variableGroupId}/variables/files`, form, {
+  const uploadResponse = await appcircleApi.post(`build/v1/variable-groups/${options.variableGroupId}/variables/files`, form, {
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
     headers: {
@@ -252,20 +260,9 @@ export async function createEnvironmentVariable(
   }>
 ) {
   if (options.type === EnvironmentVariableTypes.FILE) {
-    return createFileEnvironmentVariable({
-      variableGroupId: options.variableGroupId,
-      key: options.key,
-      value: options.value,
-      filePath: options.filePath,
-      isSecret: options.isSecret,
-    });
-  } else if (options.type && options.type === EnvironmentVariableTypes.TEXT) {
-    return createTextEnvironmentVariable({
-      variableGroupId: options.variableGroupId,
-      key: options.key,
-      value: options.value,
-      isSecret: options.isSecret,
-    });
+    return createFileEnvironmentVariable(options);
+  } else if (!options.type || options.type === EnvironmentVariableTypes.TEXT) {
+    return createTextEnvironmentVariable(options);
   } else if (options.type) {
     throw new Error("Environment variable type not found");
   }
@@ -285,24 +282,14 @@ export async function getWorkflows(options: OptionsType<{ profileId: string }>) 
   return workflowResponse.data;
 }
 
+/*
 export async function getBuildTaskStatus(options: OptionsType<{ latestCommitId: string; taskId: string }>) {
   const taskStatus = await appcircleApi.get(`build/v2/commits/${options.latestCommitId}/builds/${options.taskId}/status`, {
     headers: getHeaders(),
   });
   return taskStatus.data;
 }
-
-/**
- * Handles an error and logs it based on the given options.
- *
- * @param {unknown} error - The error to be handled.
- * @param {OptionsType} options - The options for logging the error. (default: {})
- * @return {void}
- */
-
-function removeHttp(url: string) {
-  return url.replace(/(^\w+:|^)\/\//, "");
-}
+*/
 
 export async function getEnterpriseProfiles(options: OptionsType = {}) {
   const buildProfiles = await appcircleApi.get(`store/v2/profiles`, {

@@ -14,7 +14,7 @@ export const createProgram = () => {
 
   Commands.forEach((command) => {
     let comandPrg = program.command(command.command).description(command.description);
-    command.params.forEach((param) => {
+    command.params.filter(p => !p.requriedForInteractiveMode).forEach((param) => {
       param.required !== false
         ? comandPrg.requiredOption(`--${param.name} <${param.valueType}>`, param.description)
         : comandPrg.option(`--${param.name} <${param.valueType}>`, param.description);

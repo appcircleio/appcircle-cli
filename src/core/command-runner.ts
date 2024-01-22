@@ -75,7 +75,7 @@ export const runCommand = async (command: ProgramCommand) => {
       break;
     }
     case CommandTypes.BUILD: {
-      const spinner = createOra(`Try to start a new build with ${params.workflow}`).start();
+      const spinner = createOra(`Try to start a new build`).start();
       try {
         responseData = await startBuild(params);
         commandWriter(CommandTypes.BUILD, responseData);
@@ -83,6 +83,7 @@ export const runCommand = async (command: ProgramCommand) => {
         spinner.succeed();
       } catch (e) {
         spinner.fail("Build failed");
+        throw e;
       }
       break;
     }

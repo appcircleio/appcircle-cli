@@ -1,7 +1,8 @@
 import ora from "ora";
+import { getConsoleOutputType } from "../config";
 
-export const createOra = (message: string, options: { output?: "plain" | "json" } = {}) => {
-  if (options.output === "json") {
+export const createOra = (message: string) => {
+  if (getConsoleOutputType() === "json") {
     return {
       fail: () => {},
       succeed: () => {},

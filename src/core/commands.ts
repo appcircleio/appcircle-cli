@@ -38,7 +38,17 @@ export enum CommandTypes {
 export const Commands: {
   command: string;
   description: string;
-  params: { name: string; description: string; type: string; valueType: string; required?: boolean; params?: any }[];
+  params: {
+    name: string;
+    description: string;
+    type: string;
+    valueType: string;
+    required?: boolean;
+    params?: any;
+    requriedForInteractiveMode?: boolean;
+    paramType?: string;
+    defaultValue?: any;
+  }[];
 }[] = [
   {
     command: CommandTypes.LOGIN,
@@ -64,7 +74,7 @@ export const Commands: {
       {
         name: "profileId",
         description: "Build profile ID",
-        type: CommandParameterTypes.STRING,
+        type: CommandParameterTypes.SELECT,
         valueType: "uuid",
       },
     ],
@@ -76,7 +86,7 @@ export const Commands: {
       {
         name: "profileId",
         description: "Build profile ID",
-        type: CommandParameterTypes.STRING,
+        type: CommandParameterTypes.SELECT,
         valueType: "uuid",
       },
     ],
@@ -86,9 +96,16 @@ export const Commands: {
     description: "Get list of commits of a branch",
     params: [
       {
+        name: "profileId",
+        description: "Build profile ID",
+        type: CommandParameterTypes.SELECT,
+        requriedForInteractiveMode: true,
+        valueType: "uuid",
+      },
+      {
         name: "branchId",
         description: "Branch ID",
-        type: CommandParameterTypes.STRING,
+        type: CommandParameterTypes.SELECT,
         valueType: "uuid",
       },
     ],
@@ -98,9 +115,23 @@ export const Commands: {
     description: "Get list of builds of a commit",
     params: [
       {
+        name: "profileId",
+        description: "Build profile ID",
+        type: CommandParameterTypes.SELECT,
+        requriedForInteractiveMode: true,
+        valueType: "uuid",
+      },
+      {
+        name: "branchId",
+        description: "Branch ID",
+        type: CommandParameterTypes.SELECT,
+        requriedForInteractiveMode: true,
+        valueType: "uuid",
+      },
+      {
         name: "commitId",
         description: "Commit ID",
-        type: CommandParameterTypes.STRING,
+        type: CommandParameterTypes.SELECT,
         valueType: "uuid",
       },
     ],
@@ -117,21 +148,47 @@ export const Commands: {
       {
         name: "profileId",
         description: "Build profile ID",
-        type: CommandParameterTypes.STRING,
+        type: CommandParameterTypes.SELECT,
         valueType: "uuid",
       },
       {
-        name: "branch",
-        description: "Branch",
+        name: "branchId",
+        description: "Branch ID",
         type: CommandParameterTypes.SELECT,
         valueType: "string",
+        required: false,
+        params: [],
+      },
+      {
+        name: "commitId",
+        description: "Commit ID",
+        type: CommandParameterTypes.SELECT,
+        valueType: "string",
+        required: false,
+        params: [],
+      },
+      {
+        name: "workflowId",
+        description: "Workflow ID",
+        type: CommandParameterTypes.SELECT,
+        valueType: "string",
+        required: false,
+        params: [],
+      },
+      {
+        name: "branch",
+        description: "Branch Name",
+        type: 'string',
+        valueType: "string",
+        required: false,
         params: [],
       },
       {
         name: "workflow",
-        description: "Workflow",
-        type: CommandParameterTypes.SELECT,
+        description: "Workflow Name",
+        type: 'string',
         valueType: "string",
+        required: false,
         params: [],
       },
     ],
@@ -148,15 +205,30 @@ export const Commands: {
         required: false,
       },
       {
+        name: "profileId",
+        description: "Build profile ID",
+        type: CommandParameterTypes.SELECT,
+        requriedForInteractiveMode: true,
+        valueType: "uuid",
+      },
+      {
+        name: "branchId",
+        description: "Branch ID",
+        type: CommandParameterTypes.SELECT,
+        valueType: "string",
+        requriedForInteractiveMode: true,
+        params: [],
+      },
+      {
         name: "commitId",
         description: "Commit ID of your build",
-        type: CommandParameterTypes.STRING,
+        type: CommandParameterTypes.SELECT,
         valueType: "uuid",
       },
       {
         name: "buildId",
-        description: "Build ID of your commit. This can be retrieved from builds of commit",
-        type: CommandParameterTypes.STRING,
+        description: "Build ID",
+        type: CommandParameterTypes.SELECT,
         valueType: "uuid",
       },
     ],
@@ -166,10 +238,10 @@ export const Commands: {
     description: "Upload your mobile app to selected distribution profile",
     params: [
       {
-        name: "app",
-        description: "App path",
-        type: CommandParameterTypes.STRING,
-        valueType: "path",
+        name: "distProfileId",
+        description: "Distribution profile ID",
+        type: CommandParameterTypes.SELECT,
+        valueType: "uuid",
       },
       {
         name: "message",
@@ -178,10 +250,10 @@ export const Commands: {
         valueType: "string",
       },
       {
-        name: "profileId",
-        description: "Distribution profile ID",
+        name: "app",
+        description: "App path",
         type: CommandParameterTypes.STRING,
-        valueType: "uuid",
+        valueType: "path",
       },
     ],
   },
@@ -221,7 +293,7 @@ export const Commands: {
       {
         name: "variableGroupId",
         description: "Variable Groups ID",
-        type: CommandParameterTypes.STRING,
+        type: CommandParameterTypes.SELECT,
         valueType: "uuid",
       },
     ],
@@ -230,6 +302,12 @@ export const Commands: {
     command: CommandTypes.CREATE_ENVIRONMENT_VARIABLE,
     description: "Create a file or text environment variable",
     params: [
+      {
+        name: "variableGroupId",
+        description: "Variable group ID",
+        type: CommandParameterTypes.SELECT,
+        valueType: "uuid",
+      },
       {
         name: "type",
         description: "Type",
@@ -251,12 +329,7 @@ export const Commands: {
         description: "Secret",
         type: CommandParameterTypes.BOOLEAN,
         valueType: "boolean",
-      },
-      {
-        name: "variableGroupId",
-        description: "Variable group ID",
-        type: CommandParameterTypes.STRING,
-        valueType: "uuid",
+        required: false,
       },
       {
         name: "key",
@@ -266,15 +339,19 @@ export const Commands: {
       },
       {
         name: "value",
-        description: `Key Value (You can skip this if you selected type of ${chalk.hex(APPCIRCLE_COLOR)("file")})`,
+        description: `Key Value`,
         type: CommandParameterTypes.STRING,
         valueType: "string",
+        required: false,
+        paramType: 'text'
       },
       {
         name: "filePath",
-        description: `File path (You can skip this if you selected type of ${chalk.hex(APPCIRCLE_COLOR)("text")})`,
+        description: `File Path`,
         type: CommandParameterTypes.STRING,
         valueType: "string",
+        required: false,
+        paramType: 'file'
       },
     ],
   },
@@ -295,8 +372,23 @@ export const Commands: {
       },
       {
         name: "publishType",
-        description: "[OPTIONAL] Publish Type Empty,0=All,1=Beta,2=Live",
-        type: CommandParameterTypes.STRING,
+        description: "Publish Type Empty,0=All,1=Beta,2=Live",
+        type: CommandParameterTypes.SELECT,
+        defaultValue: "0",
+        params: [
+          {
+            name: "0",
+            message: "All",
+          },
+          {
+            name: "1",
+            message: "Beta",
+          },
+          {
+            name: "2",
+            message: "Live",
+          },
+        ],
         required: false,
         valueType: "number",
       },
@@ -333,7 +425,22 @@ export const Commands: {
       {
         name: "publishType",
         description: "Publish Type 0=None,1=Beta,2=Live",
-        type: CommandParameterTypes.STRING,
+        type: CommandParameterTypes.SELECT,
+        defaultValue: "0",
+        params: [
+          {
+            name: "0",
+            message: "None",
+          },
+          {
+            name: "1",
+            message: "Beta",
+          },
+          {
+            name: "2",
+            message: "Live",
+          },
+        ],
         valueType: "number",
       },
     ],
