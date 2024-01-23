@@ -69,8 +69,8 @@ CURL_LOGGING= appcircle
         appcircle config set API_HOSTNAME https://api.your.appcircle.io
         appcircle config set AUTH_HOSTNAME https://auth.your.appcircle.io
 
-- You can change current configuration enviroment using `appcircle config current default`
-- You can set all these settings via interactive mode `appcircle -i`
+- Change current configuration enviroment using `appcircle config current default`
+- Set all these settings via interactive mode `appcircle -i`
 - Print help of config command `appcircle config -h` 
 
 ## How to Connect your Appcircle Account within CLI?
