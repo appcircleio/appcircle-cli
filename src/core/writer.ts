@@ -8,7 +8,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
 
   [CommandTypes.CONFIG]: (data: any) => {
     
-  }
+  },
   [CommandTypes.LOGIN]: (data: any) => {
     console.log(chalk.italic(`export AC_ACCESS_TOKEN="${data.access_token}"\n`));
     console.info(

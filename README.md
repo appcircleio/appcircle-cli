@@ -30,7 +30,8 @@ Below is the list of commands currently supported by Appcircle CLI:
 
 | Command                                                                                                                     | Description                                             |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `appcircle`                                                                                                                 | AppCircle GUI                                           |
+| `appcircle  (-i, --interactive)`                                                                                                                 | AppCircle GUI                                           |
+| `appcircle config <action> [options]`                                                                                                   | View and edit Appcircle CLI properties                     |
 | `appcircle login [--pat]`                                                                                                   | Get an access token for the session                     |
 | `appcircle listBuildProfiles`                                                                                               | Get the list of build profiles                          |
 | `appcircle listDistributionProfiles`                                                                                        | Get the list of distribution profiles                   |
@@ -61,6 +62,16 @@ Example:
 ```
 CURL_LOGGING= appcircle
 ```
+## How to Configure your Appcircle CLI environment?
+- Using the Appcircle CLI, add your custom configuration for self-hosted Appcircle
+
+        appcircle config add self_env
+        appcircle config set API_HOSTNAME https://api.your.appcircle.io
+        appcircle config set AUTH_HOSTNAME https://auth.your.appcircle.io
+
+- You can change current configuration enviroment using `appcircle config current default`
+- You can set all these settings via interactive mode `appcircle -i`
+- Print help of config command `appcircle config -h` 
 
 ## How to Connect your Appcircle Account within CLI?
 - [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication)

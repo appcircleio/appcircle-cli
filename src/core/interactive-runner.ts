@@ -3,7 +3,7 @@ import chalk from "chalk";
 import ora from "ora";
 import moment from "moment";
 //@ts-ignore https://github.com/enquirer/enquirer/issues/212
-import { prompt, Select, BooleanPrompt } from "enquirer";
+import { prompt, Select, AutoComplete, BooleanPrompt } from "enquirer";
 import { runCommand } from "./command-runner";
 import { Commands, CommandParameterTypes } from "./commands";
 import { APPCIRCLE_COLOR } from "../constant";
@@ -119,9 +119,10 @@ export const runCommandsInteractively = async () => {
     )
   );
 
-  const commandSelect = new Select({
+  const commandSelect = new AutoComplete({
     name: "command",
-    message: "What do you want to do?",
+    message: `What do you want to do?${` (${Commands.length} Options)`}`,
+    limit: 10,
     choices: [...Commands.map((command, index) => `${index + 1}. ${command.description}`)],
   });
 
@@ -280,10 +281,11 @@ export const runCommandsInteractively = async () => {
         //@ts-ignore
         params[param.name] = await booleanPrompt.run();
       } else if (param.type === CommandParameterTypes.SELECT) {
-        const selectPrompt = new Select({
+        const selectPrompt = new AutoComplete({
           name: param.name,
-          message: param.description,
+          message: `${param.description}${param.params.length > 10 ?` (${param.params.length} Options)`: ''}`,
           initial: param.defaultValue,
+          limit: 10,
           choices: [
             //@ts-ignore
             ...param.params.map((val: any) => val),
