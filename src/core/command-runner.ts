@@ -1,7 +1,19 @@
 import path from "path";
 import os from "os";
 import { CommandTypes } from "./commands";
-import { writeVariable, EnvironmentVariables } from "../config";
+import {
+  EnvironmentVariables,
+  addNewConfigVariable,
+  clearConfigs,
+  getConfigFilePath,
+  getConfigStore,
+  getConsoleOutputType,
+  getCurrentConfigVariable,
+  getEnviromentsConfigToWriting,
+  readEnviromentConfigVariable,
+  setCurrentConfigVariable,
+  writeEnviromentConfigVariable,
+} from "../config";
 import { createOra } from "../utils/orahelper";
 import { ProgramCommand } from "../program";
 import {
@@ -30,17 +42,67 @@ import {
   uploadEnterpriseAppVersion,
   getEnterpriseDownloadLink,
 } from "../services";
-import { commandWriter } from "./writer";
+import { commandWriter, configWriter } from "./writer";
+
+const handleConfigCommand = (command: ProgramCommand) => {
+  const action = command.name();
+  const key = (command.args()[0] || "");
+  if (action === "list") {
+    const store = getConfigStore();
+    if (getConsoleOutputType() === "json") {
+      configWriter(store);
+    } else {
+      configWriter({ "current": store.current, path: getConfigFilePath() });
+      configWriter(getEnviromentsConfigToWriting());
+    }
+  } else if (action === "set") {
+    writeEnviromentConfigVariable(key, command.args()[1]);
+    configWriter({ [key]: readEnviromentConfigVariable(key)});
+  } else if (action === "get") {
+    configWriter({ [key]: readEnviromentConfigVariable(key)});
+  }  else if (action === "current") {
+    const store = getConfigStore();
+    if(key){
+      if(store.envs[key]){
+        setCurrentConfigVariable(key);
+        configWriter({ "current": getCurrentConfigVariable() });
+      }else{
+        throw new Error("Config command 'current' action requires a valid value");
+      }
+    }else{
+      throw new Error("Config command 'current' action requires a value");
+    }
+  }else if (action === "add") {
+    if(key){
+      addNewConfigVariable(key);
+      configWriter({ "current": getCurrentConfigVariable() });
+      configWriter(getEnviromentsConfigToWriting());
+    }else{
+      throw new Error("Config command 'add' action requires a value(key)");
+    }
+  }else if (action === "reset") {
+      clearConfigs()
+      configWriter({ "current": getCurrentConfigVariable() });
+      configWriter(getEnviromentsConfigToWriting());
+  }else {
+    throw new Error("Config command action not found");
+  }
+};
 
 export const runCommand = async (command: ProgramCommand) => {
   const params = command.opts() as any;
   const commandName = command.name();
   let responseData;
+  
+
+  if(command.parent?.name() === 'config'){
+    return handleConfigCommand(command);
+  }
 
   switch (commandName) {
     case CommandTypes.LOGIN: {
       responseData = await getToken(params);
-      writeVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
+      writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
       commandWriter(CommandTypes.LOGIN, responseData);
       break;
     }
@@ -211,9 +273,13 @@ export const runCommand = async (command: ProgramCommand) => {
       commandWriter(CommandTypes.GET_ENTERPRISE_DOWNLOAD_LINK, responseData);
       break;
     }
-    default: {
-      console.error("Command not found");
+    case "config":
+      handleConfigCommand(command);
       break;
+    default: {
+      console.log('Coomd: ', command.name(), command.args())
+      console.error("Command not found");
+      process.exit(1);
     }
   }
 };

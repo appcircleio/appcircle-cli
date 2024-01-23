@@ -19,6 +19,87 @@ import {
   getDistributionProfiles,
   getEnvironmentVariableGroups,
 } from "../services";
+import { DefaultEnvironmentVariables, getConfigStore } from "../config";
+
+const prepareConfigCommand = async () => {
+  const commandSelect = new Select({
+    name: "action",
+    message: "Which action do you want?",
+    choices: [
+      { name: "list", message: "1. List (List CLI properties for all configurations)" },
+      { name: "get", message: "2. Get (Print the value of an CLI currently active configuration property)" },
+      { name: "set", message: "3. Set (Set a CLI currently active configuration property)" },
+      { name: "current", message: "4. Current (Set a CLI currently active configuration property)" },
+      { name: "add", message: "5. Add (Add a new CLI configuration environment)" },
+      { name: "reset", message: "6. Reset (Reset a CLI configuration to default)" },
+    ],
+  });
+  const action = await commandSelect.run();
+
+  const configActionCommandArgs = [] as string[];
+  const configActionCommand = {
+    parent: { name: () => "config", args: () => [], opts: () => ({}) },
+    name: () => action,
+    args: () => configActionCommandArgs,
+    opts: () => ({}),
+  };
+
+  const keySelect = async (questionStr: string = "Key") => {
+    const keySelect = new Select({
+      name: "action",
+      message: questionStr,
+      choices: Object.keys(DefaultEnvironmentVariables),
+    });
+    const key = await keySelect.run();
+    configActionCommandArgs.push(key);
+  };
+
+  const valueInput = async () => {
+    const valueResponse = (await prompt({
+      type: "input",
+      name: "value",
+      message: "Value",
+    })) as any;
+    configActionCommandArgs.push(valueResponse.value as string);
+  };
+
+  const envSelect = async (questionStr: string = "Which key do you want?") => {
+    const envSelect = new Select({
+      name: "action",
+      message: "Environment",
+      choices: Object.keys(getConfigStore().envs),
+    });
+    const key = await envSelect.run();
+    configActionCommandArgs.push(key);
+  };
+
+  let args = [];
+  switch (action) {
+    case "reset":
+    case "list": {
+      break;
+    }
+    case "get": {
+      await keySelect();
+      break;
+    }
+    case "set": {
+      await keySelect();
+      await valueInput();
+      break;
+    }
+    case "current": {
+      await envSelect();
+      break;
+    }
+    case "add": {
+      await valueInput();
+      break;
+    }
+  }
+  return configActionCommand;
+};
+
 export const runCommandsInteractively = async () => {
   let params: any = {};
   let selectedCommand: (typeof Commands)[number];
@@ -44,9 +125,14 @@ export const runCommandsInteractively = async () => {
     choices: [...Commands.map((command, index) => `${index + 1}. ${command.description}`)],
   });
 
-  selectedCommandDescription = await commandSelect.run();
-  selectedCommandIndex = Number(selectedCommandDescription.split(".")[0]) - 1;
+  selectedCommandIndex = Number((await commandSelect.run()).split(".")[0]) - 1;
   selectedCommand = Commands[selectedCommandIndex];
+
+  //Selected command is equal config
+  if (selectedCommandIndex === 0) {
+    const configActionCommand = await prepareConfigCommand();
+    return runCommand(configActionCommand);
+  }
 
   for (let param of selectedCommand.params) {
     if (param.name === "branchId") {
@@ -208,5 +294,5 @@ export const runCommandsInteractively = async () => {
     }
   }
   // debug console.log("params:", params);
-  runCommand({ name: () => selectedCommand.command, args: [], opts: () => params });
+  runCommand({ name: () => selectedCommand.command, opts: () => params, args: () => Object.values(params) });
 };

@@ -6,7 +6,7 @@ import axios, { AxiosRequestConfig } from "axios";
 import moment from "moment";
 import chalk from "chalk";
 import CurlHelper from "../utils/curlhelper";
-import { readVariable, EnvironmentVariables, getConsoleOutputType } from "../config";
+import { readEnviromentConfigVariable, EnvironmentVariables, getConsoleOutputType } from "../config";
 import { EnvironmentVariableTypes } from "../constant";
 
 if (process.env.CURL_LOGGING) {
@@ -23,8 +23,8 @@ if (process.env.CURL_LOGGING) {
   });
 }
 
-const API_HOSTNAME = readVariable(EnvironmentVariables.API_HOSTNAME);
-const AUTH_HOSTNAME = readVariable(EnvironmentVariables.AUTH_HOSTNAME);
+const API_HOSTNAME = readEnviromentConfigVariable(EnvironmentVariables.API_HOSTNAME);
+const AUTH_HOSTNAME = readEnviromentConfigVariable(EnvironmentVariables.AUTH_HOSTNAME);
 
 const appcircleApi = axios.create({
   baseURL: API_HOSTNAME.endsWith("/") ? API_HOSTNAME : `${API_HOSTNAME}/`,
@@ -36,7 +36,7 @@ function getHeaders(withToken = true): AxiosRequestConfig["headers"] {
     "User-Agent": "Appcircle CLI/1.0.3",
   };
   if (withToken) {
-    response.Authorization = `Bearer ${readVariable(EnvironmentVariables.AC_ACCESS_TOKEN)}`;
+    response.Authorization = `Bearer ${readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN)}`;
   }
   return response;
 }

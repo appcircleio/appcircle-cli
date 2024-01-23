@@ -5,6 +5,10 @@ import moment from "moment";
 import { getConsoleOutputType } from "../config";
 
 const writersMap: { [key in CommandTypes]: (data: any) => void } = {
+
+  [CommandTypes.CONFIG]: (data: any) => {
+    
+  }
   [CommandTypes.LOGIN]: (data: any) => {
     console.log(chalk.italic(`export AC_ACCESS_TOKEN="${data.access_token}"\n`));
     console.info(
@@ -220,5 +224,13 @@ export const commandWriter = (command: CommandTypes, data: any) => {
     if (writer) {
       writer(data);
     }
+  }
+};
+
+export const configWriter = (config: any) => {
+  if (getConsoleOutputType() === "json") {
+    console.log(JSON.stringify(config));
+  } else {
+    console.table(config);
   }
 };

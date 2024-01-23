@@ -9,6 +9,7 @@ export const CommandParameterTypes = {
 };
 
 export enum CommandTypes {
+  CONFIG = "config",
   LOGIN = "login",
   LIST_BUILD_PROFILES = "listBuildProfiles",
   LIST_BUILD_PROFILE_BRANCHES = "listBuildProfileBranches",
@@ -38,6 +39,7 @@ export enum CommandTypes {
 export const Commands: {
   command: string;
   description: string;
+  ignore?: boolean;
   params: {
     name: string;
     description: string;
@@ -50,6 +52,12 @@ export const Commands: {
     defaultValue?: any;
   }[];
 }[] = [
+  {
+    command: CommandTypes.CONFIG,
+    ignore: true,
+    description: "Config",
+    params: [],
+  },
   {
     command: CommandTypes.LOGIN,
     description: "Login",
@@ -178,7 +186,7 @@ export const Commands: {
       {
         name: "branch",
         description: "Branch Name",
-        type: 'string',
+        type: "string",
         valueType: "string",
         required: false,
         params: [],
@@ -186,7 +194,7 @@ export const Commands: {
       {
         name: "workflow",
         description: "Workflow Name",
-        type: 'string',
+        type: "string",
         valueType: "string",
         required: false,
         params: [],
@@ -343,7 +351,7 @@ export const Commands: {
         type: CommandParameterTypes.STRING,
         valueType: "string",
         required: false,
-        paramType: 'text'
+        paramType: "text",
       },
       {
         name: "filePath",
@@ -351,7 +359,7 @@ export const Commands: {
         type: CommandParameterTypes.STRING,
         valueType: "string",
         required: false,
-        paramType: 'file'
+        paramType: "file",
       },
     ],
   },

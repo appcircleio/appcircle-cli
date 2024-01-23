@@ -1,11 +1,7 @@
 /**
  * Implements CRUD options from a file. Replaces the usage of a database, acts like environment variables.
  */
-import fs from "fs";
-import jsonfile from "jsonfile";
-import path from "path";
-
-const FILE_NAME = "../data.json";
+import Conf from "conf";
 
 /**
  * This variable exists only to specify which environment variables are being used.
@@ -14,67 +10,79 @@ export enum EnvironmentVariables {
   AC_ACCESS_TOKEN = "AC_ACCESS_TOKEN",
   API_HOSTNAME = "API_HOSTNAME",
   AUTH_HOSTNAME = "AUTH_HOSTNAME",
-  OUTPUT = "plain",
 }
 
-const DefaultEnvironmentVariables = {
+export const DefaultEnvironmentVariables = {
   API_HOSTNAME: "https://api.appcircle.io",
   AUTH_HOSTNAME: "https://auth.appcircle.io",
   AC_ACCESS_TOKEN: "",
 };
 
-export type ConsoleOutputType = "json" | "plain"
+const config = new Conf<{ current: string; envs: { [key: string]: typeof DefaultEnvironmentVariables } }>({
+  defaults: { current: "default", envs: { default: DefaultEnvironmentVariables } },
+});
+
+export type ConsoleOutputType = "json" | "plain";
 
 let output_type = (process.env.CONSOLE_OUTPUT_TYPE || "plain") as ConsoleOutputType;
 
-export const setConsoleOutputType = (type:ConsoleOutputType) => {
+export const setConsoleOutputType = (type: ConsoleOutputType) => {
   output_type = type;
 };
 export const getConsoleOutputType = () => {
   return output_type;
 };
 
-export function writeVariable(variable: EnvironmentVariables, value: string): void {
-  const currentPath = path.join(__dirname, "", FILE_NAME);
+export function getConfigStore(): any {
+  return { ...config.store };
+}
+
+export function getConfigFilePath(): any {
+  return config.path;
+}
+
+
+export function getCurrentConfigVariable(): string {
+  return config.get('current') || 'default';
+}
+
+export function setCurrentConfigVariable(val: string = 'default'): void {
+  config.set('current', val);
+}
+
+
+export function addNewConfigVariable(val: string = 'new'): void {
+  config.set('current', val);
+  config.set(`envs.${val}`, DefaultEnvironmentVariables);
+}
+
+export const getEnviromentsConfigToWriting = () => {
+  let resEnvs = {} as any;
+  Object.keys(config.store.envs).forEach( (key) => {
+    resEnvs[key]  = { ...config.store.envs[key], AC_ACCESS_TOKEN: (config.store.envs[key].AC_ACCESS_TOKEN||'').substring(0,10)+"..." };
+  });
+  return resEnvs;
+}
+
+export function writeEnviromentConfigVariable(variable: EnvironmentVariables, value: string): void {
+  const current = config.get('current') || 'default';
   try {
-    const currentData = jsonfile.readFileSync(currentPath);
-    currentData[variable] = value;
-    jsonfile.writeFile(currentPath, currentData, { flag: "w+" });
+    config.set(`envs.${current}.${variable}`, value);
   } catch {
-    console.error("Could not write variable to the file.");
+    console.error("Could not write variable to the config file.");
   }
 }
 
-export function readVariable(variable: EnvironmentVariables): string {
-  const currentPath = path.join(__dirname, "", FILE_NAME);
+export function readEnviromentConfigVariable(variable: EnvironmentVariables): string {
+  const current = config.get('current') || 'default';
   try {
-    const currentData = jsonfile.readFileSync(currentPath);
-    return currentData[variable] || "";
+    return config.get(`envs.${current}.${variable}`) || "";
   } catch {
     console.error("Could not read data, returning empty.");
     return "";
   }
 }
 
-/**
- * Prioritizes environment variables over the file contents.
- */
-function initializeFile() {
-  const currentPath = path.join(__dirname, "", FILE_NAME);
-  let currentData = { ...DefaultEnvironmentVariables };
-  if (fs.existsSync(currentPath)) {
-    try {
-      currentData = jsonfile.readFileSync(currentPath);
-    } catch (e) {
-      console.info("Corrupted data.json file, rewriting it...");
-    }
-  }
-  for (const key in EnvironmentVariables) {
-    (currentData as any)[key] = process.env[key] || (currentData as any)[key] || (DefaultEnvironmentVariables as any)[key];
-  }
-  jsonfile.writeFileSync(currentPath, currentData, { flag: "w+" });
+export function clearConfigs() {
+  config.clear();
 }
-
-(async () => {
-  initializeFile();
-})();
