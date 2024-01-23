@@ -10,7 +10,8 @@
     "watch": "rm -rf dist && tsc -w",
     "build": "rm -rf dist && tsc",
     "postversion": "git push && git push --tags",
-    "postuninstall": "node ./scripts/appcircle-uninstall.js"
+    "postuninstall": "node ./scripts/appcircle-uninstall.js",
+    "check:package": "zx ./scripts/check-package.mjs"
   },
   "repository": {
     "type": "git",
@@ -53,6 +54,7 @@
     "@types/jsonfile": "^6.0.0",
     "@types/minimist": "^1.2.1",
     "@types/node": "^15.12.5",
-    "typescript": "^4.3.4"
+    "typescript": "^4.3.4",
+    "zx": "^7.2.3"
   }
 }
