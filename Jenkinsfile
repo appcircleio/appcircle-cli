@@ -5,13 +5,15 @@ pipeline {
 
     stages {
 
-        stage ("Info") {
-            echo '$tag'
-            echo 'env'
-            load "$JENKINS_HOME/jobvars.env"
-            echo "$JENKINS_HOME/jobvars.env"
-            sh 'npm install yarn -g'
-            sh 'yarn'
+        stage('Info') {
+            steps {
+                echo '$tag'
+                echo 'env'
+                load "$JENKINS_HOME/jobvars.env"
+                echo "$JENKINS_HOME/jobvars.env"
+                sh 'npm install yarn -g'
+                sh 'yarn'
+            }
         }
 
         stage('Publish for Beta') { 
