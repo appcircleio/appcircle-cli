@@ -8,9 +8,7 @@ pipeline {
         stage('Info') {
             steps {
                 echo '$tag'
-                echo 'env'
-                load "$JENKINS_HOME/jobvars.env"
-                echo "$JENKINS_HOME/jobvars.env"
+                sh 'env'
                 sh 'npm install yarn -g'
                 sh 'yarn'
             }
