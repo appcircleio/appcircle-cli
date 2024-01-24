@@ -2,13 +2,12 @@ pipeline {
 
     agent { label 'agent'}
 
-    tools {nodejs "Node18"}
-
     stages {
 
         stage('Info') {
             steps {
-                echo '$tag'
+                echo '${tag}'
+                 echo '${branch}'
                 sh 'env'
                 sh 'npm install yarn -g'
                 sh 'yarn'
