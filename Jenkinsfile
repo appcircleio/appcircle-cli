@@ -22,10 +22,12 @@ pipeline {
                 echo 'Run "npm publish --tag beta"'
             }
         }
+        /*
         stage('Prepare') {
             sh "npm install -g yarn"
             sh "yarn install"
         }
+        */
 
         stage('Yarn build') { 
             steps {
