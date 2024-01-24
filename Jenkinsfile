@@ -2,6 +2,7 @@ pipeline {
 
     agent { label 'agent'}
 
+    tools {nodejs "Node18"}
 
     stages {
 
