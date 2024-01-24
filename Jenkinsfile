@@ -10,7 +10,7 @@ pipeline {
 
         stage('Info') {
             steps {
-                eecho'${NPM_AUTH_TOKEN}'
+                echo'${NPM_AUTH_TOKEN}'
                 echo '${tag}'
                 echo '${branch}'
                 sh 'env'
