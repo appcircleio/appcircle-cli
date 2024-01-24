@@ -2,12 +2,17 @@ pipeline {
 
     agent { label 'agent'}
 
+    environment {
+        NPM_AUTH_TOKEN     = credentials('b85730d0-5596-41f7-9592-f70a6ccf99db')
+    }
+
     stages {
 
         stage('Info') {
             steps {
+                eecho'${NPM_AUTH_TOKEN}'
                 echo '${tag}'
-                 echo '${branch}'
+                echo '${branch}'
                 sh 'env'
                 sh 'npm install yarn -g'
                 sh 'yarn'
