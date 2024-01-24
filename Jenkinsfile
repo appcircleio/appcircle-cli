@@ -1,5 +1,8 @@
 pipeline {
 
+    agent { label 'agent'}
+
+
     stages {
 
         stage('Publish for Beta') { 
