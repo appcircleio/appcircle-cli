@@ -4,9 +4,7 @@ COPY yarn.lock .
 COPY package.json .
 RUN yarn install
 COPY . .
-#RUN yarn run check:package
-#RUN yarn run build
+RUN yarn run check:package
+RUN yarn run build
 ARG NPM_AUTH_TOKEN
 RUN echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" >> ~/.npmrc
-
-ENTRYPOINT sh

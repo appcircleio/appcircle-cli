@@ -115,9 +115,16 @@ CURL_LOGGING= appcircle
 
 - Docker image is for building and publishing the application anywhere.
 
-- For building and publishing the application:
+- For building and publishing the application to the beta channgel:
 
 ```bash
-docker image build -t ac-cli --build-arg NPM_AUTH_TOKEN=abcd . && \
-docker run --rm -it ac-cli
+docker image build -t ac-cli --build-arg NPM_AUTH_TOKEN=abcd .
+docker run --rm ac-cli npm publish --tag beta
+```
+
+- For building and publishing the application to the production:
+
+```bash
+docker image build -t ac-cli --build-arg NPM_AUTH_TOKEN=abcd .
+docker run --rm ac-cli npm publish
 ```
