@@ -11,7 +11,6 @@ pipeline {
                     # shellcheck shell=bash
                     set -euo pipefail
 
-                    export NPM_AUTH_TOKEN=abcd
                     echo "Tag: ${tag}"
                     echo "Branch: ${branch}"
                     echo "Npm token: ${NPM_AUTH_TOKEN}"
