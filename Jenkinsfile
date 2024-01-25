@@ -5,7 +5,7 @@ pipeline {
     stages {
 
         stage('Publish for Beta') {
-            when {tag '*-beta'}
+            when {tag '*-beta*'}
             steps {
                 withCredentials([string(credentialsId: 'NPM_AUTH_TOKEN', variable: 'NPM_AUTH_TOKEN')]) {
                     sh '''#!/bin/bash
