@@ -2,20 +2,20 @@ pipeline {
 
     agent { label 'agent'}
 
-    environment {
-        NPM_AUTH_TOKEN     = credentials('b85730d0-5596-41f7-9592-f70a6ccf99db')
-    }
 
     stages {
 
+
         stage('Info') {
             steps {
-                echo'${NPM_AUTH_TOKEN}'
-                echo '${tag}'
-                echo '${branch}'
-                sh 'env'
-                sh 'npm install yarn -g'
-                sh 'yarn'
+                withCredentials([string(credentialsId: 'b85730d0-5596-41f7-9592-f70a6ccf99db', variable: 'NPM_AUTH_TOKEN')]) {
+                    echo'${NPM_AUTH_TOKEN}'
+                    echo '${tag}'
+                    echo '${branch}'
+                    sh 'env'
+                    sh 'npm install yarn -g'
+                    sh 'yarn'
+                }
             }
         }
 
@@ -53,7 +53,7 @@ pipeline {
                 withEnv(["TOKEN=${NPMJS_TOKEN}"]) {
                     sh 'env'
                     /*
-                    sh 'echo "//registry.npmjs.org/:_authToken=${TOKEN}" >> ~/.npmrc'
+                    sh 'echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" >> ~/.npmrc'
                     sh 'npm publish' 
                      */
 
