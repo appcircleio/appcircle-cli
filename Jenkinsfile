@@ -27,16 +27,16 @@ pipeline {
                 fi
 
                 ## Build the image and make it ready for publishing.
-                docker image build -t ac-cli .
+                echo docker image build -t ac-cli .
 
                 ## Publish the application.
                 publishStatus=0
                 # shellcheck disable=SC2086
-                if ! docker run --rm --env NPM_AUTH_TOKEN=${NPM_AUTH_TOKEN} ac-cli ${npmPublishCommand}; then
-                    echo "Publishing failed"
-                    publishStatus=1
-                fi
-                docker image rm ac-cli
+                # if ! docker run --rm --env NPM_AUTH_TOKEN=${NPM_AUTH_TOKEN} ac-cli ${npmPublishCommand}; then
+                #    echo "Publishing failed"
+                #    publishStatus=1
+                #fi
+                #docker image rm ac-cli
                 exit $publishStatus
                 '''
             }
