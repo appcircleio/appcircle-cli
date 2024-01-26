@@ -118,13 +118,13 @@ CURL_LOGGING= appcircle
 - For building and publishing the application to the beta channgel:
 
 ```bash
-docker image build -t ac-cli --build-arg NPM_AUTH_TOKEN=abcd .
-docker run --rm ac-cli npm publish --tag beta
+docker image build -t ac-cli .
+docker run --rm --env NPM_AUTH_TOKEN=abcd ac-cli npm publish --tag beta
 ```
 
 - For building and publishing the application to the production:
 
 ```bash
 docker image build -t ac-cli --build-arg NPM_AUTH_TOKEN=abcd .
-docker run --rm ac-cli npm publish
+docker run --rm --env NPM_AUTH_TOKEN=abcd ac-cli npm publish
 ```
