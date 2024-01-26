@@ -11,7 +11,9 @@
     "build": "rm -rf dist && tsc",
     "postversion": "git push && git push --tags",
     "postuninstall": "node ./scripts/appcircle-uninstall.js",
-    "check:package": "zx ./scripts/check-package.mjs"
+    "check:package": "zx ./scripts/check-package.mjs",
+    "bump:version:beta": "npm version prerelease --preid=beta",
+    "bump:version:alpha": "npm version prerelease --preid=alpha"
   },
   "repository": {
     "type": "git",
