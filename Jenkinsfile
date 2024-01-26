@@ -1,7 +1,7 @@
 pipeline {
     agent { label 'agent'}
     environment {
-        NPM_AUTH_TOKEN = credentials('NPM_AUTH_TOKEN')
+        NPM_TOKEN = credentials('NPM_AUTH_TOKEN')
     }
     stages {
 
@@ -32,7 +32,7 @@ pipeline {
                 ## Publish the application.
                 publishStatus=0
                 # shellcheck disable=SC2086
-                if ! docker run --rm --env NPM_AUTH_TOKEN=${NPM_AUTH_TOKEN} ac-cli ${npmPublishCommand}; then
+                if ! docker run --rm --env NPM_AUTH_TOKEN=${NPM_TOKEN} ac-cli ${npmPublishCommand}; then
                     echo "Publishing failed"
                     publishStatus=1
                 fi
