@@ -7,12 +7,23 @@ pipeline {
                 # shellcheck shell=bash
                 set -euo pipefail
                 tag=$(git describe --tags --abbrev=0)
-                branch=$(git rev-parse --abbrev-ref HEAD)
                 echo "Tag: ${tag}"
-                echo "Branch: ${branch}"
-                # echo "Npm token: ${NPM_AUTH_TOKEN}"
+
+                npmPublishArgument=""
+                if [[ "${tag}"  ]]; then
+                echo "Beta Release"
+                npmPublishArgument="--tag beta"
+                elif [[ "${tag}" ]]; then
+                echo "Alpha Release"
+                npmPublishArgument="--tag alpha"
+                else
+                echo "Production Release"
+                fi
+
                 docker image build -t ac-cli --build-arg NPM_AUTH_TOKEN=abcd .
-                # docker run --rm ac-cli npm publish
+                echo "docker run --rm ac-cli ${npmPublishArgument}"
+                # shellcheck disable=SC2086
+                docker run --rm ac-cli ${npmPublishArgument}
                 docker image rm ac-cli
                 '''
             }
