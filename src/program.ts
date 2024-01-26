@@ -1,11 +1,8 @@
-import { Command } from "commander";
-import { readEnviromentConfigVariable } from "./config";
 import { Commands } from "./core/commands";
-import { configWriter } from "./core/writer";
 
 const { createCommand } = require("commander");
 
-export type ProgramCommand = { parent?: ProgramCommand, name: () => string; args: any; opts: () => { [key: string]: any } };
+export type ProgramCommand = { parent?: ProgramCommand; name: () => string; args: any; opts: () => { [key: string]: any } };
 
 export const createProgram = () => {
   const program = createCommand();
@@ -16,7 +13,10 @@ export const createProgram = () => {
   program.option("-o, --output <type>", "output type (json, plain)", "plain");
 
   //Add config command with subcommands
-  const configCommand = program.command("config").description("View and edit Appcircle CLI properties").action(() => {});
+  const configCommand = program
+    .command("config")
+    .description("View and edit Appcircle CLI properties")
+    .action(() => {});
   configCommand
     .command("list")
     .description("List Appcircle CLI properties for all configurations")
@@ -48,7 +48,7 @@ export const createProgram = () => {
     .action(() => {});
   configCommand.action(() => {});
 
-  Commands.filter(c => !c.ignore).forEach((command) => {
+  Commands.filter((c) => !c.ignore).forEach((command) => {
     let comandPrg = program.command(command.command).description(command.description);
     command.params
       .filter((p) => !p.requriedForInteractiveMode)
@@ -60,11 +60,15 @@ export const createProgram = () => {
     comandPrg.action(() => actionCb);
   });
   program.executeSubCommand = () => false;
-  program.exitOverride();
+
   program.hook("preAction", (thisCommand: any, actionCommand: ProgramCommand) => {
     //console.log(thisCommand.name(), thisCommand.args , actionCommand.parent?.name())
     actionCb({
-      parent: { name: () => actionCommand.parent?.name() || '', args: () => actionCommand.parent?.args(), opts: () => ({...actionCommand.parent?.opts()}) },
+      parent: {
+        name: () => actionCommand.parent?.name() || "",
+        args: () => actionCommand.parent?.args(),
+        opts: () => ({ ...actionCommand.parent?.opts() }),
+      },
       name: () => actionCommand.name(),
       args: () => (Array.isArray(actionCommand.args) ? actionCommand.args : actionCommand.args()),
       opts: () => ({ ...thisCommand.opts(), ...actionCommand.opts() }),
