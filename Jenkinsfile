@@ -1,66 +1,45 @@
 pipeline {
-
     agent { label 'agent'}
-
-
+    environment {
+        NPM_AUTH_TOKEN = credentials('Appcircle-CLI-NPM-Cred')
+    }
     stages {
 
-
-        stage('Info') {
-            steps {
-                withCredentials([string(credentialsId: 'b85730d0-5596-41f7-9592-f70a6ccf99db', variable: 'NPM_AUTH_TOKEN')]) {
-                    echo'${NPM_AUTH_TOKEN}'
-                    echo '${tag}'
-                    echo '${branch}'
-                    sh 'env'
-                    sh 'npm install yarn -g'
-                    sh 'yarn'
-                }
-            }
-        }
-
-        stage('Publish for Beta') { 
-            when {tag '*-beta'}
-            steps {
-                echo 'Run "npm publish --tag beta"'
-            }
-        }
-        /*
-        stage('Prepare') {
-            sh "npm install -g yarn"
-            sh "yarn install"
-        }
-        */
-
-        stage('Yarn build') { 
-            steps {
-                sh 'yarn' 
-                sh 'yarn build'
-            }
-        }
-        stage('Check package version is releasable') { 
-            steps {
-                sh 'yarn check:package'
-            }
-        }
         stage('Publish') {
-
             steps {
+                sh '''#!/bin/bash
+                # shellcheck shell=bash
+                set -x
+                set -euo pipefail
+                tag=$(git describe --tags --abbrev=0)
+                echo "Tag: ${tag}"
 
-                load "$JENKINS_HOME/jobvars.env"
-                echo "$JENKINS_HOME/jobvars.env"
-            
-                withEnv(["TOKEN=${NPMJS_TOKEN}"]) {
-                    sh 'env'
-                    /*
-                    sh 'echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" >> ~/.npmrc'
-                    sh 'npm publish' 
-                     */
+                npmPublishCommand=""
+                if [[ "${tag}" ]]; then
+                    echo "Beta Release"
+                    npmPublishCommand="npm publish --tag beta"
+                elif [[ "${tag}" ]]; then
+                    echo "Alpha Release"
+                    npmPublishCommand="npm publish --tag alpha"
+                else
+                    echo "Production Release"
+                    npmPublishCommand="npm publish"
+                fi
 
-                }
-           
+                ## Build the image and make it ready for publishing.
+                docker image build -t ac-cli .
+
+                ## Publish the application.
+                publishStatus=0
+                # shellcheck disable=SC2086
+                if ! docker run --rm --env NPM_AUTH_TOKEN=${NPM_AUTH_TOKEN} ac-cli ${npmPublishCommand}; then
+                    echo "Publishing failed"
+                    publishStatus=1
+                fi
+                docker image rm ac-cli
+                exit $publishStatus
+                '''
             }
-            
         }
     }
 }
