@@ -137,6 +137,15 @@ export const runCommand = async (command: ProgramCommand) => {
       break;
     }
     case CommandTypes.BUILD: {
+      //Check optional params if need one of them
+      if(!params.branchId && !params.branch){
+        console.error("error: You must provide either branchId or branch parameter");
+        process.exit(1);
+      }
+      if(!params.workflowId && !params.workflow){
+        console.error("error: You must provide either workflowId or workflow parameter");
+        process.exit(1);
+      }
       const spinner = createOra(`Try to start a new build`).start();
       try {
         responseData = await startBuild(params);
@@ -277,8 +286,7 @@ export const runCommand = async (command: ProgramCommand) => {
       handleConfigCommand(command);
       break;
     default: {
-      console.log('Coomd: ', command.name(), command.args())
-      console.error("Command not found");
+      console.error("Command not found: ", commandName );
       process.exit(1);
     }
   }
