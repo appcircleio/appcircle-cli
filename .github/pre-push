@@ -1,0 +1,30 @@
+#!/bin/sh
+
+protected_branch=main
+branch=$(git rev-parse --abbrev-ref HEAD);
+exit 0;
+
+#TODO Check tags names in main branch
+
+if [ $protected_branch != $branch ]; then
+    echo "IGNORE Checking tags: Pushing to branch $branch"
+else
+    echo "Checking unpublished release tags to branch $branch"
+    unpublished__release_tags=$(git show-ref --tags | cut -d ' ' -f2,3 | grep -v -F '$(git ls-remote --tags origin | grep -v "\^{}" | cut -f 2)' | grep -E "\-beta*|\-alpa*|\-rc*|\-release*");
+    if [[ $unpublished__release_tags ]]; then
+        echo "Unpublished release tags found ($unpublished__release_tags)"
+        echo "Please remove unpublished release tags in '$branch' to continue to push"
+        exit 1;
+        #
+        #for item in $tags
+        #
+        #do
+        #    echo "Attempting removing $item from remote"
+
+        #done
+        
+    else
+        echo "Pushing to branch $branch"
+    fi
+fi
+exit 0;

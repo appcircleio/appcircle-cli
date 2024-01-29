@@ -1,6 +1,6 @@
 {
   "name": "@appcircle/cli",
-  "version": "1.0.4",
+  "version": "1.0.7-beta.2",
   "description": "CLI tool for running Appcircle services from the command line",
   "main": "bin/appcircle",
   "bin": {
@@ -9,7 +9,11 @@
   "scripts": {
     "watch": "rm -rf dist && tsc -w",
     "build": "rm -rf dist && tsc",
-    "postversion": "git push && git push --tags"
+    "postversion": "git push && git push --tags",
+    "postuninstall": "node ./scripts/appcircle-uninstall.js",
+    "check:package": "zx ./scripts/check-package.mjs",
+    "bump:version:beta": "npm version prerelease --preid=beta",
+    "bump:version:alpha": "npm version prerelease --preid=alpha"
   },
   "repository": {
     "type": "git",
@@ -31,7 +35,8 @@
   "dependencies": {
     "axios": "^0.27.1",
     "chalk": "^4.1.1",
-    "commander": "^7.1.0",
+    "commander": "^11.1.0",
+    "conf": "^10.0.2",
     "enquirer": "^2.3.6",
     "esm": "^3.2.25",
     "form-data": "^4.0.0",
@@ -51,6 +56,7 @@
     "@types/jsonfile": "^6.0.0",
     "@types/minimist": "^1.2.1",
     "@types/node": "^15.12.5",
-    "typescript": "^4.3.4"
+    "typescript": "^4.3.4",
+    "zx": "^5.2.3"
   }
 }

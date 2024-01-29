@@ -109,3 +109,5 @@ dist
 
 # MAC specific
 .DS_STORE
+
+output
