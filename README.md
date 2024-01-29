@@ -1,3 +1,5 @@
+![NPM Version](https://img.shields.io/npm/v/%40appcircle%2Fcli?label=@appcircle%2Fcli&labelColor=ff8e34&color=5a789e)
+
 # Appcircle Command Line Interface
 
 Appcircle CLI is a unified tool for accessing the Appcircle platform features from the command line.
@@ -31,6 +33,7 @@ Below is the list of commands currently supported by Appcircle CLI:
 | Command                                                                                                                                 | Description                                             |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | `appcircle  (-i, --interactive)`                                                                                                        | AppCircle GUI                                           |
+| `appcircle  help [commandName]`                                                                                                        | Display help for command                     |
 | `appcircle config <action> [options]`                                                                                                   | View and edit Appcircle CLI properties                  |
 | `appcircle login [--pat]`                                                                                                               | Get an access token for the session                     |
 | `appcircle listBuildProfiles`                                                                                                           | Get the list of build profiles                          |
