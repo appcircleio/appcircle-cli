@@ -14,6 +14,7 @@ export enum CommandTypes {
   LIST_BUILD_PROFILES = "listBuildProfiles",
   LIST_BUILD_PROFILE_BRANCHES = "listBuildProfileBranches",
   LIST_BUILD_PROFILE_WORKFLOWS = "listBuildProfileWorkflows",
+  LIST_BUILD_PROFILE_CONFIGURATIONS = "listBuildProfileConfigurations",
   LIST_BUILD_PROFILE_COMMITS = "listBuildProfileCommits",
   LIST_BUILD_PROFILE_BUILDS_OF_COMMIT = "listBuildProfileBuildsOfCommit",
   LIST_DISTRIBUTION_PROFILES = "listDistributionProfiles",
@@ -100,6 +101,18 @@ export const Commands: {
     ],
   },
   {
+    command: CommandTypes.LIST_BUILD_PROFILE_CONFIGURATIONS,
+    description: "Get list of configurations of a build profile",
+    params: [
+      {
+        name: "profileId",
+        description: "Build profile ID",
+        type: CommandParameterTypes.SELECT,
+        valueType: "uuid",
+      },
+    ],
+  },
+  {
     command: CommandTypes.LIST_BUILD_PROFILE_COMMITS,
     description: "Get list of commits of a branch",
     params: [
@@ -170,6 +183,14 @@ export const Commands: {
       {
         name: "commitId",
         description: "Commit ID [Optional]",
+        type: CommandParameterTypes.SELECT,
+        valueType: "uuid",
+        required: false,
+        params: [],
+      },
+      {
+        name: "configurationId",
+        description: "Configuration ID [Optional]",
         type: CommandParameterTypes.SELECT,
         valueType: "uuid",
         required: false,

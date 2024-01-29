@@ -18,6 +18,7 @@ import {
   getBuildsOfCommit,
   getDistributionProfiles,
   getEnvironmentVariableGroups,
+  getConfigurations,
 } from "../services";
 import { DefaultEnvironmentVariables, getConfigStore } from "../config";
 
@@ -237,7 +238,7 @@ export const runCommandsInteractively = async () => {
       spinner.text = "Enterprise Versions fetched";
       spinner.succeed();
     } else if (param.name === "workflowId") {
-      const spinner = ora("Workflow fetching").start();
+      const spinner = ora("Workflows fetching").start();
       const workflows = await getWorkflows({ profileId: params.profileId || "" });
       if (!workflows || workflows.length === 0) {
         spinner.text = "No workflows available";
@@ -248,7 +249,19 @@ export const runCommandsInteractively = async () => {
       param.params = workflows.map((workflow: any) => ({ name: workflow.id, message: `${workflow.id} (${workflow.workflowName})` }));
       spinner.text = "Workflows fetched";
       spinner.succeed();
-    } else if (param.name === "value" && params.isSecret) {
+    } else if (param.name === "configurationId") {
+      const spinner = ora("Configurations fetching").start();
+      const configurations = await getConfigurations({ profileId: params.profileId || "" });
+      if (!configurations || configurations.length === 0) {
+        spinner.text = "No configurations available";
+        spinner.fail();
+        return;
+      }
+      //@ts-ignore
+      param.params = configurations.map((configurations: any) => ({ name: configurations.item1.id, message: `${configurations.item1.id} (${configurations.item1.configurationName})` }));
+      spinner.text = "Configurations fetched";
+      spinner.succeed();
+    }else if (param.name === "value" && params.isSecret) {
       param.type = CommandParameterTypes.PASSWORD;
     }
 

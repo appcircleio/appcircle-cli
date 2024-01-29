@@ -41,6 +41,7 @@ import {
   uploadEnterpriseApp,
   uploadEnterpriseAppVersion,
   getEnterpriseDownloadLink,
+  getConfigurations,
 } from "../services";
 import { commandWriter, configWriter } from "./writer";
 
@@ -121,6 +122,12 @@ export const runCommand = async (command: ProgramCommand) => {
       commandWriter(CommandTypes.LIST_BUILD_PROFILE_WORKFLOWS, responseData);
       break;
     }
+    case CommandTypes.LIST_BUILD_PROFILE_CONFIGURATIONS: {
+      responseData = await getConfigurations(params);
+      commandWriter(CommandTypes.LIST_BUILD_PROFILE_CONFIGURATIONS, responseData);
+      break;
+    }
+    
     case CommandTypes.LIST_BUILD_PROFILE_COMMITS: {
       responseData = await getCommits(params);
       commandWriter(CommandTypes.LIST_BUILD_PROFILE_COMMITS, responseData);

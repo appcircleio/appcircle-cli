@@ -5,10 +5,7 @@ import moment from "moment";
 import { getConsoleOutputType } from "../config";
 
 const writersMap: { [key in CommandTypes]: (data: any) => void } = {
-
-  [CommandTypes.CONFIG]: (data: any) => {
-    
-  },
+  [CommandTypes.CONFIG]: (data: any) => {},
   [CommandTypes.LOGIN]: (data: any) => {
     console.log(chalk.italic(`export AC_ACCESS_TOKEN="${data.access_token}"\n`));
     console.info(
@@ -51,8 +48,17 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
     console.table(
       data.map((workflow: any) => ({
         "Workflow Id": workflow.id,
-        "Workflow Name": workflow.workflowName,
+        "Workflow Name": workflow.configurationName,
         "Last Used": workflow.lastUsedTime ? moment(workflow.lastUsedTime).calendar() : "No previous builds",
+      }))
+    );
+  },
+  [CommandTypes.LIST_BUILD_PROFILE_CONFIGURATIONS]: (data: any) => {
+    console.table(
+      data.map((configuration: any) => ({
+        "Configuration Id": configuration.item1.id,
+        "Configuration Name": configuration.item1.configurationName,
+        "Update Date": configuration.item1.updateDate ? moment(configuration.item1.updateDate).calendar() : "No updated before",
       }))
     );
   },

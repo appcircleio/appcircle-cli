@@ -36,6 +36,9 @@ Below is the list of commands currently supported by Appcircle CLI:
 | `appcircle listBuildProfiles`                                                                                                           | Get the list of build profiles                          |
 | `appcircle listDistributionProfiles`                                                                                                    | Get the list of distribution profiles                   |
 | `appcircle listBuildProfileWorkflows [--profileId]`                                                                                     | Get the list of workflows for the profile               |
+| `appcircle listBuildProfileConfigurations [--profileId]`                                                                                     | Get the list of configurations for the profile               |
+| `appcircle listBuildProfileBuildsOfCommit [--profileId]`                                                                                     | Get the list of commits of branch              |
+| `appcircle listBuildProfileBuildsOfCommit [--profileId]`                                                                                     | Get the list of builds of a commit               |
 | `appcircle build [--profileId] [--branch] [--workflow]`                                                                                 | Start a new build                                       |
 | `appcircle download [--path] [--commitId] [--buildId]`                                                                                  | Download the artifact under the selected path           |
 | `appcircle upload [--app] [--message] [--profileId]`                                                                                    | Upload your app binary to selected distribution profile |

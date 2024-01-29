@@ -118,6 +118,8 @@ export async function startBuild(
   let branchId = options.branchId || "";
   let workflowId = options.workflowId || "";
   let commitId = options.commitId || "";
+  let configurationId = options.configurationId || "";
+
 
   if (!branchId && options.branch) {
     const branchesRes = await getBranches({ profileId: options.profileId || "" });
@@ -133,7 +135,11 @@ export async function startBuild(
     const allCommitsByBranchId = await getCommits({ branchId });
     commitId = allCommitsByBranchId[0].id;
   }
-  const buildResponse = await appcircleApi.post(`build/v2/commits/${commitId}?workflowId=${workflowId}`, qs.stringify({ sample: "test" }), {
+  if (!configurationId) {
+    const allConfigurations = await getConfigurations({ profileId: options.profileId || "" });
+    configurationId = allConfigurations[0].item1.id;
+  }
+  const buildResponse = await appcircleApi.post(`build/v2/commits/${commitId}?${qs.stringify({  action: 'build', workflowId, configurationId })}`, '{}', {
     headers: {
       ...getHeaders(),
       accept: "*/*",
@@ -280,6 +286,13 @@ export async function getWorkflows(options: OptionsType<{ profileId: string }>) 
     headers: getHeaders(),
   });
   return workflowResponse.data;
+}
+
+export async function getConfigurations(options: OptionsType<{ profileId: string }>) {
+  const configurationsResponse = await appcircleApi.get(`build/v2/profiles/${options.profileId}/configurations`, {
+    headers: getHeaders(),
+  });
+  return configurationsResponse.data;
 }
 
 /*
