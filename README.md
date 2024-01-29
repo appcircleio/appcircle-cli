@@ -33,6 +33,7 @@ Below is the list of commands currently supported by Appcircle CLI:
 | Command                                                                                                                                 | Description                                             |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | `appcircle  (-i, --interactive)`                                                                                                        | AppCircle GUI                                           |
+| `appcircle  help [commandName]`                                                                                                        | Display help for command                     |
 | `appcircle config <action> [options]`                                                                                                   | View and edit Appcircle CLI properties                  |
 | `appcircle login [--pat]`                                                                                                               | Get an access token for the session                     |
 | `appcircle listBuildProfiles`                                                                                                           | Get the list of build profiles                          |
