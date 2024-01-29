@@ -1,4 +1,4 @@
-![NPM Version](https://img.shields.io/npm/v/%40appcircle%2Fcli?label=appcircle%2Fcli&labelColor=ff8e34&color=5a789e)
+![NPM Version](https://img.shields.io/npm/v/%40appcircle%2Fcli?label=@appcircle%2Fcli&labelColor=ff8e34&color=5a789e)
 
 # Appcircle Command Line Interface
 
