@@ -15,10 +15,10 @@ pipeline {
                 echo "Tag: ${tag}"
 
                 npmPublishCommand=""
-                if [[ "${tag}" ]]; then
+                if [[ "${tag}" == *"beta"* ]]; then
                     echo "Beta Release"
                     npmPublishCommand="npm publish --tag beta"
-                elif [[ "${tag}" ]]; then
+                elif [[ "${tag}" == *"alpha"* ]]; then
                     echo "Alpha Release"
                     npmPublishCommand="npm publish --tag alpha"
                 else
