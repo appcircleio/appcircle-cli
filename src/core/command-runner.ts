@@ -42,6 +42,7 @@ import {
   uploadEnterpriseAppVersion,
   getEnterpriseDownloadLink,
   getConfigurations,
+  trustAppcircleCertificate,
 } from "../services";
 import { commandWriter, configWriter } from "./writer";
 
@@ -85,7 +86,10 @@ const handleConfigCommand = (command: ProgramCommand) => {
       clearConfigs()
       configWriter({ "current": getCurrentConfigVariable() });
       configWriter(getEnviromentsConfigToWriting());
-  }else {
+  }else if (action == "trust"){
+      trustAppcircleCertificate()
+  }
+  else {
     throw new Error("Config command action not found");
   }
 };

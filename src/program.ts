@@ -46,6 +46,10 @@ export const createProgram = () => {
     .command("reset")
     .description("Reset a Appcircle CLI configuration to default")
     .action(() => {});
+  configCommand
+    .command("trust")
+    .description("Trust the SSL certificate of the self-hosted Appcircle server")
+    .action(()=> {});
   configCommand.action(() => {});
 
   Commands.filter((c) => !c.ignore).forEach((command) => {
