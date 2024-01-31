@@ -42,54 +42,53 @@ import {
   uploadEnterpriseAppVersion,
   getEnterpriseDownloadLink,
   getConfigurations,
-  trustAppcircleCertificate,
 } from "../services";
 import { commandWriter, configWriter } from "./writer";
+import { trustAppcircleCertificate } from "../security/trust-url-certificate";
 
 const handleConfigCommand = (command: ProgramCommand) => {
   const action = command.name();
-  const key = (command.args()[0] || "");
+  const key = command.args()[0] || "";
   if (action === "list") {
     const store = getConfigStore();
     if (getConsoleOutputType() === "json") {
       configWriter(store);
     } else {
-      configWriter({ "current": store.current, path: getConfigFilePath() });
+      configWriter({ current: store.current, path: getConfigFilePath() });
       configWriter(getEnviromentsConfigToWriting());
     }
   } else if (action === "set") {
     writeEnviromentConfigVariable(key, command.args()[1]);
-    configWriter({ [key]: readEnviromentConfigVariable(key)});
+    configWriter({ [key]: readEnviromentConfigVariable(key) });
   } else if (action === "get") {
-    configWriter({ [key]: readEnviromentConfigVariable(key)});
-  }  else if (action === "current") {
+    configWriter({ [key]: readEnviromentConfigVariable(key) });
+  } else if (action === "current") {
     const store = getConfigStore();
-    if(key){
-      if(store.envs[key]){
+    if (key) {
+      if (store.envs[key]) {
         setCurrentConfigVariable(key);
-        configWriter({ "current": getCurrentConfigVariable() });
-      }else{
+        configWriter({ current: getCurrentConfigVariable() });
+      } else {
         throw new Error("Config command 'current' action requires a valid value");
       }
-    }else{
+    } else {
       throw new Error("Config command 'current' action requires a value");
     }
-  }else if (action === "add") {
-    if(key){
+  } else if (action === "add") {
+    if (key) {
       addNewConfigVariable(key);
-      configWriter({ "current": getCurrentConfigVariable() });
+      configWriter({ current: getCurrentConfigVariable() });
       configWriter(getEnviromentsConfigToWriting());
-    }else{
+    } else {
       throw new Error("Config command 'add' action requires a value(key)");
     }
-  }else if (action === "reset") {
-      clearConfigs()
-      configWriter({ "current": getCurrentConfigVariable() });
-      configWriter(getEnviromentsConfigToWriting());
-  }else if (action == "trust"){
-      trustAppcircleCertificate()
-  }
-  else {
+  } else if (action === "reset") {
+    clearConfigs();
+    configWriter({ current: getCurrentConfigVariable() });
+    configWriter(getEnviromentsConfigToWriting());
+  } else if (action == "trust") {
+    trustAppcircleCertificate();
+  } else {
     throw new Error("Config command action not found");
   }
 };
@@ -98,9 +97,8 @@ export const runCommand = async (command: ProgramCommand) => {
   const params = command.opts() as any;
   const commandName = command.name();
   let responseData;
-  
 
-  if(command.parent?.name() === 'config'){
+  if (command.parent?.name() === "config") {
     return handleConfigCommand(command);
   }
 
@@ -131,7 +129,7 @@ export const runCommand = async (command: ProgramCommand) => {
       commandWriter(CommandTypes.LIST_BUILD_PROFILE_CONFIGURATIONS, responseData);
       break;
     }
-    
+
     case CommandTypes.LIST_BUILD_PROFILE_COMMITS: {
       responseData = await getCommits(params);
       commandWriter(CommandTypes.LIST_BUILD_PROFILE_COMMITS, responseData);
@@ -149,11 +147,11 @@ export const runCommand = async (command: ProgramCommand) => {
     }
     case CommandTypes.BUILD: {
       //Check optional params if need one of them
-      if(!params.branchId && !params.branch){
+      if (!params.branchId && !params.branch) {
         console.error("error: You must provide either branchId or branch parameter");
         process.exit(1);
       }
-      if(!params.workflowId && !params.workflow){
+      if (!params.workflowId && !params.workflow) {
         console.error("error: You must provide either workflowId or workflow parameter");
         process.exit(1);
       }
@@ -297,7 +295,7 @@ export const runCommand = async (command: ProgramCommand) => {
       handleConfigCommand(command);
       break;
     default: {
-      console.error("Command not found: ", commandName );
+      console.error("Command not found: ", commandName);
       process.exit(1);
     }
   }
