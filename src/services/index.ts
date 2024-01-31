@@ -9,6 +9,7 @@ import CurlHelper from "../utils/curlhelper";
 import { readEnviromentConfigVariable, EnvironmentVariables, getConsoleOutputType } from "../config";
 import { EnvironmentVariableTypes } from "../constant";
 import { exec, spawn } from 'child_process';
+import { platform } from 'os';
 
 if (process.env.CURL_LOGGING) {
   axios.interceptors.request.use((config) => {
@@ -421,6 +422,17 @@ export async function getEnterpriseDownloadLink(options: OptionsType<{ entProfil
 }
 
 export async function trustAppcircleCertificate() {
+
+  const osType = platform();
+
+  // Check if the operating system is either Linux or macOS
+  if (osType !== 'darwin' && osType !== 'linux') {
+    console.error(
+      `Error: This command is supported on macOS and Linux only.`
+    );
+    process.exit(1); // Exit with a non-zero code indicating an error
+  }
+
   const bashScriptPath = 'src/scripts/install_cert.sh';
 
   const appcircleUrl = API_HOSTNAME;
