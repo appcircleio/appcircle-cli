@@ -33,15 +33,15 @@ Below is the list of commands currently supported by Appcircle CLI:
 | Command                                                                                                                                 | Description                                             |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | `appcircle  (-i, --interactive)`                                                                                                        | AppCircle GUI                                           |
-| `appcircle  help [commandName]`                                                                                                        | Display help for command                     |
+| `appcircle  help [commandName]`                                                                                                         | Display help for command                                |
 | `appcircle config <action> [options]`                                                                                                   | View and edit Appcircle CLI properties                  |
 | `appcircle login [--pat]`                                                                                                               | Get an access token for the session                     |
 | `appcircle listBuildProfiles`                                                                                                           | Get the list of build profiles                          |
 | `appcircle listDistributionProfiles`                                                                                                    | Get the list of distribution profiles                   |
 | `appcircle listBuildProfileWorkflows [--profileId]`                                                                                     | Get the list of workflows for the profile               |
-| `appcircle listBuildProfileConfigurations [--profileId]`                                                                                     | Get the list of configurations for the profile               |
-| `appcircle listBuildProfileBuildsOfCommit [--profileId]`                                                                                     | Get the list of commits of branch              |
-| `appcircle listBuildProfileBuildsOfCommit [--profileId]`                                                                                     | Get the list of builds of a commit               |
+| `appcircle listBuildProfileConfigurations [--profileId]`                                                                                | Get the list of configurations for the profile          |
+| `appcircle listBuildProfileBuildsOfCommit [--profileId]`                                                                                | Get the list of commits of branch                       |
+| `appcircle listBuildProfileBuildsOfCommit [--profileId]`                                                                                | Get the list of builds of a commit                      |
 | `appcircle build [--profileId] [--branch] [--workflow]`                                                                                 | Start a new build                                       |
 | `appcircle download [--path] [--commitId] [--buildId]`                                                                                  | Download the artifact under the selected path           |
 | `appcircle upload [--app] [--message] [--profileId]`                                                                                    | Upload your app binary to selected distribution profile |
@@ -82,9 +82,19 @@ CURL_LOGGING= appcircle
 - Set all these settings via interactive mode `appcircle -i`
 - Print help of config command `appcircle config -h`
 
+## How to Trust your Self-Hosted Appcircle Certificate?
+
+- After you configure the Appcircle CLI, you can run the the command below to trust SSL certificate.
+
+        appcircle config trust
+
+- This command will try to extract the SSL certificate from the API_HOSTNAME host and make it trusted on your computer.
+
+- For detailed usage, please refer to the [Trusting SSL Certificate](https://docs.appcircle.io/self-hosted-appcircle/configure-server/appcircle-cli#trusting-the-ssl-certificate-recommended) documentation.
+
 ## How to Connect your Appcircle Account within CLI?
 
-- [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication)
+- [Generate a personal access token from the Appcircle dashboard](/appcircle-api/api-authentication)
 - Using the Appcircle CLI, create a full access API token using the following command with the personal access token specified as "pat": `appcircle login --pat="YOUR PERSONAL ACCESS TOKEN"`.
 
 > Your token will be stored internally. You should always revoke your access token if you do not plan to use it in the future.
