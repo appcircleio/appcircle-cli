@@ -423,7 +423,7 @@ export async function getEnterpriseDownloadLink(options: OptionsType<{ entProfil
 export async function trustAppcircleCertificate() {
   const bashScriptPath = 'src/scripts/install_cert.sh';
 
-  const appcircleUrl = 'my.appcircle.burakberk.dev';
+  const appcircleUrl = API_HOSTNAME;
 
   // Use 'bash' as the command to spawn a new shell process
   const childProcess = spawn('bash', [bashScriptPath, appcircleUrl]);
