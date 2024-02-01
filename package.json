@@ -13,7 +13,8 @@
     "postuninstall": "node ./scripts/appcircle-uninstall.js",
     "check:package": "zx ./scripts/check-package.mjs",
     "bump:version:beta": "npm version prerelease --preid=beta",
-    "bump:version:alpha": "npm version prerelease --preid=alpha"
+    "bump:version:alpha": "npm version prerelease --preid=alpha",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "repository": {
     "type": "git",
@@ -56,7 +57,13 @@
     "@types/jsonfile": "^6.0.0",
     "@types/minimist": "^1.2.1",
     "@types/node": "^15.12.5",
+    "cz-conventional-changelog": "^3.3.0",
     "typescript": "^4.3.4",
     "zx": "^5.2.3"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   }
 }
