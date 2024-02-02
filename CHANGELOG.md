@@ -1,9 +1,24 @@
 # [1.1.0](https://github.com/appcircleio/appcircle-cli/compare/v1.0.7-beta.2...v1.1.0) (2024-01-29)
 
 
+
 ### Bug Fixes
 
 * **doc:** version label ([072435e](https://github.com/appcircleio/appcircle-cli/commit/072435e20fd041524a2807a26e2e23831deda19d))
+* **build:** add get configurations list step for build command ([8dbe764](https://github.com/appcircleio/appcircle-cli/commit/8dbe764279f96bf854ede7fb1baed068b625e261))
+* **commands:** exit with code 0 when help command runs ([26a9a26](https://github.com/appcircleio/appcircle-cli/commit/26a9a260d1f7b6f17f4dd4ad5d41fe59b39a80cc))
+* **help:** build commands optinal params check if need one of them ([b67518e](https://github.com/appcircleio/appcircle-cli/commit/b67518ee7bea3cb49df181514c4184b41e0253dc))
+
+
+
+### Features
+
+* **command:** Add missing builds of commit command &  download artifact command params description and order ([a34fc4c](https://github.com/appcircleio/appcircle-cli/commit/a34fc4cf4a99363746fd1fc8d4356666cb15d1b5))
+* **command:** Add config commands ([54b3adc](https://github.com/appcircleio/appcircle-cli/commit/54b3adc8605a771a8ddbc3323d4e4e346c7b85a5))
+* **core:** BE-2553 Add commander for help command ([cba319b](https://github.com/appcircleio/appcircle-cli/commit/cba319bc3de595cdcf836ec97e68abbb24d42023))
+* **core:** Separate services ( writer, command runner, interactive runner) ([567de5f](https://github.com/appcircleio/appcircle-cli/commit/567de5f8d79fddfb25d6497639226fbe38da3635))
+* **prompt:** Add autocomplete promt inteadof select ([713df4e](https://github.com/appcircleio/appcircle-cli/commit/713df4ee219d08ae985e5c2fe93e88c47b5cab01))
+* **scripts:** Add npm package checker script ([bc4eff4](https://github.com/appcircleio/appcircle-cli/commit/bc4eff468b113fd0b534610a941d85e781edf264))
 
 
 
@@ -43,12 +58,12 @@
 
 ### Features
 
-* **command:** add missing builds of commit command &  download artifact command params description and order ([a34fc4c](https://github.com/appcircleio/appcircle-cli/commit/a34fc4cf4a99363746fd1fc8d4356666cb15d1b5))
-* **config:** add config commands ([54b3adc](https://github.com/appcircleio/appcircle-cli/commit/54b3adc8605a771a8ddbc3323d4e4e346c7b85a5))
-* **core:** BE-2553 add commander for help command ([cba319b](https://github.com/appcircleio/appcircle-cli/commit/cba319bc3de595cdcf836ec97e68abbb24d42023))
-* **core:** separate services ( writer, command runner, interactive runner) ([567de5f](https://github.com/appcircleio/appcircle-cli/commit/567de5f8d79fddfb25d6497639226fbe38da3635))
-* **prompt:** add autocomplete promt inteadof select ([713df4e](https://github.com/appcircleio/appcircle-cli/commit/713df4ee219d08ae985e5c2fe93e88c47b5cab01))
-* **scripts:** add npm package checker script ([bc4eff4](https://github.com/appcircleio/appcircle-cli/commit/bc4eff468b113fd0b534610a941d85e781edf264))
+* **command:** Add missing builds of commit command &  download artifact command params description and order ([a34fc4c](https://github.com/appcircleio/appcircle-cli/commit/a34fc4cf4a99363746fd1fc8d4356666cb15d1b5))
+* **config:** Add config commands ([54b3adc](https://github.com/appcircleio/appcircle-cli/commit/54b3adc8605a771a8ddbc3323d4e4e346c7b85a5))
+* **core:** BE-2553 Add commander for help command ([cba319b](https://github.com/appcircleio/appcircle-cli/commit/cba319bc3de595cdcf836ec97e68abbb24d42023))
+* **core:** Separate services ( writer, command runner, interactive runner) ([567de5f](https://github.com/appcircleio/appcircle-cli/commit/567de5f8d79fddfb25d6497639226fbe38da3635))
+* **prompt:** Add autocomplete promt inteadof select ([713df4e](https://github.com/appcircleio/appcircle-cli/commit/713df4ee219d08ae985e5c2fe93e88c47b5cab01))
+* **scripts:** Add npm package checker script ([bc4eff4](https://github.com/appcircleio/appcircle-cli/commit/bc4eff468b113fd0b534610a941d85e781edf264))
 
 
 
