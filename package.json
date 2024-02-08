@@ -48,7 +48,8 @@
   },
   "files": [
     "bin/",
-    "dist/"
+    "dist/",
+    "scripts/"
   ],
   "resolutions": {
     "ora/strip-ansi": "6.0.1"
