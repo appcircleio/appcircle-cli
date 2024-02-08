@@ -1,6 +1,6 @@
 {
   "name": "@appcircle/cli",
-  "version": "1.1.1-beta.1",
+  "version": "1.1.1",
   "description": "CLI tool for running Appcircle services from the command line",
   "main": "bin/appcircle",
   "bin": {
@@ -48,7 +48,8 @@
   },
   "files": [
     "bin/",
-    "dist/"
+    "dist/",
+    "scripts/"
   ],
   "resolutions": {
     "ora/strip-ansi": "6.0.1"

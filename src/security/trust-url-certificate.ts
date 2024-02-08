@@ -13,7 +13,13 @@ export async function trustAppcircleCertificate() {
       process.exit(1); // Exit with a non-zero code indicating an error
     }
   
-    const bashScriptPath = 'src/scripts/install_cert.sh';
+    const path = require('path');
+    const bashScriptPath = path.join(
+      __dirname,
+      '../../scripts/install_cert.sh'
+    );
+    console.log(bashScriptPath)
+    // const bashScriptPath = 'src/scripts/install_cert.sh';
   
     const appcircleUrl = readEnviromentConfigVariable(EnvironmentVariables.API_HOSTNAME);;
   
