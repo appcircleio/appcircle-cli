@@ -1,6 +1,6 @@
-import path from "path";
-import os from "os";
-import { CommandTypes } from "./commands";
+import path from 'path';
+import os from 'os';
+import { CommandTypes } from './commands';
 import {
   EnvironmentVariables,
   addNewConfigVariable,
@@ -13,9 +13,9 @@ import {
   readEnviromentConfigVariable,
   setCurrentConfigVariable,
   writeEnviromentConfigVariable,
-} from "../config";
-import { createOra } from "../utils/orahelper";
-import { ProgramCommand } from "../program";
+} from '../config';
+import { createOra } from '../utils/orahelper';
+import { ProgramCommand } from '../program';
 import {
   getToken,
   getBuildProfiles,
@@ -42,27 +42,39 @@ import {
   uploadEnterpriseAppVersion,
   getEnterpriseDownloadLink,
   getConfigurations,
-} from "../services";
-import { commandWriter, configWriter } from "./writer";
-import { trustAppcircleCertificate } from "../security/trust-url-certificate";
+  getOrganizationDetail,
+  getOrganizations,
+  getOrganizationUsers,
+  getOrganizationInvitations,
+  inviteUserToOrganization,
+  getUserInfo,
+  reInviteUserToOrganization,
+  removeInvitationFromOrganization,
+  removeUserFromOrganization,
+  getOrganizationUserinfo,
+  assignRolesToUserInOrganitaion,
+} from '../services';
+import { commandWriter, configWriter } from './writer';
+import { trustAppcircleCertificate } from '../security/trust-url-certificate';
+import { PROGRAM_NAME, UNKNOWN_PARAM_VALUE } from '../constant';
 
 const handleConfigCommand = (command: ProgramCommand) => {
   const action = command.name();
-  const key = command.args()[0] || "";
-  if (action === "list") {
+  const key = command.args()[0] || '';
+  if (action === 'list') {
     const store = getConfigStore();
-    if (getConsoleOutputType() === "json") {
+    if (getConsoleOutputType() === 'json') {
       configWriter(store);
     } else {
       configWriter({ current: store.current, path: getConfigFilePath() });
       configWriter(getEnviromentsConfigToWriting());
     }
-  } else if (action === "set") {
+  } else if (action === 'set') {
     writeEnviromentConfigVariable(key, command.args()[1]);
     configWriter({ [key]: readEnviromentConfigVariable(key) });
-  } else if (action === "get") {
+  } else if (action === 'get') {
     configWriter({ [key]: readEnviromentConfigVariable(key) });
-  } else if (action === "current") {
+  } else if (action === 'current') {
     const store = getConfigStore();
     if (key) {
       if (store.envs[key]) {
@@ -74,7 +86,7 @@ const handleConfigCommand = (command: ProgramCommand) => {
     } else {
       throw new Error("Config command 'current' action requires a value");
     }
-  } else if (action === "add") {
+  } else if (action === 'add') {
     if (key) {
       addNewConfigVariable(key);
       configWriter({ current: getCurrentConfigVariable() });
@@ -82,14 +94,102 @@ const handleConfigCommand = (command: ProgramCommand) => {
     } else {
       throw new Error("Config command 'add' action requires a value(key)");
     }
-  } else if (action === "reset") {
+  } else if (action === 'reset') {
     clearConfigs();
     configWriter({ current: getCurrentConfigVariable() });
     configWriter(getEnviromentsConfigToWriting());
-  } else if (action == "trust") {
+  } else if (action == 'trust') {
     trustAppcircleCertificate();
   } else {
-    throw new Error("Config command action not found");
+    throw new Error('Config command action not found');
+  }
+};
+
+const handleOrganizationCommand = async (command: ProgramCommand, params: any) => {
+  if (!params.organizationId) {
+    params.organizationId = (await getUserInfo()).currentOrganizationId;
+  }
+  if (command.fullCommandName === `${PROGRAM_NAME}-organization-view`) {
+    const response = params.organizationId === 'all' || !params.organizationId ? await getOrganizations() : await getOrganizationDetail(params);
+    commandWriter(CommandTypes.ORGANIZATION, {
+      fullCommandName: command.fullCommandName,
+      data: response,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-member-view`) {
+    const users = await getOrganizationUsers(params);
+    const invitations = await getOrganizationInvitations(params);
+    console.log('users', invitations[0].organizationsAndRoles);
+    commandWriter(CommandTypes.ORGANIZATION, {
+      fullCommandName: command.fullCommandName,
+      data: {
+        users,
+        invitations,
+      },
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-member-invite`) {
+    const inviteRes = await inviteUserToOrganization({ organizationId: params.organizationId, email: params.email, role: params.role || [] });
+    commandWriter(CommandTypes.ORGANIZATION, {
+      fullCommandName: command.fullCommandName,
+      data: inviteRes,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-member-re-invite`) {
+    if (!params.organizationId) {
+      params.organizationId = (await getUserInfo()).currentOrganizationId;
+    }
+    const reInviteRes = await reInviteUserToOrganization({ organizationId: params.organizationId, email: params.email });
+    commandWriter(CommandTypes.ORGANIZATION, {
+      fullCommandName: command.fullCommandName,
+      data: reInviteRes,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-member-remove`) {
+    if (params.email && params.email !== UNKNOWN_PARAM_VALUE) {
+      await removeInvitationFromOrganization({ organizationId: params.organizationId, email: params.email });
+      commandWriter(CommandTypes.ORGANIZATION, {
+        fullCommandName: command.fullCommandName,
+        data: { email: params.email },
+      });
+    }
+    if (params.userId && params.userId !== UNKNOWN_PARAM_VALUE) {
+      await removeUserFromOrganization({ organizationId: params.organizationId, userId: params.userId });
+      commandWriter(CommandTypes.ORGANIZATION, {
+        fullCommandName: command.fullCommandName,
+        data: { email: params.userId },
+      });
+    }
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
+    const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+    commandWriter(CommandTypes.ORGANIZATION, {
+      fullCommandName: command.fullCommandName,
+      data: userInfo.roles,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-add`) {
+    let userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+    let rolesSet = new Set([...userInfo.roles, ...params.role]);
+    await assignRolesToUserInOrganitaion({ organizationId: params.organizationId, userId: params.userId, role: Array.from(rolesSet) });
+    userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+
+    commandWriter(CommandTypes.ORGANIZATION, {
+      fullCommandName: command.fullCommandName,
+      data: userInfo.roles,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-remove`) {
+    let userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+    let difference = userInfo.roles.filter((r: any) => !params.role.includes(r));
+    await assignRolesToUserInOrganitaion({ organizationId: params.organizationId, userId: params.userId, role: difference });
+    userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+    commandWriter(CommandTypes.ORGANIZATION, {
+      fullCommandName: command.fullCommandName,
+      data: userInfo.roles,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-clear`) {
+    await assignRolesToUserInOrganitaion({ organizationId: params.organizationId, userId: params.userId, role: [] });
+    const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+    commandWriter(CommandTypes.ORGANIZATION, {
+      fullCommandName: command.fullCommandName,
+      data: userInfo.roles,
+    });
+  } else {
+    console.log('command not found', params);
   }
 };
 
@@ -98,8 +198,15 @@ export const runCommand = async (command: ProgramCommand) => {
   const commandName = command.name();
   let responseData;
 
-  if (command.parent?.name() === "config") {
+  //console.log('Full-Command-Name: ', command.fullCommandName, params);
+
+  // Handle config command
+  if (command.isGroupCommand(CommandTypes.CONFIG)) {
     return handleConfigCommand(command);
+  }
+
+  if (command.isGroupCommand(CommandTypes.ORGANIZATION)) {
+    return handleOrganizationCommand(command, params);
   }
 
   switch (commandName) {
@@ -148,11 +255,11 @@ export const runCommand = async (command: ProgramCommand) => {
     case CommandTypes.BUILD: {
       //Check optional params if need one of them
       if (!params.branchId && !params.branch) {
-        console.error("error: You must provide either branchId or branch parameter");
+        console.error('error: You must provide either branchId or branch parameter');
         process.exit(1);
       }
       if (!params.workflowId && !params.workflow) {
-        console.error("error: You must provide either workflowId or workflow parameter");
+        console.error('error: You must provide either workflowId or workflow parameter');
         process.exit(1);
       }
       const spinner = createOra(`Try to start a new build`).start();
@@ -162,13 +269,13 @@ export const runCommand = async (command: ProgramCommand) => {
         spinner.text = `Build added to queue successfully.\n\nTaskId: ${responseData.taskId}\nQueueItemId: ${responseData.queueItemId}`;
         spinner.succeed();
       } catch (e) {
-        spinner.fail("Build failed");
+        spinner.fail('Build failed');
         throw e;
       }
       break;
     }
     case CommandTypes.DOWNLOAD: {
-      const downloadPath = path.resolve((params.path || "").replace("~", `${os.homedir}`));
+      const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
       const spinner = createOra(`Downloading file artifact.zip`).start();
       try {
         responseData = await downloadArtifact(params, downloadPath);
@@ -176,20 +283,20 @@ export const runCommand = async (command: ProgramCommand) => {
         spinner.text = `The file artifact.zip is downloaded successfully under path:\n${downloadPath}`;
         spinner.succeed();
       } catch (e) {
-        spinner.text = "The file could not be downloaded.";
+        spinner.text = 'The file could not be downloaded.';
         spinner.fail();
       }
       break;
     }
     case CommandTypes.UPLOAD: {
-      const spinner = createOra("Try to upload the app").start();
+      const spinner = createOra('Try to upload the app').start();
       try {
         responseData = await uploadArtifact(params);
         commandWriter(CommandTypes.UPLOAD, responseData);
         spinner.text = `App uploaded successfully.\n\nTaskId: ${responseData.taskId}`;
         spinner.succeed();
       } catch (e) {
-        spinner.fail("Upload failed");
+        spinner.fail('Upload failed');
       }
       break;
     }
@@ -239,14 +346,14 @@ export const runCommand = async (command: ProgramCommand) => {
       break;
     }
     case CommandTypes.REMOVE_ENTERPRISE_APP_VERSION: {
-      const spinner = createOra("Try to delete the app version").start();
+      const spinner = createOra('Try to delete the app version').start();
       try {
         responseData = await removeEnterpriseAppVersion(params);
         commandWriter(CommandTypes.REMOVE_ENTERPRISE_APP_VERSION, responseData);
         spinner.text = `App version deleted successfully.\n\nTaskId: ${responseData.taskId}`;
         spinner.succeed();
       } catch (e) {
-        spinner.fail("App version delete failed");
+        spinner.fail('App version delete failed');
       }
       break;
     }
@@ -258,31 +365,31 @@ export const runCommand = async (command: ProgramCommand) => {
         spinner.text = `Version notification sent successfully.\n\nTaskId: ${responseData.taskId}`;
         spinner.succeed();
       } catch (e) {
-        spinner.fail("Notification failed");
+        spinner.fail('Notification failed');
       }
       break;
     }
     case CommandTypes.UPLOAD_ENTERPRISE_APP: {
-      const spinner = createOra("Try to upload the app").start();
+      const spinner = createOra('Try to upload the app').start();
       try {
         responseData = await uploadEnterpriseApp(params);
         commandWriter(CommandTypes.UPLOAD_ENTERPRISE_APP, responseData);
         spinner.text = `New profile created and app uploaded successfully.\n\nTaskId: ${responseData.taskId}`;
         spinner.succeed();
       } catch (e) {
-        spinner.fail("Upload failed");
+        spinner.fail('Upload failed');
       }
       break;
     }
     case CommandTypes.UPLOAD_ENTERPRISE_APP_VERSION: {
-      const spinner = createOra("Try to upload the app").start();
+      const spinner = createOra('Try to upload the app').start();
       try {
         responseData = await uploadEnterpriseAppVersion(params);
         commandWriter(CommandTypes.UPLOAD_ENTERPRISE_APP_VERSION, responseData);
         spinner.text = `App version uploaded successfully.\n\nTaskId: ${responseData.taskId}`;
         spinner.succeed();
       } catch (e) {
-        spinner.fail("Upload failed");
+        spinner.fail('Upload failed');
       }
       break;
     }
@@ -291,11 +398,8 @@ export const runCommand = async (command: ProgramCommand) => {
       commandWriter(CommandTypes.GET_ENTERPRISE_DOWNLOAD_LINK, responseData);
       break;
     }
-    case "config":
-      handleConfigCommand(command);
-      break;
     default: {
-      console.error("Command not found: ", commandName);
+      console.error('Command not found: ', commandName);
       process.exit(1);
     }
   }
