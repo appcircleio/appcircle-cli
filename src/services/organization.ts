@@ -1,3 +1,4 @@
+import { ProgramError } from '../core/ProgramError';
 import { OptionsType, appcircleApi, getHeaders } from './api';
 
 export const getOrganizations = async () => {
@@ -123,5 +124,9 @@ export const assignRolesToUserInOrganitaion = async (options: OptionsType<{ orga
 
 export const getOrganizationUserinfo = async (options: OptionsType<{ organizationId: string; userId: string }>) => {
   const users = await getOrganizationUsers(options);
-  return users.find((user: any) => user.id === options.userId);
+  const user = users.find((user: any) => user.id === options.userId);
+  if(!user){
+    throw new ProgramError(`User "${options.userId}" not found with organization "${options.organizationId}"`);
+  }
+  return user;
 };

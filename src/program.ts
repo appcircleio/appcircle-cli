@@ -8,11 +8,11 @@ export type ProgramCommand = { fullCommandName: string, isGroupCommand: (command
 
 const createCommands = (program: any, commands: typeof Commands, actionCb: any) => {
   commands.filter((c) => !c.ignore).forEach((command) => {
-    let comandPrg = program.command(command.command).description(command.description);
+    let comandPrg = program.command(command.command).description(command.longDescription || command.description);
 
     //Create arguments
     command.arguments?.forEach((arg) => {
-      comandPrg.argument(`[${arg.name}]`, arg.description);
+      comandPrg.argument(`[${arg.name}]`, arg.longDescription || arg.description);
     });
 
     //Create sub commands.
@@ -22,8 +22,8 @@ const createCommands = (program: any, commands: typeof Commands, actionCb: any) 
       .filter((p) => !p.requriedForInteractiveMode)
       .forEach((param) => {
         param.required !== false
-          ? comandPrg.requiredOption(`--${param.name} <${param.valueType}>`, param.description)
-          : comandPrg.option(`--${param.name} <${param.valueType}>`, param.description);
+          ? comandPrg.requiredOption(`--${param.name} <${param.valueType}>`, param.longDescription || param.description)
+          : comandPrg.option(`--${param.name} <${param.valueType}>`, param.longDescription || param.description, param.defaultValue);
       });
     comandPrg.action(() => actionCb);
   });

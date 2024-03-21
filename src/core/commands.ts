@@ -1,4 +1,5 @@
 import { DefaultEnvironmentVariables, getConfigStore } from '../config';
+import { CURRENT_PARAM_VALUE } from '../constant';
 
 export enum CommandParameterTypes {
   SELECT = 'select',
@@ -41,6 +42,7 @@ export enum CommandTypes {
 export type ParamType = {
   name: string;
   description: string;
+  longDescription?: string
   type: CommandParameterTypes;
   valueType?: string;
   required?: boolean;
@@ -53,6 +55,7 @@ export type ParamType = {
 export type CommandType = {
   command: string;
   description: string;
+  longDescription?: string;
   ignore?: boolean;
   subCommands?: CommandType[];
   arguments?: ParamType[];
@@ -141,6 +144,7 @@ export const Commands: CommandType[] = [
   {
     command: CommandTypes.LOGIN,
     description: 'Login',
+    longDescription: 'Log in to obtain your access token.',
     params: [
       {
         name: 'pat',
@@ -153,11 +157,13 @@ export const Commands: CommandType[] = [
   {
     command: CommandTypes.ORGANIZATION,
     description: 'Organization management',
+    longDescription: 'Manage organization users, roles, and details.',
     subCommands: [
       {
         command: 'view',
         description: 'View organizations details',
-        params: [ {
+        longDescription: 'View organization details. If "organizationId" not provided, will list all organizations.',
+        params: [{
           name: 'organizationId',
           description: 'Organization ID [Optional]',
           type: CommandParameterTypes.SELECT,
@@ -167,12 +173,13 @@ export const Commands: CommandType[] = [
         }],
       },
       {
-        command: 'member',
-        description: 'Member management',
+        command: 'user',
+        description: 'User management',
+        longDescription: 'Organization users management (view, invite, re-invite, remove ).',
         subCommands: [
           {
             command: 'view',
-            description: 'View members of organization',
+            description: 'View users of organization',
             params: [ {
               name: 'organizationId',
               description: 'Organization ID [Optional]',
@@ -184,7 +191,7 @@ export const Commands: CommandType[] = [
           },
           {
             command: 'invite',
-            description: 'Invite member to organization',
+            description: 'Invite user to organization',
             params: [{
               name: 'organizationId',
               description: 'Organization ID [Optional]',
@@ -203,20 +210,19 @@ export const Commands: CommandType[] = [
               name: 'role',
               description: 'Role',
               type: CommandParameterTypes.MULTIPLE_SELECT,
-              defaultValue: '',
               valueType: 'string',
               required: false,
             }],
           },
           {
             command: 're-invite',
-            description: 'Re-invite member to organization',
+            description: 'Re-invite user to organization',
             params: [
               {
                 name: 'organizationId',
                 description: 'Organization ID [Optional]',
                 type: CommandParameterTypes.SELECT,
-                defaultValue: 'current',
+                defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
                 required: false,
               },{
@@ -231,12 +237,12 @@ export const Commands: CommandType[] = [
           },
           {
             command: 'remove',
-            description: 'Remove member or inivation from organization',
+            description: 'Remove user or inivation from organization',
             params: [{
               name: 'organizationId',
               description: 'Organization ID [Optional]',
               type: CommandParameterTypes.SELECT,
-              defaultValue: 'current',
+              defaultValue: CURRENT_PARAM_VALUE,
               valueType: 'uuid',
               required: false,
             },{
@@ -255,11 +261,12 @@ export const Commands: CommandType[] = [
             }],
           },
         ],
-        params: [ ],
+        params: [],
       },
       {
         command: 'role',
         description: 'Roles management',
+        longDescription: 'Organization users roles management (view, add, remove, clear ).',
         subCommands: [
           {
             command: 'view',
@@ -269,7 +276,7 @@ export const Commands: CommandType[] = [
                 name: 'organizationId',
                 description: 'Organization ID [Optional]',
                 type: CommandParameterTypes.SELECT,
-                defaultValue: 'current',
+                defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
                 required: false,
               },
@@ -288,9 +295,9 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'organizationId',
-                description: 'Organization ID [Optional] (defaults to current organization)',
+                description: 'Organization ID [Optional]',
                 type: CommandParameterTypes.SELECT,
-                defaultValue: 'current',
+                defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
                 required: false,
               },
@@ -316,9 +323,9 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'organizationId',
-                description: 'Organization ID [Optional] (defaults to current organization)',
+                description: 'Organization ID [Optional]',
                 type: CommandParameterTypes.SELECT,
-                defaultValue: 'current',
+                defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
                 required: false,
               },
@@ -344,9 +351,9 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'organizationId',
-                description: 'Organization ID [Optional] (defaults to current organization)',
+                description: 'Organization ID [Optional]',
                 type: CommandParameterTypes.SELECT,
-                defaultValue: 'current',
+                defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
                 required: false,
               },
@@ -522,7 +529,8 @@ export const Commands: CommandType[] = [
     params: [
       {
         name: 'path',
-        description: '[OPTIONAL] The path for artifacts to be downloaded: (Defaults to the current directory)',
+        description: '[OPTIONAL] The path for artifacts to be downloaded:',
+        longDescription:'[OPTIONAL] The path for artifacts to be downloaded: (Defaults to the current directory)',
         type: CommandParameterTypes.STRING,
         valueType: 'string',
         required: false,

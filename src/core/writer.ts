@@ -242,44 +242,46 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
               'Given Id': organization.givenId,
               Members: organization.memberCount || '-',
               SSO: organization.ssoEnabled ? 'Yes' : 'No',
-              'Accepted Innovations': organization.acceptedInvitationCount || '-',
-              'Created Date': organization.createdDate ? moment(organization.createdDate).calendar() : '-',
-              'Root Organization': organization.rootOrganizationName || '-',
-              'Root Organization Id': organization.rootOrganizationId || '-',
+              'Created': organization.createdDate ? moment(organization.createdDate).calendar() : '-',
+              'Root Org.': organization.rootOrganizationName || '-',
+              'Root Org. Id': organization.rootOrganizationId || '-',
               'Logo Url': organization.logoUrl || '-',
             }))
       );
-    } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-member-view`) {
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-user-view`) {
+      console.log('\n- Users ↴ ');
       data.data.users?.length
         ? console.table(
-            data.data.users.map((user: any) => ({
-              'User Name': user.username,
-              Id: user.id,
-              Email: user.email || '-',
-              Roles: user.roles.join(',') || '-',
-            }))
+            data.data.users
+              .map((user: any) => ({
+                'User Name': user.username,
+                Id: user.id,
+                Email: user.email || '-',
+                Roles: user.roles.join(',') || '-',
+              }))
           )
         : console.log('- No users found.');
 
+      console.log('\n- Invitations ↴ ');
       data.data.invitations?.length
         ? console.table(
             data.data.invitations.map((user: any) => ({
               'User Email': user.userEmail,
               'Root Organization ID': user.rootOrganizationId,
+              Roles: user.organizationsAndRoles?.[0]?.roles?.join(',') || '-',
               Status: user.status || '-',
             }))
           )
         : console.log('- No invitations found');
-    } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-member-invite`) {
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-user-invite`) {
       console.log('Invitation successfully sent.');
-    } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-member-re-invite`) {
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-user-re-invite`) {
       console.log('Re-invitation successfully sent again.');
-    } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-member-remove`) {
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-user-remove`) {
       console.log(`User "${data.data.email}" has been removed.`);
     } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
-      console.table(
-        data.data
-      );
+      console.log('\n- Roles ↴ ');
+      data.data.length ? console.table(data.data) : console.log('- No roles found.');
     } else {
       console.log(data.data);
     }

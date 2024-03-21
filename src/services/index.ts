@@ -6,6 +6,7 @@ import axios from 'axios';
 import moment from 'moment';
 import { EnvironmentVariableTypes } from '../constant';
 import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
+import { ProgramError } from '../core/ProgramError';
 
 export async function getToken(options: OptionsType<{ pat: string }>) {
   const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, qs.stringify({ pat: options.pat }), {
@@ -237,7 +238,7 @@ export async function createEnvironmentVariable(
   } else if (!options.type || options.type === EnvironmentVariableTypes.TEXT) {
     return createTextEnvironmentVariable(options);
   } else if (options.type) {
-    throw new Error('Environment variable type not found');
+    throw new ProgramError(`Environment variable type (${options.type}) not found`);
   }
 }
 

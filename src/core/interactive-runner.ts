@@ -254,9 +254,11 @@ const handleInteractiveParamsOrArguments = async (
       param.defaultValue = param.defaultValue || 'all';
 
       const currentOrganization = organizations.find((org: any) => org.id === userInfo.currentOrganizationId);
-      const organizationParams = (isAllOrganizations ? [] : [
-        { name: userInfo.currentOrganizationId, message: `${userInfo.currentOrganizationId} (➞ ${currentOrganization.name})  ❮❮❮ ` },
-      ]).concat(
+      const organizationParams = (
+        isAllOrganizations
+          ? []
+          : [{ name: userInfo.currentOrganizationId, message: `${userInfo.currentOrganizationId} (➞ ${currentOrganization.name})  ❮❮❮ ` }]
+      ).concat(
         organizations
           .filter((org: any) => isAllOrganizations || org.rootOrganizationId === currentOrganization.id)
           .map((organization: any) => ({
@@ -270,7 +272,7 @@ const handleInteractiveParamsOrArguments = async (
       spinner.succeed();
     } else if (param.name === 'role') {
       const spinner = ora('Roles fetching').start();
-      const userinfo = await getOrganizationUserinfo({ organizationId: params.organizationId , userId: params.userId});
+      const userinfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
       const roleList = await getRoleList();
       if (!roleList || roleList.length === 0) {
         spinner.text = 'No roles available';
@@ -278,35 +280,35 @@ const handleInteractiveParamsOrArguments = async (
         return;
       }
       param.params = roleList.map((role: any) => ({ name: role.key, message: role.description }));
-      if( param.required !== false && userinfo?.roles  ){
+      if (param.required !== false && userinfo?.roles) {
         param.params = param.params.filter((role: any) => !userinfo.roles.includes(role.name));
-        if(userinfo.roles.includes('owner')){
+        if (userinfo.roles.includes('owner')) {
           param.params = [{ name: 'owner', message: 'Owner' }];
         }
       }
       spinner.text = 'Roles fetched';
       spinner.succeed();
     } else if (param.name === 'userId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Members fetching').start();
-      let membersList = await getOrganizationUsers({ organizationId: params.organizationId || params.currentOrganizationId || '' });
-      if (!membersList || membersList.length === 0) {
-        spinner.text = 'No members available';
+      const spinner = ora('Users fetching').start();
+      let userList = await getOrganizationUsers({ organizationId: params.organizationId || params.currentOrganizationId || '' });
+      if (!userList || userList.length === 0) {
+        spinner.text = 'No users available';
       }
-      if(param.required === false){
-        membersList.unshift({ id: UNKNOWN_PARAM_VALUE, _message: ' Skip - (No user)' });
+      if (param.required === false) {
+        userList.unshift({ id: UNKNOWN_PARAM_VALUE, _message: ' Skip - (No user)' });
       }
-      param.params = membersList.map((member: any) => ({ name: member.id, message: member._message || ` ${member.id} (${member.email})` }));
-      spinner.text = 'Members fetched';
+      param.params = userList.map((user: any) => ({ name: user.id, message: user._message || ` ${user.id} (${user.email})` }));
+      spinner.text = 'Users fetched';
       spinner.succeed();
     } else if (param.name === 'email' && param.type === CommandParameterTypes.SELECT) {
       const spinner = ora('Invitations fetching').start();
       const invitationsList = await getOrganizationInvitations({ organizationId: params.organizationId || params.currentOrganizationId || '' });
-      if ( param.required !== false &&( !invitationsList || invitationsList.length === 0)) {
+      if (param.required !== false && (!invitationsList || invitationsList.length === 0)) {
         spinner.text = 'No invitations available';
         spinner.fail();
         return;
       }
-      if(param.required === false){
+      if (param.required === false) {
         invitationsList.unshift({ userEmail: UNKNOWN_PARAM_VALUE, _message: 'Skip - (No email)' });
       }
       param.params = invitationsList.map((invitation: any) => ({ name: invitation.userEmail, message: invitation._message || invitation.userEmail }));

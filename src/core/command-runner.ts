@@ -56,7 +56,8 @@ import {
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
-import { PROGRAM_NAME, UNKNOWN_PARAM_VALUE } from '../constant';
+import { CURRENT_PARAM_VALUE, PROGRAM_NAME, UNKNOWN_PARAM_VALUE } from '../constant';
+import { ProgramError } from './ProgramError';
 
 const handleConfigCommand = (command: ProgramCommand) => {
   const action = command.name();
@@ -81,10 +82,10 @@ const handleConfigCommand = (command: ProgramCommand) => {
         setCurrentConfigVariable(key);
         configWriter({ current: getCurrentConfigVariable() });
       } else {
-        throw new Error("Config command 'current' action requires a valid value");
+        throw new ProgramError("Config command 'current' action requires a valid value");
       }
     } else {
-      throw new Error("Config command 'current' action requires a value");
+      throw new ProgramError("Config command 'current' action requires a value");
     }
   } else if (action === 'add') {
     if (key) {
@@ -92,7 +93,7 @@ const handleConfigCommand = (command: ProgramCommand) => {
       configWriter({ current: getCurrentConfigVariable() });
       configWriter(getEnviromentsConfigToWriting());
     } else {
-      throw new Error("Config command 'add' action requires a value(key)");
+      throw new ProgramError("Config command 'add' action requires a value(key)");
     }
   } else if (action === 'reset') {
     clearConfigs();
@@ -101,24 +102,25 @@ const handleConfigCommand = (command: ProgramCommand) => {
   } else if (action == 'trust') {
     trustAppcircleCertificate();
   } else {
-    throw new Error('Config command action not found');
+    throw new ProgramError(`Config command action not found \nRun "${PROGRAM_NAME} config --help" for more information`);
   }
 };
 
 const handleOrganizationCommand = async (command: ProgramCommand, params: any) => {
-  if (!params.organizationId) {
+  if (!params.organizationId || params.organizationId === CURRENT_PARAM_VALUE) {
     params.organizationId = (await getUserInfo()).currentOrganizationId;
   }
+  params.role = Array.isArray(params.role) ? params.role : [params.role];
   if (command.fullCommandName === `${PROGRAM_NAME}-organization-view`) {
     const response = params.organizationId === 'all' || !params.organizationId ? await getOrganizations() : await getOrganizationDetail(params);
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
       data: response,
     });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-member-view`) {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-view`) {
     const users = await getOrganizationUsers(params);
     const invitations = await getOrganizationInvitations(params);
-    console.log('users', invitations[0].organizationsAndRoles);
+    //console.log('users', invitations[0].organizationsAndRoles);
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
       data: {
@@ -126,22 +128,26 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
         invitations,
       },
     });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-member-invite`) {
-    const inviteRes = await inviteUserToOrganization({ organizationId: params.organizationId, email: params.email, role: params.role || [] });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-invite`) {
+    await inviteUserToOrganization({ organizationId: params.organizationId, email: params.email, role: params.role || [] });
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
-      data: inviteRes,
+      data: 'Invitation successfully sent.',
     });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-member-re-invite`) {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-re-invite`) {
     if (!params.organizationId) {
       params.organizationId = (await getUserInfo()).currentOrganizationId;
     }
-    const reInviteRes = await reInviteUserToOrganization({ organizationId: params.organizationId, email: params.email });
+    await reInviteUserToOrganization({ organizationId: params.organizationId, email: params.email });
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
-      data: reInviteRes,
+      data: 'Re-Invitation successfully sent.',
     });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-member-remove`) {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-remove`) {
+    if (!params.email && !params.userId) {
+      console.error('error: You must provide either email or userId parameter');
+      process.exit(1);
+    }
     if (params.email && params.email !== UNKNOWN_PARAM_VALUE) {
       await removeInvitationFromOrganization({ organizationId: params.organizationId, email: params.email });
       commandWriter(CommandTypes.ORGANIZATION, {
@@ -189,7 +195,8 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       data: userInfo.roles,
     });
   } else {
-    console.log('command not found', params);
+    const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
+    console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
   }
 };
 
@@ -285,6 +292,7 @@ export const runCommand = async (command: ProgramCommand) => {
       } catch (e) {
         spinner.text = 'The file could not be downloaded.';
         spinner.fail();
+        throw e;
       }
       break;
     }
@@ -297,6 +305,7 @@ export const runCommand = async (command: ProgramCommand) => {
         spinner.succeed();
       } catch (e) {
         spinner.fail('Upload failed');
+        throw e;
       }
       break;
     }
@@ -354,6 +363,7 @@ export const runCommand = async (command: ProgramCommand) => {
         spinner.succeed();
       } catch (e) {
         spinner.fail('App version delete failed');
+        throw e;
       }
       break;
     }
@@ -366,6 +376,7 @@ export const runCommand = async (command: ProgramCommand) => {
         spinner.succeed();
       } catch (e) {
         spinner.fail('Notification failed');
+        throw e;
       }
       break;
     }
@@ -378,6 +389,7 @@ export const runCommand = async (command: ProgramCommand) => {
         spinner.succeed();
       } catch (e) {
         spinner.fail('Upload failed');
+        throw e;
       }
       break;
     }
@@ -390,6 +402,7 @@ export const runCommand = async (command: ProgramCommand) => {
         spinner.succeed();
       } catch (e) {
         spinner.fail('Upload failed');
+        throw e;
       }
       break;
     }
@@ -399,7 +412,8 @@ export const runCommand = async (command: ProgramCommand) => {
       break;
     }
     default: {
-      console.error('Command not found: ', commandName);
+      const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
+      console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
       process.exit(1);
     }
   }
