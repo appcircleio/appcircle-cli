@@ -50,6 +50,7 @@ export type ParamType = {
   requriedForInteractiveMode?: boolean;
   paramType?: string;
   defaultValue?: any;
+  from?: 'user' | 'api';
 };
 
 export type CommandType = {
@@ -340,6 +341,7 @@ export const Commands: CommandType[] = [
                 name: 'role',
                 description: 'Roles',
                 type: CommandParameterTypes.MULTIPLE_SELECT,
+                from: 'user',
                 valueType: 'string',
                 required: true,
               },

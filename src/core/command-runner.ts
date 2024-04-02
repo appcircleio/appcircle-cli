@@ -207,6 +207,11 @@ export const runCommand = async (command: ProgramCommand) => {
 
   //console.log('Full-Command-Name: ', command.fullCommandName, params);
 
+  //In interactive mode, if any parameters have errors, we can't continue execution.
+  if(params.isError){
+    process.exit(1);
+  }
+
   // Handle config command
   if (command.isGroupCommand(CommandTypes.CONFIG)) {
     return handleConfigCommand(command);

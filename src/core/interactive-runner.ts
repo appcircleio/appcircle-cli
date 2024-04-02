@@ -272,17 +272,24 @@ const handleInteractiveParamsOrArguments = async (
       spinner.succeed();
     } else if (param.name === 'role') {
       const spinner = ora('Roles fetching').start();
-      const userinfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+      const userinfo = params.userId ? await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId }): null;
       const roleList = await getRoleList();
       if (!roleList || roleList.length === 0) {
-        spinner.text = 'No roles available';
+        spinner.text = 'No roles available.';
         spinner.fail();
-        return;
+          return { isError: true };
       }
       param.params = roleList.map((role: any) => ({ name: role.key, message: role.description }));
-      if (param.required !== false && userinfo?.roles) {
+      if(param.from === 'user' && userinfo?.roles) {
+        param.params = param.params.filter((role: any) => userinfo.roles.includes(role.name));
+        if(param.params.length === 0) {
+          spinner.text = 'No roles for this user.';
+          spinner.fail();
+          return { isError: true };
+        }
+      }else if (param.required !== false && userinfo?.roles) {
         param.params = param.params.filter((role: any) => !userinfo.roles.includes(role.name));
-        if (userinfo.roles.includes('owner')) {
+        if (userinfo?.roles.includes('owner')) {
           param.params = [{ name: 'owner', message: 'Owner' }];
         }
       }
