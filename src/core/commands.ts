@@ -50,7 +50,7 @@ export type ParamType = {
   requriedForInteractiveMode?: boolean;
   paramType?: string;
   defaultValue?: any;
-  from?: 'user' | 'api';
+  from?: 'user' | 'default';
 };
 
 export type CommandType = {

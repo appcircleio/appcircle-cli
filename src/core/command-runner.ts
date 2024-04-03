@@ -53,6 +53,7 @@ import {
   removeUserFromOrganization,
   getOrganizationUserinfo,
   assignRolesToUserInOrganitaion,
+  getOrganizationUsersWithRoles,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -118,7 +119,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       data: response,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-view`) {
-    const users = await getOrganizationUsers(params);
+    const users = await getOrganizationUsersWithRoles(params);
     const invitations = await getOrganizationInvitations(params);
     //console.log('users', invitations[0].organizationsAndRoles);
     commandWriter(CommandTypes.ORGANIZATION, {

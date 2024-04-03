@@ -256,11 +256,12 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
               .map((user: any) => ({
                 'User Name': user.username,
                 Id: user.id,
+                'InRootOrg': !user.isSubOrganizationMember ? 'Yes' : 'No',
                 Email: user.email || '-',
                 Roles: user.roles.join(',') || '-',
               }))
           )
-        : console.log('- No users found.');
+        : console.log('  No users found.');
 
       console.log('\n- Invitations ↴ ');
       data.data.invitations?.length
@@ -268,11 +269,12 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
             data.data.invitations.map((user: any) => ({
               'User Email': user.userEmail,
               'Root Organization ID': user.rootOrganizationId,
+              'InRootOrg': !user.isSubOrganizationMember ? 'Yes' : 'No',
               Roles: user.organizationsAndRoles?.[0]?.roles?.join(',') || '-',
               Status: user.status || '-',
             }))
           )
-        : console.log('- No invitations found');
+        : console.log('  No invitations found');
     } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-user-invite`) {
       console.log('Invitation successfully sent.');
     } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-user-re-invite`) {
@@ -281,7 +283,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
       console.log(`User "${data.data.email}" has been removed.`);
     } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
       console.log('\n- Roles ↴ ');
-      data.data.length ? console.table(data.data) : console.log('- No roles found.');
+      data.data.length ? console.table(data.data) : console.log('  No roles found.');
     } else {
       console.log(data.data);
     }
