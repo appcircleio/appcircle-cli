@@ -36,7 +36,7 @@ Below is the list of commands currently supported by Appcircle CLI:
 | `appcircle  help [commandName]`                                                                                                         | Display help for command                                |
 | `appcircle config <subcommand> [argument] [options]`                                                                                                   | View and edit Appcircle CLI properties                  |
 | `appcircle login [--pat]`                                                                                                               | Get an access token for the session                     |
-| `appcircle organization <subcommand> [action] [options]`                                                                                                   | Organization management (user, role)                  |
+| `appcircle organization <subcommand> [action] [options]`                                                                                                   | Manage organization users, roles, and details                  |
 | `appcircle listBuildProfiles`                                                                                                           | Get the list of build profiles                          |
 | `appcircle listDistributionProfiles`                                                                                                    | Get the list of distribution profiles                   |
 | `appcircle listBuildProfileWorkflows [--profileId]`                                                                                     | Get the list of workflows for the profile               |
