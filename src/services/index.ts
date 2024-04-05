@@ -1,54 +1,18 @@
-import qs from "querystring";
-import fs from "fs";
-import path from "path";
-import FormData from "form-data";
-import axios, { AxiosRequestConfig } from "axios";
-import moment from "moment";
-import chalk from "chalk";
-import CurlHelper from "../utils/curlhelper";
-import { readEnviromentConfigVariable, EnvironmentVariables, getConsoleOutputType } from "../config";
-import { EnvironmentVariableTypes } from "../constant";
-
-
-if (process.env.CURL_LOGGING) {
-  axios.interceptors.request.use((config) => {
-    const data = new CurlHelper(config);
-    let curl = data.generateCommand();
-    if (getConsoleOutputType() === "json") {
-      //Do nothing
-      //console.log(JSON.stringify(curl));
-    } else {
-      console.log(chalk.green(curl));
-    }
-    return config;
-  });
-}
-
-const API_HOSTNAME = readEnviromentConfigVariable(EnvironmentVariables.API_HOSTNAME);
-const AUTH_HOSTNAME = readEnviromentConfigVariable(EnvironmentVariables.AUTH_HOSTNAME);
-
-const appcircleApi = axios.create({
-  baseURL: API_HOSTNAME.endsWith("/") ? API_HOSTNAME : `${API_HOSTNAME}/`,
-});
-
-function getHeaders(withToken = true): AxiosRequestConfig["headers"] {
-  let response: AxiosRequestConfig["headers"] = {
-    accept: "application/json",
-    "User-Agent": "Appcircle CLI/1.0.3",
-  };
-  if (withToken) {
-    response.Authorization = `Bearer ${readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN)}`;
-  }
-  return response;
-}
-
-export type OptionsType<T = {}> = Record<string, any> & { output?: "json" | "plain" } & T;
+import qs from 'querystring';
+import fs from 'fs';
+import path from 'path';
+import FormData from 'form-data';
+import axios from 'axios';
+import moment from 'moment';
+import { EnvironmentVariableTypes } from '../constant';
+import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
+import { ProgramError } from '../core/ProgramError';
 
 export async function getToken(options: OptionsType<{ pat: string }>) {
   const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, qs.stringify({ pat: options.pat }), {
     headers: {
-      accept: "application/json",
-      "content-type": "application/x-www-form-urlencoded",
+      accept: 'application/json',
+      'content-type': 'application/x-www-form-urlencoded',
     },
   });
   return response.data;
@@ -76,16 +40,16 @@ export async function getTestingGroups(options: OptionsType) {
   const response = await appcircleApi.get(`distribution/v2/testing-groups`, {
     headers: getHeaders(),
   });
-  if (options.output === "json") {
+  if (options.output === 'json') {
     console.log(JSON.stringify(response.data));
   } else {
     console.table(
       response.data.map((testingGroup: any) => ({
         ID: testingGroup.id,
         Name: testingGroup.name,
-        "Organization ID": testingGroup.organizationId,
-        Created: testingGroup.createDate ? moment(testingGroup.createDate).calendar() : "No created data",
-        "Last Updated": testingGroup.createDate ? moment(testingGroup.createDate).fromNow() : "No update data",
+        'Organization ID': testingGroup.organizationId,
+        Created: testingGroup.createDate ? moment(testingGroup.createDate).calendar() : 'No created data',
+        'Last Updated': testingGroup.createDate ? moment(testingGroup.createDate).fromNow() : 'No update data',
       }))
     );
   }
@@ -116,19 +80,18 @@ export async function getBuildsOfCommit(options: OptionsType<{ commitId: string 
 export async function startBuild(
   options: OptionsType<{ profileId: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string }>
 ) {
-  let branchId = options.branchId || "";
-  let workflowId = options.workflowId || "";
-  let commitId = options.commitId || "";
-  let configurationId = options.configurationId || "";
-
+  let branchId = options.branchId || '';
+  let workflowId = options.workflowId || '';
+  let commitId = options.commitId || '';
+  let configurationId = options.configurationId || '';
 
   if (!branchId && options.branch) {
-    const branchesRes = await getBranches({ profileId: options.profileId || "" });
+    const branchesRes = await getBranches({ profileId: options.profileId || '' });
     const branchIndex = branchesRes.branches.findIndex((element: { [key: string]: any }) => element.name === options.branch);
     branchId = branchesRes.branches[branchIndex].id;
   }
   if (!workflowId && options.workflow) {
-    const workflowsRes = await getWorkflows({ profileId: options.profileId || "" });
+    const workflowsRes = await getWorkflows({ profileId: options.profileId || '' });
     const workflowIndex = workflowsRes.workflows.findIndex((element: { [key: string]: any }) => element.workflowName === options.workflow);
     workflowId = workflowsRes.workflows[workflowIndex].id;
   }
@@ -137,27 +100,31 @@ export async function startBuild(
     commitId = allCommitsByBranchId[0].id;
   }
   if (!configurationId) {
-    const allConfigurations = await getConfigurations({ profileId: options.profileId || "" });
+    const allConfigurations = await getConfigurations({ profileId: options.profileId || '' });
     configurationId = allConfigurations[0].item1.id;
   }
-  const buildResponse = await appcircleApi.post(`build/v2/commits/${commitId}?${qs.stringify({  action: 'build', workflowId, configurationId })}`, '{}', {
-    headers: {
-      ...getHeaders(),
-      accept: "*/*",
-      "content-type": "application/x-www-form-urlencoded",
-    },
-  });
+  const buildResponse = await appcircleApi.post(
+    `build/v2/commits/${commitId}?${qs.stringify({ action: 'build', workflowId, configurationId })}`,
+    '{}',
+    {
+      headers: {
+        ...getHeaders(),
+        accept: '*/*',
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+    }
+  );
   return buildResponse.data;
 }
 
 export async function downloadArtifact(options: OptionsType<{ buildId: string; commitId: string }>, downloadPath: string) {
   const data = new FormData();
-  data.append("Path", downloadPath);
-  data.append("Build Id", options.buildId);
-  data.append("Commit Id", options.commitId);
+  data.append('Path', downloadPath);
+  data.append('Build Id', options.buildId);
+  data.append('Commit Id', options.commitId);
 
   const downloadResponse = await appcircleApi.get(`build/v2/commits/${options.commitId}/builds/${options.buildId}`, {
-    responseType: "stream",
+    responseType: 'stream',
     headers: {
       ...getHeaders(),
       ...data.getHeaders(),
@@ -167,12 +134,12 @@ export async function downloadArtifact(options: OptionsType<{ buildId: string; c
     const writer = fs.createWriteStream(`${downloadPath}/artifact.zip`);
     downloadResponse.data.pipe(writer);
     let error: any = null;
-    writer.on("error", (err) => {
+    writer.on('error', (err) => {
       error = err;
       writer.close();
       reject(err);
     });
-    writer.on("close", () => {
+    writer.on('close', () => {
       if (!error) {
         resolve(true);
       }
@@ -184,8 +151,8 @@ export async function downloadArtifact(options: OptionsType<{ buildId: string; c
 
 export async function uploadArtifact(options: OptionsType<{ message: string; app: string; distProfileId: string }>) {
   const data = new FormData();
-  data.append("Message", options.message);
-  data.append("File", fs.createReadStream(options.app));
+  data.append('Message', options.message);
+  data.append('File', fs.createReadStream(options.app));
 
   const uploadResponse = await appcircleApi.post(`distribution/v2/profiles/${options.distProfileId}/app-versions`, data, {
     maxContentLength: Infinity,
@@ -193,7 +160,7 @@ export async function uploadArtifact(options: OptionsType<{ message: string; app
     headers: {
       ...getHeaders(),
       ...data.getHeaders(),
-      "Content-Type": "multipart/form-data;boundary=" + data.getBoundary(),
+      'Content-Type': 'multipart/form-data;boundary=' + data.getBoundary(),
     },
   });
   return uploadResponse.data;
@@ -227,7 +194,7 @@ export async function getEnvironmentVariables(options: OptionsType<{ variableGro
 async function createTextEnvironmentVariable(options: OptionsType<{ variableGroupId: string; value: string; isSecret: boolean; key: string }>) {
   const response = await appcircleApi.post(
     `build/v1/variable-groups/${options.variableGroupId}/variables`,
-    { Key: options.key, Value: options.value, IsSecret: options.isSecret || "false" },
+    { Key: options.key, Value: options.value, IsSecret: options.isSecret || 'false' },
     {
       headers: getHeaders(),
     }
@@ -238,11 +205,11 @@ async function createTextEnvironmentVariable(options: OptionsType<{ variableGrou
 async function createFileEnvironmentVariable(options: OptionsType<{ key: string; isSecret: boolean; filePath: string; variableGroupId: string }>) {
   const form = new FormData();
   const file = fs.createReadStream(options.filePath);
-  console.log("options.filePath): ", options.filePath);
-  form.append("Key", options.key);
-  form.append("Value", path.basename(options.filePath));
-  form.append("IsSecret", options.isSecret || "false");
-  form.append("Binary", file);
+  console.log('options.filePath): ', options.filePath);
+  form.append('Key', options.key);
+  form.append('Value', path.basename(options.filePath));
+  form.append('IsSecret', options.isSecret || 'false');
+  form.append('Binary', file);
 
   const uploadResponse = await appcircleApi.post(`build/v1/variable-groups/${options.variableGroupId}/variables/files`, form, {
     maxContentLength: Infinity,
@@ -250,7 +217,7 @@ async function createFileEnvironmentVariable(options: OptionsType<{ key: string;
     headers: {
       ...getHeaders(),
       ...form.getHeaders(),
-      "Content-Type": "multipart/form-data;boundary=" + form.getBoundary(),
+      'Content-Type': 'multipart/form-data;boundary=' + form.getBoundary(),
     },
   });
   return uploadResponse.data;
@@ -271,7 +238,7 @@ export async function createEnvironmentVariable(
   } else if (!options.type || options.type === EnvironmentVariableTypes.TEXT) {
     return createTextEnvironmentVariable(options);
   } else if (options.type) {
-    throw new Error("Environment variable type not found");
+    throw new ProgramError(`Environment variable type (${options.type}) not found`);
   }
 }
 
@@ -313,13 +280,13 @@ export async function getEnterpriseProfiles(options: OptionsType = {}) {
 }
 
 export async function getEnterpriseAppVersions(options: { entProfileId: string; publishType: string }) {
-  let versionType = "";
+  let versionType = '';
   switch (options.publishType) {
-    case "1":
-      versionType = "?publishtype=Beta";
+    case '1':
+      versionType = '?publishtype=Beta';
       break;
-    case "2":
-      versionType = "?publishtype=Live";
+    case '2':
+      versionType = '?publishtype=Live';
     default:
       break;
   }
@@ -363,7 +330,7 @@ export async function removeEnterpriseAppVersion(options: { entProfileId: string
     headers: getHeaders(),
   });
   if (versionResponse.data.length === 0) {
-    console.info("No app versions available.");
+    console.info('No app versions available.');
     return;
   }
   return versionResponse.data;
@@ -384,7 +351,7 @@ export async function notifyEnterpriseAppVersion(
 
 export async function uploadEnterpriseAppVersion(options: OptionsType<{ entProfileId: string; app: string }>) {
   const data = new FormData();
-  data.append("File", fs.createReadStream(options.app));
+  data.append('File', fs.createReadStream(options.app));
 
   const uploadResponse = await appcircleApi.post(`store/v2/profiles/${options.entProfileId}/app-versions`, data, {
     maxContentLength: Infinity,
@@ -392,7 +359,7 @@ export async function uploadEnterpriseAppVersion(options: OptionsType<{ entProfi
     headers: {
       ...getHeaders(),
       ...data.getHeaders(),
-      "Content-Type": "multipart/form-data;boundary=" + data.getBoundary(),
+      'Content-Type': 'multipart/form-data;boundary=' + data.getBoundary(),
     },
   });
   return uploadResponse.data;
@@ -400,14 +367,14 @@ export async function uploadEnterpriseAppVersion(options: OptionsType<{ entProfi
 
 export async function uploadEnterpriseApp(options: { app: string }) {
   const data = new FormData();
-  data.append("File", fs.createReadStream(options.app));
+  data.append('File', fs.createReadStream(options.app));
   const uploadResponse = await appcircleApi.post(`store/v2/profiles/app-versions`, data, {
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
     headers: {
       ...getHeaders(),
       ...data.getHeaders(),
-      "Content-Type": "multipart/form-data;boundary=" + data.getBoundary(),
+      'Content-Type': 'multipart/form-data;boundary=' + data.getBoundary(),
     },
   });
   return uploadResponse.data;
@@ -419,3 +386,12 @@ export async function getEnterpriseDownloadLink(options: OptionsType<{ entProfil
   });
   return qrcodeStatus.data;
 }
+
+export const getUserInfo = async () => {
+  const userInfo = await axios.get(`${AUTH_HOSTNAME}/auth/realms/appcircle/protocol/openid-connect/userinfo`, {
+    headers: getHeaders(),
+  });
+  return userInfo.data;
+};
+
+export * from './organization';
