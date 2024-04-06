@@ -13,6 +13,7 @@ export enum CommandTypes {
   CONFIG = 'config',
   LOGIN = 'login',
   ORGANIZATION = 'organization',
+  PUBLISH = 'publish',
   LIST_BUILD_PROFILES = 'listBuildProfiles',
   LIST_BUILD_PROFILE_BRANCHES = 'listBuildProfileBranches',
   LIST_BUILD_PROFILE_WORKFLOWS = 'listBuildProfileWorkflows',
@@ -371,6 +372,258 @@ export const Commands: CommandType[] = [
         ],
         params: [],
       },
+    ],
+    params: [],
+  },
+  {
+    command: CommandTypes.PUBLISH,
+    description: 'Publish',
+    longDescription: 'Manage publish module actions.',
+    subCommands: [
+      {
+        command: 'createProfile',
+        description: 'Create a publish profile',
+        longDescription: 'Create a new publish profile',
+        params: [{
+          name: 'platform',
+          description: 'Platform (ios/android)',
+          type: CommandParameterTypes.STRING,
+          defaultValue: 'ios',
+          valueType: 'string',
+          required: true,
+        },
+        {
+          name: 'name',
+          description: 'Profile name',
+          type: CommandParameterTypes.STRING,
+          defaultValue: undefined,
+          valueType: 'string',
+          required: true,
+        }
+      ],
+      },
+      {
+        command: 'profileList',
+        description: 'Publish profile list',
+        longDescription: 'Get list of publish profile',
+        params: [{
+          name: 'platform',
+          description: 'Platform (ios/android)',
+          type: CommandParameterTypes.STRING,
+          defaultValue: 'ios',
+          valueType: 'string',
+          required: true,
+        }],
+      },
+      {
+        command: 'versionUpload',
+        description: 'Upload a new app version',
+        longDescription: 'Upload a new version to selected publish profile',
+        params: [
+          {
+            name: 'platform',
+            description: 'Platform (ios/android)',
+            type: CommandParameterTypes.STRING,
+            defaultValue: 'ios',
+            valueType: 'string',
+            required: true,
+          },
+          {
+            name: 'publishProfileId',
+            description: 'Publish Profile ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          },
+          {
+            name: 'app',
+            description: 'App path',
+            type: CommandParameterTypes.STRING,
+            valueType: 'path',
+            required: true
+          }
+        ],
+      },
+      {
+        command: 'versionDelete',
+        description: 'Remove app version',
+        longDescription: 'Remove app version from selected publish profile',
+        params: [
+          {
+            name: 'platform',
+            description: 'Platform (ios/android)',
+            type: CommandParameterTypes.STRING,
+            defaultValue: 'ios',
+            valueType: 'string',
+            required: true,
+          },
+          {
+            name: 'publishProfileId',
+            description: 'Publish Profile ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          },
+          {
+            name: 'appVersionId',
+            description: 'App version',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          }
+        ],
+      },
+      {
+        command: 'versionDownload',
+        description: 'Download app version',
+        longDescription: 'Download app version from selected publish profile',
+        params: [
+          {
+            name: 'platform',
+            description: 'Platform (ios/android)',
+            type: CommandParameterTypes.STRING,
+            defaultValue: 'ios',
+            valueType: 'string',
+            required: true,
+          },
+          {
+            name: 'publishProfileId',
+            description: 'Publish Profile ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          },
+          {
+            name: 'appVersionId',
+            description: 'App version',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          }
+        ],
+      },
+      {
+        command: 'markAsReleaseCandidate',
+        description: 'Mark/Unmark as Release Candidate',
+        longDescription: 'Mark/Unmark an app version as Release Candidate',
+        params: [
+          {
+            name: 'platform',
+            description: 'Platform (ios/android)',
+            type: CommandParameterTypes.STRING,
+            defaultValue: 'ios',
+            valueType: 'string',
+            required: true,
+          },
+          {
+            name: 'publishProfileId',
+            description: 'Publish Profile ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          },
+          {
+            name: 'appVersionId',
+            description: 'App version',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          },
+          {
+            name: 'releaseCandidate',
+            description: 'Release Candidate',
+            type: CommandParameterTypes.BOOLEAN,
+            valueType: 'boolean',
+            required: true
+          }
+        ],
+      },
+      {
+        command: 'startExistingFlow',
+        description: 'Start a publish',
+        longDescription: 'Starts a publish',
+        params: [
+          {
+            name: 'platform',
+            description: 'Platform (ios/android)',
+            type: CommandParameterTypes.STRING,
+            defaultValue: 'ios',
+            valueType: 'string',
+            required: true,
+          },
+          {
+            name: 'publishProfileId',
+            description: 'Publish Profile ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          },
+          {
+            name: 'appVersionId',
+            description: 'App version',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          }
+        ],
+      },
+      {
+        command: 'setAsAutoPublish',
+        description: 'Set Publish Profile as Auto Publish',
+        longDescription: 'Start a publish process when a new version is received.',
+        params: [
+          {
+            name: 'platform',
+            description: 'Platform (ios/android)',
+            type: CommandParameterTypes.STRING,
+            defaultValue: 'ios',
+            valueType: 'string',
+            required: true,
+          },
+          {
+            name: 'publishProfileId',
+            description: 'Publish Profile ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          },
+          {
+            name: 'enableAutoPublish',
+            description: 'Enable Auto Publish',
+            type: CommandParameterTypes.BOOLEAN,
+            valueType: 'boolean',
+            required: true
+          }
+        ],
+      },
+      {
+        command: 'publishVariables',
+        description: 'Publish Variables',
+        longDescription: 'Publish Variables',
+        params: [],
+        subCommands: [
+          {
+            command: 'groups',
+            description: 'Groups',
+            longDescription: 'Get list of publish variable group',
+            params: [],
+          },
+          {
+            command: 'variables',
+            description: 'Publish Variable List',
+            longDescription: 'View publish variables by group',
+            params: [
+              {
+                name: 'publishVariableGroupId',
+                description: 'Variable Group ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true
+              }
+            ],
+          }
+        ]
+      }
     ],
     params: [],
   },

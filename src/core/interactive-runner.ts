@@ -6,7 +6,7 @@ import moment from 'moment';
 import { prompt, Select, AutoComplete, BooleanPrompt, MultiSelect } from 'enquirer';
 import { runCommand } from './command-runner';
 import { Commands, CommandParameterTypes, CommandTypes, CommandType } from './commands';
-import { APPCIRCLE_COLOR, UNKNOWN_PARAM_VALUE } from '../constant';
+import { APPCIRCLE_COLOR, OperatingSystems, UNKNOWN_PARAM_VALUE, globalVariables } from '../constant';
 import { createOra } from '../utils/orahelper';
 import {
   getBranches,
@@ -25,6 +25,9 @@ import {
   getOrganizationInvitations,
   getOrganizationUsers,
   getOrganizationUserinfo,
+  getPublishProfiles,
+  getAppVersions,
+  getPublishVariableGroups,
 } from '../services';
 import { DefaultEnvironmentVariables, getConfigStore } from '../config';
 import { ProgramCommand, createCommandActionCallback } from '../program';
@@ -307,7 +310,39 @@ const handleInteractiveParamsOrArguments = async (
       param.params = userList.map((user: any) => ({ name: user.id, message: user._message || ` ${user.id} (${user.email})` }));
       spinner.text = 'Users fetched';
       spinner.succeed();
-    } else if (param.name === 'email' && param.type === CommandParameterTypes.SELECT) {
+    }else if(param.name === 'publishProfileId' && param.type === CommandParameterTypes.SELECT){
+      const spinner = ora('Publish Profiles Fetching').start();
+      const selectedPlatform = globalVariables["platform"];
+      const publishProfiles = await getPublishProfiles({ platform: selectedPlatform });
+      param.params = publishProfiles.map((profile:any) => ({name:profile.id, message: ` ${profile.id} (${profile.name}) - ${(OperatingSystems as any)[profile.platformType]}`}));
+      spinner.text = 'Publish Profiles Fetched';
+      spinner.succeed();
+    }else if(param.name === 'appVersionId' && param.type === CommandParameterTypes.SELECT){
+      const spinner = ora('App Versions Fetching').start();
+      const selectedPlatform = globalVariables["platform"];
+      const selectedPublishProfileId = globalVariables["publishProfileId"];
+      const appVersions = await getAppVersions({ platform: selectedPlatform, publishProfileId: selectedPublishProfileId });
+      if (!appVersions || appVersions.length === 0) {
+        spinner.text = 'No app versions available';
+        spinner.fail();
+      }else {
+        param.params = appVersions.map((appVersion:any) => ({name:appVersion.id, message: ` ${appVersion.id} - ${appVersion.name}(${appVersion.version}) ${appVersion.releaseCandidate ? '(Release Candidate)' : ''}`}));
+        spinner.text = 'App Versions Fetched';
+        spinner.succeed();
+      }
+    }else if(param.name === 'publishVariableGroupId' && param.type === CommandParameterTypes.SELECT){
+      const spinner = ora('Publish Variable Groups Fetching').start();
+      const groups = await getPublishVariableGroups();
+      if (!groups || groups.length === 0) {
+        spinner.text = 'No groups available';
+        spinner.fail();
+      }else {
+        param.params = groups.map((group:any) => ({name:group.id, message: ` ${group.id} (${group.name})`}));
+        spinner.text = 'Publish Variable Groups Fetched';
+        spinner.succeed();
+      }
+    }
+    else if (param.name === 'email' && param.type === CommandParameterTypes.SELECT) {
       const spinner = ora('Invitations fetching').start();
       const invitationsList = await getOrganizationInvitations({ organizationId: params.organizationId || params.currentOrganizationId || '' });
       if (param.required !== false && (!invitationsList || invitationsList.length === 0)) {
@@ -321,7 +356,7 @@ const handleInteractiveParamsOrArguments = async (
       param.params = invitationsList.map((invitation: any) => ({ name: invitation.userEmail, message: invitation._message || invitation.userEmail }));
       spinner.text = 'Invitations fetched';
       spinner.succeed();
-    } else if (param.name === 'value' && params.isSecret) {
+    }else if (param.name === 'value' && params.isSecret) {
       param.type = CommandParameterTypes.PASSWORD;
     }
 
@@ -346,6 +381,11 @@ const handleInteractiveParamsOrArguments = async (
           },
         ]);
         (params as any)[param.name] = (stringPrompt as any)[Object.keys(stringPrompt)[0]];
+
+        // set global variables from selected params
+        Object.keys(params).map((key:string) => {
+          globalVariables[key] = params[key];
+        });
       } else if (param.type === CommandParameterTypes.BOOLEAN) {
         const booleanPrompt = new BooleanPrompt({
           name: param.name,
@@ -365,6 +405,10 @@ const handleInteractiveParamsOrArguments = async (
           ],
         });
         (params as any)[param.name] = await selectPrompt.run();
+        // set global variables from selected params
+        Object.keys(params).map((key:string) => {
+          globalVariables[key] = params[key];
+        });
       } else if (param.type === CommandParameterTypes.MULTIPLE_SELECT && param.params) {
         const selectPrompt = new AutoComplete({
           name: param.name,
@@ -387,7 +431,6 @@ const handleInteractiveParamsOrArguments = async (
 const handleCommandParamsAndArguments = async (selectedCommand: CommandType, parentCommand: any): Promise<ProgramCommand | undefined> => {
   const params = (await handleInteractiveParamsOrArguments(selectedCommand.params || [])) || {};
   const args = (await handleInteractiveParamsOrArguments(selectedCommand.arguments || [])) || {};
-
   return createCommandActionCallback({
     parent: parentCommand || null,
     name: () => selectedCommand.command,
@@ -398,7 +441,6 @@ const handleCommandParamsAndArguments = async (selectedCommand: CommandType, par
 
 const handleSelectedCommand = async (command: CommandType, __parentCommand?: any): Promise<ProgramCommand | undefined> => {
   const preparedCommand = await handleCommandParamsAndArguments(command, __parentCommand);
-
   if (command.subCommands?.length) {
     const commandSelect = new AutoComplete({
       name: 'action',

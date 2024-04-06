@@ -288,6 +288,44 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
       console.log(data.data);
     }
   },
+  [CommandTypes.PUBLISH]: (data: any) => {
+    if(data.fullCommandName === `${PROGRAM_NAME}-publish-profileList`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((publishProfile: any) => ({
+          'Profile Id': publishProfile.id,
+          'Profile Name': publishProfile.name,
+          'Last Upload Version': publishProfile.lastUploadVersion,
+          'Last Upload Version Code': publishProfile.lastUploadVersionCode,
+          'Version Code': publishProfile.version,
+          'App Unique Id': publishProfile.appUniqueId ,
+          'Latest Publish': publishProfile.latestPublishDate ? moment(publishProfile.publishDate).calendar() : '-',
+          'Target Platform': (OperatingSystems as any)[publishProfile.platformType],
+          Created: publishProfile.createDate ? moment(publishProfile.createDate).calendar() : '-',
+          Updated: publishProfile.updateDate ? moment(publishProfile.updateDate).calendar() : '-',
+        }))
+      ) : console.log('  No publish profile found');
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-publish-publishVariables-groups`){
+      data.data.length > 0 ? console.table(
+        data.data.map((group: any) => ({
+          'Group Id': group.id,
+          'Group Name': group.name,
+          Created: group.createDate ? moment(group.createDate).calendar() : '-',
+          Updated: group.updateDate ? moment(group.updateDate).calendar() : '-',
+        }))
+      ) : console.log('  No publish variable group found');
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-publish-publishVariables-variables`){
+      data.data.length > 0 ? console.table(
+        data.data.map((variable: any) => ({
+          'Key Name': variable.key,
+          'Key Value': variable.isSecret ? '********' : variable.value,
+        }))
+      ) : console.log('  No publish variable found');
+    }
+    else {
+      console.log(data.data)
+    }
+  }
 };
 
 export const commandWriter = (command: CommandTypes, data: any) => {
