@@ -36,8 +36,6 @@ export async function createDistributionProfile(options: OptionsType<{ name: str
   return response.data;
 }
 
-}
-
 export async function getTestingGroups(options: OptionsType) {
   const response = await appcircleApi.get(`distribution/v2/testing-groups`, {
     headers: getHeaders(),

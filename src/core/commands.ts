@@ -391,123 +391,7 @@ export const Commands: CommandType[] = [
     longDescription: 'Manage publish module actions.',
     subCommands: [
       {
-        command: 'createProfile',
-        description: 'Create a publish profile',
-        longDescription: 'Create a new publish profile',
-        params: [platformParam,
-        {
-          name: 'name',
-          description: 'Profile name',
-          type: CommandParameterTypes.STRING,
-          defaultValue: undefined,
-          valueType: 'string',
-          required: true,
-        }
-      ],
-      },
-      {
-        command: 'profileList',
-        description: 'Publish profile list',
-        longDescription: 'Get list of publish profile',
-        params: [platformParam],
-      },
-      {
-        command: 'versionUpload',
-        description: 'Upload a new app version',
-        longDescription: 'Upload a new version to selected publish profile',
-        params: [
-          platformParam,
-          {
-            name: 'publishProfileId',
-            description: 'Publish Profile ID',
-            type: CommandParameterTypes.SELECT,
-            valueType: 'uuid',
-            required: true
-          },
-          {
-            name: 'app',
-            description: 'App path',
-            type: CommandParameterTypes.STRING,
-            valueType: 'path',
-            required: true
-          }
-        ],
-      },
-      {
-        command: 'versionDelete',
-        description: 'Remove app version',
-        longDescription: 'Remove app version from selected publish profile',
-        params: [
-          platformParam,
-          {
-            name: 'publishProfileId',
-            description: 'Publish Profile ID',
-            type: CommandParameterTypes.SELECT,
-            valueType: 'uuid',
-            required: true
-          },
-          {
-            name: 'appVersionId',
-            description: 'App version',
-            type: CommandParameterTypes.SELECT,
-            valueType: 'uuid',
-            required: true
-          }
-        ],
-      },
-      {
-        command: 'versionDownload',
-        description: 'Download app version',
-        longDescription: 'Download app version from selected publish profile',
-        params: [
-          platformParam,
-          {
-            name: 'publishProfileId',
-            description: 'Publish Profile ID',
-            type: CommandParameterTypes.SELECT,
-            valueType: 'uuid',
-            required: true
-          },
-          {
-            name: 'appVersionId',
-            description: 'App version',
-            type: CommandParameterTypes.SELECT,
-            valueType: 'uuid',
-            required: true
-          }
-        ],
-      },
-      {
-        command: 'markAsReleaseCandidate',
-        description: 'Mark/Unmark as Release Candidate',
-        longDescription: 'Mark/Unmark an app version as Release Candidate',
-        params: [
-          platformParam,
-          {
-            name: 'publishProfileId',
-            description: 'Publish Profile ID',
-            type: CommandParameterTypes.SELECT,
-            valueType: 'uuid',
-            required: true
-          },
-          {
-            name: 'appVersionId',
-            description: 'App version',
-            type: CommandParameterTypes.SELECT,
-            valueType: 'uuid',
-            required: true
-          },
-          {
-            name: 'releaseCandidate',
-            description: 'Release Candidate',
-            type: CommandParameterTypes.BOOLEAN,
-            valueType: 'boolean',
-            required: true
-          }
-        ],
-      },
-      {
-        command: 'startExistingFlow',
+        command: 'start',
         description: 'Start a publish',
         longDescription: 'Starts a publish',
         params: [
@@ -529,52 +413,272 @@ export const Commands: CommandType[] = [
         ],
       },
       {
-        command: 'setAsAutoPublish',
-        description: 'Set Publish Profile as Auto Publish',
-        longDescription: 'Start a publish process when a new version is received.',
-        params: [
-          platformParam,
+        command: 'profile',
+        description: 'Publish profile actions',
+        longDescription: 'Publish profile actions',
+        params: [],
+        subCommands: [
           {
-            name: 'publishProfileId',
-            description: 'Publish Profile ID',
-            type: CommandParameterTypes.SELECT,
-            valueType: 'uuid',
-            required: true
+            command: 'list',
+            description: 'Publish profile list',
+            longDescription: 'Get list of publish profile',
+            params: [platformParam],
           },
           {
-            name: 'enableAutoPublish',
-            description: 'Enable Auto Publish',
-            type: CommandParameterTypes.BOOLEAN,
-            valueType: 'boolean',
-            required: true
+            command: 'create',
+            description: 'Create a publish profile',
+            longDescription: 'Create a new publish profile',
+            params: [platformParam,
+            {
+              name: 'name',
+              description: 'Profile name',
+              type: CommandParameterTypes.STRING,
+              defaultValue: undefined,
+              valueType: 'string',
+              required: true,
+            }
+          ],
+          },
+          {
+            command: 'rename',
+            description: 'Raname publish profile',
+            longDescription: 'Rename publish profile',
+            params: [platformParam,
+              {
+                name: 'publishProfileId',
+                description: 'Publish Profile ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true
+              },
+              {
+                name: 'name',
+                description: 'New profile name',
+                type: CommandParameterTypes.STRING,
+                defaultValue: undefined,
+                valueType: 'string',
+                required: true,
+              }
+          ],
+          },
+          {
+            command: 'delete',
+            description: 'Remove publish profile',
+            longDescription: 'Remove publish profile',
+            params: [platformParam,
+              {
+                name: 'publishProfileId',
+                description: 'Publish Profile ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true
+              }
+          ],
+          },
+          {
+            command: 'version',
+            description: 'App version actions',
+            longDescription: 'App version actions',
+            params: [],
+            subCommands: [
+              {
+                command: 'upload',
+                description: 'Upload a new app version',
+                longDescription: 'Upload a new version to given publish profile',
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'app',
+                    description: 'App path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true
+                  }
+                ],
+              },
+              {
+                command: 'download',
+                description: 'Download app version',
+                longDescription: 'Download app version from selected publish profile',
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'appVersionId',
+                    description: 'App version',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The path for artifacts to be downloaded:',
+                    longDescription:'[OPTIONAL] The path for artifacts to be downloaded: (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: false
+                  }
+                ],
+              },
+              {
+                command: 'delete',
+                description: 'Remove app version',
+                longDescription: 'Remove app version from selected publish profile',
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'appVersionId',
+                    description: 'App version',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  }
+                ],
+              },
+              {
+                command: 'markAsRC',
+                description: 'Mark as Release Candidate',
+                longDescription: 'Mark an app version as Release Candidate',
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'appVersionId',
+                    description: 'App version',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  }
+                ],
+              },
+              {
+                command: 'unmarkAsRC',
+                description: 'Unmark as Release Candidate',
+                longDescription: 'Unmark an app version as Release Candidate',
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'appVersionId',
+                    description: 'App version',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  }
+                ],
+              },
+            ]
+          },
+          {
+            command: 'settings',
+            description: 'Publish profile settings',
+            longDescription: 'Publish profile settings',
+            params: [],
+            subCommands: [
+              {
+                command: 'autopublish',
+                description: 'Set Publish Profile as Auto Publish',
+                longDescription: 'Start a publish process when a new version is received.',
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'enable',
+                    description: 'Enable Auto Publish',
+                    type: CommandParameterTypes.BOOLEAN,
+                    valueType: 'boolean',
+                    required: true
+                  }
+                ],
+              },
+            ]
           }
-        ],
+        ]
       },
       {
-        command: 'publishVariables',
+        command: 'variable',
         description: 'Publish Variables',
         longDescription: 'Publish Variables',
         params: [],
         subCommands: [
           {
-            command: 'groups',
-            description: 'Groups',
-            longDescription: 'Get list of publish variable group',
+            command: 'group',
+            description: 'Group Actions',
+            longDescription: 'Publish variable group actions',
             params: [],
-          },
-          {
-            command: 'variables',
-            description: 'Publish Variable List',
-            longDescription: 'View publish variables by group',
-            params: [
+            subCommands:[
               {
-                name: 'publishVariableGroupId',
-                description: 'Variable Group ID',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
-                required: true
+                command: "list",
+                description: 'List groups',
+                longDescription: 'Publish variable group actions',
+                params: [],
+              },
+              // {
+              //   command: "create",
+              //   description: 'Create new group',
+              //   longDescription: 'Create a new publish variable group',
+              //   params: [{
+              //     name: 'name',
+              //     description: 'Group name',
+              //     type: CommandParameterTypes.STRING,
+              //     defaultValue: undefined,
+              //     valueType: 'string',
+              //     required: true,
+              //   }],
+              // },
+              {
+                command: "view",
+                description: 'View items of group',
+                longDescription: 'View items of publish variable group',
+                params: [
+                  {
+                    name: 'publishVariableGroupId',
+                    description: 'Variable Group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  }
+                ],
               }
-            ],
+            ]
           }
         ]
       }
