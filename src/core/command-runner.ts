@@ -218,6 +218,9 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
 };
 
 const handlePublishCommand = async (command: ProgramCommand, params: any) => {
+  if(params.platform && !['ios','android'].includes(params.platform)){
+    throw new ProgramError(`Invalid platform(${params.platform}). Supported platforms: ios, android`);
+  }
   if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-create`) {
     const profileRes = await createPublishProfile({ platform: params.platform, name: params.name });
     commandWriter(CommandTypes.PUBLISH, {
