@@ -49,3 +49,5 @@ export const PROGRAM_NAME = "appcircle";
 export const UNKNOWN_PARAM_VALUE = '-'
 export const CURRENT_PARAM_VALUE = 'current'
 
+export let globalVariables : {[key:string]: string} = {}
+

@@ -287,7 +287,80 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
     } else {
       console.log(data.data);
     }
-  },
+  }, 
+  [CommandTypes.PUBLISH]: (data: any) => {
+    if(data.fullCommandName === `${PROGRAM_NAME}-publish-profile-create`){
+      console.table(
+        [{ 'Id:': data.data.id,
+          'Name:': data.data.name,
+          'Created:': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+        }]
+      )
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-publish-profile-rename`){
+      console.table(
+        [{ 'Id:': data.data.id,
+          'Name:': data.data.name,
+          'Created:': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+          'Updated:': data.data.updateDate ? moment(data.data.updateDate).calendar() : '-',
+        }]
+      )
+    }
+    else if(data.fullCommandName === `${PROGRAM_NAME}-publish-profile-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((publishProfile: any) => ({
+          'Id': publishProfile.id,
+          'Name': publishProfile.name,
+          'Last Version': publishProfile.lastUploadVersion,
+          'Last Version Code': publishProfile.lastUploadVersionCode,
+          'Version Code': publishProfile.version,
+          'App Unique Id': publishProfile.appUniqueId ,
+          'Latest Publish': publishProfile.latestPublishDate ? moment(publishProfile.publishDate).calendar() : '-',
+          'Platform': (OperatingSystems as any)[publishProfile.platformType],
+          Created: publishProfile.createDate ? moment(publishProfile.createDate).calendar() : '-',
+          Updated: publishProfile.updateDate ? moment(publishProfile.updateDate).calendar() : '-',
+        }))
+      ) : console.log('  No publish profile found');
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`){
+      data.data.length > 0 ? console.table(
+        data.data.map((group: any) => ({
+          'Group Id': group.id,
+          'Group Name': group.name,
+          Created: group.createDate ? moment(group.createDate).calendar() : '-',
+          Updated: group.updateDate ? moment(group.updateDate).calendar() : '-',
+        }))
+      ) : console.log('  No publish variable group found');
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`){
+      data.data.length > 0 ? console.table(
+        data.data.map((variable: any) => ({
+          'Key Name': variable.key,
+          'Key Value': variable.isSecret ? '********' : variable.value,
+        }))
+      ) : console.log('  No publish variable found');
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-settings-autopublish`){
+      console.table(
+        [{ 'Id:': data.data.id,
+          'Name:': data.data.name,
+          'Created:': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+          'Updated:': data.data.updateDate ? moment(data.data.updateDate).calendar() : '-',
+          'Auto Publish': data.data.profileSettings.whenNewVersionRecieved ? 'Yes' : 'No',
+        }]
+      )
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-markAsRC` || data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-unmarkAsRC`){
+      console.table(
+        [{ 'Id:': data.data.id,
+          'Name:': data.data.name,
+          'Unique Name': data.data.uniqueName,
+          'Created:': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+          'Updated:': data.data.updateDate ? moment(data.data.updateDate).calendar() : '-',
+          'Release Candidate': data.data.releaseCandidate ? 'Yes' : 'No',
+        }]
+      )
+    }
+    else {
+      console.log(data.data)
+    }
+  }
 };
 
 export const commandWriter = (command: CommandTypes, data: any) => {
