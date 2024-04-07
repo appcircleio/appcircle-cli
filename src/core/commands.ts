@@ -64,6 +64,16 @@ export type CommandType = {
   params: ParamType[];
 };
 
+const platformParam = {
+  name: 'platform',
+  description: 'Platform (ios/android)',
+  type: CommandParameterTypes.SELECT,
+  params: [{ name: 'ios' , message: 'iOS' }, { name: 'android', message: 'Android' }],
+  defaultValue: 'ios',
+  valueType: 'string',
+  required: true,
+};
+
 export const Commands: CommandType[] = [
   {
     command: CommandTypes.CONFIG,
@@ -384,14 +394,7 @@ export const Commands: CommandType[] = [
         command: 'createProfile',
         description: 'Create a publish profile',
         longDescription: 'Create a new publish profile',
-        params: [{
-          name: 'platform',
-          description: 'Platform (ios/android)',
-          type: CommandParameterTypes.STRING,
-          defaultValue: 'ios',
-          valueType: 'string',
-          required: true,
-        },
+        params: [platformParam,
         {
           name: 'name',
           description: 'Profile name',
@@ -406,28 +409,14 @@ export const Commands: CommandType[] = [
         command: 'profileList',
         description: 'Publish profile list',
         longDescription: 'Get list of publish profile',
-        params: [{
-          name: 'platform',
-          description: 'Platform (ios/android)',
-          type: CommandParameterTypes.STRING,
-          defaultValue: 'ios',
-          valueType: 'string',
-          required: true,
-        }],
+        params: [platformParam],
       },
       {
         command: 'versionUpload',
         description: 'Upload a new app version',
         longDescription: 'Upload a new version to selected publish profile',
         params: [
-          {
-            name: 'platform',
-            description: 'Platform (ios/android)',
-            type: CommandParameterTypes.STRING,
-            defaultValue: 'ios',
-            valueType: 'string',
-            required: true,
-          },
+          platformParam,
           {
             name: 'publishProfileId',
             description: 'Publish Profile ID',
@@ -449,14 +438,7 @@ export const Commands: CommandType[] = [
         description: 'Remove app version',
         longDescription: 'Remove app version from selected publish profile',
         params: [
-          {
-            name: 'platform',
-            description: 'Platform (ios/android)',
-            type: CommandParameterTypes.STRING,
-            defaultValue: 'ios',
-            valueType: 'string',
-            required: true,
-          },
+          platformParam,
           {
             name: 'publishProfileId',
             description: 'Publish Profile ID',
@@ -478,14 +460,7 @@ export const Commands: CommandType[] = [
         description: 'Download app version',
         longDescription: 'Download app version from selected publish profile',
         params: [
-          {
-            name: 'platform',
-            description: 'Platform (ios/android)',
-            type: CommandParameterTypes.STRING,
-            defaultValue: 'ios',
-            valueType: 'string',
-            required: true,
-          },
+          platformParam,
           {
             name: 'publishProfileId',
             description: 'Publish Profile ID',
@@ -507,14 +482,7 @@ export const Commands: CommandType[] = [
         description: 'Mark/Unmark as Release Candidate',
         longDescription: 'Mark/Unmark an app version as Release Candidate',
         params: [
-          {
-            name: 'platform',
-            description: 'Platform (ios/android)',
-            type: CommandParameterTypes.STRING,
-            defaultValue: 'ios',
-            valueType: 'string',
-            required: true,
-          },
+          platformParam,
           {
             name: 'publishProfileId',
             description: 'Publish Profile ID',
@@ -543,14 +511,7 @@ export const Commands: CommandType[] = [
         description: 'Start a publish',
         longDescription: 'Starts a publish',
         params: [
-          {
-            name: 'platform',
-            description: 'Platform (ios/android)',
-            type: CommandParameterTypes.STRING,
-            defaultValue: 'ios',
-            valueType: 'string',
-            required: true,
-          },
+          platformParam,
           {
             name: 'publishProfileId',
             description: 'Publish Profile ID',
@@ -572,14 +533,7 @@ export const Commands: CommandType[] = [
         description: 'Set Publish Profile as Auto Publish',
         longDescription: 'Start a publish process when a new version is received.',
         params: [
-          {
-            name: 'platform',
-            description: 'Platform (ios/android)',
-            type: CommandParameterTypes.STRING,
-            defaultValue: 'ios',
-            valueType: 'string',
-            required: true,
-          },
+          platformParam,
           {
             name: 'publishProfileId',
             description: 'Publish Profile ID',

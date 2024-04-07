@@ -289,18 +289,25 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
     }
   },
   [CommandTypes.PUBLISH]: (data: any) => {
-    if(data.fullCommandName === `${PROGRAM_NAME}-publish-profileList`){
+    if(data.fullCommandName === `${PROGRAM_NAME}-publish-createProfile`){
+      console.table(
+        [{ 'Id:': data.data.id,
+          'Name:': data.data.name,
+          'Created:': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+        }]
+      )
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-publish-profileList`){
       data.data.length > 0 ?  
       console.table(
         data.data.map((publishProfile: any) => ({
-          'Profile Id': publishProfile.id,
-          'Profile Name': publishProfile.name,
-          'Last Upload Version': publishProfile.lastUploadVersion,
-          'Last Upload Version Code': publishProfile.lastUploadVersionCode,
+          'Id': publishProfile.id,
+          'Name': publishProfile.name,
+          'Last Version': publishProfile.lastUploadVersion,
+          'Last Version Code': publishProfile.lastUploadVersionCode,
           'Version Code': publishProfile.version,
           'App Unique Id': publishProfile.appUniqueId ,
           'Latest Publish': publishProfile.latestPublishDate ? moment(publishProfile.publishDate).calendar() : '-',
-          'Target Platform': (OperatingSystems as any)[publishProfile.platformType],
+          'Platform': (OperatingSystems as any)[publishProfile.platformType],
           Created: publishProfile.createDate ? moment(publishProfile.createDate).calendar() : '-',
           Updated: publishProfile.updateDate ? moment(publishProfile.updateDate).calendar() : '-',
         }))

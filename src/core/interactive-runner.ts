@@ -6,7 +6,7 @@ import moment from 'moment';
 import { prompt, Select, AutoComplete, BooleanPrompt, MultiSelect } from 'enquirer';
 import { runCommand } from './command-runner';
 import { Commands, CommandParameterTypes, CommandTypes, CommandType } from './commands';
-import { APPCIRCLE_COLOR, OperatingSystems, UNKNOWN_PARAM_VALUE, globalVariables } from '../constant';
+import { APPCIRCLE_COLOR, OperatingSystems, UNKNOWN_PARAM_VALUE } from '../constant';
 import { createOra } from '../utils/orahelper';
 import {
   getBranches,
@@ -312,19 +312,20 @@ const handleInteractiveParamsOrArguments = async (
       spinner.succeed();
     }else if(param.name === 'publishProfileId' && param.type === CommandParameterTypes.SELECT){
       const spinner = ora('Publish Profiles Fetching').start();
-      const selectedPlatform = globalVariables["platform"];
+      const selectedPlatform = params["platform"];
       const publishProfiles = await getPublishProfiles({ platform: selectedPlatform });
       param.params = publishProfiles.map((profile:any) => ({name:profile.id, message: ` ${profile.id} (${profile.name}) - ${(OperatingSystems as any)[profile.platformType]}`}));
       spinner.text = 'Publish Profiles Fetched';
       spinner.succeed();
     }else if(param.name === 'appVersionId' && param.type === CommandParameterTypes.SELECT){
       const spinner = ora('App Versions Fetching').start();
-      const selectedPlatform = globalVariables["platform"];
-      const selectedPublishProfileId = globalVariables["publishProfileId"];
+      const selectedPlatform = params["platform"];
+      const selectedPublishProfileId = params["publishProfileId"];
       const appVersions = await getAppVersions({ platform: selectedPlatform, publishProfileId: selectedPublishProfileId });
       if (!appVersions || appVersions.length === 0) {
         spinner.text = 'No app versions available';
         spinner.fail();
+        return { isError: true };
       }else {
         param.params = appVersions.map((appVersion:any) => ({name:appVersion.id, message: ` ${appVersion.id} - ${appVersion.name}(${appVersion.version}) ${appVersion.releaseCandidate ? '(Release Candidate)' : ''}`}));
         spinner.text = 'App Versions Fetched';
@@ -336,6 +337,7 @@ const handleInteractiveParamsOrArguments = async (
       if (!groups || groups.length === 0) {
         spinner.text = 'No groups available';
         spinner.fail();
+        return { isError: true };
       }else {
         param.params = groups.map((group:any) => ({name:group.id, message: ` ${group.id} (${group.name})`}));
         spinner.text = 'Publish Variable Groups Fetched';
@@ -382,10 +384,6 @@ const handleInteractiveParamsOrArguments = async (
         ]);
         (params as any)[param.name] = (stringPrompt as any)[Object.keys(stringPrompt)[0]];
 
-        // set global variables from selected params
-        Object.keys(params).map((key:string) => {
-          globalVariables[key] = params[key];
-        });
       } else if (param.type === CommandParameterTypes.BOOLEAN) {
         const booleanPrompt = new BooleanPrompt({
           name: param.name,
@@ -405,10 +403,7 @@ const handleInteractiveParamsOrArguments = async (
           ],
         });
         (params as any)[param.name] = await selectPrompt.run();
-        // set global variables from selected params
-        Object.keys(params).map((key:string) => {
-          globalVariables[key] = params[key];
-        });
+
       } else if (param.type === CommandParameterTypes.MULTIPLE_SELECT && param.params) {
         const selectPrompt = new AutoComplete({
           name: param.name,

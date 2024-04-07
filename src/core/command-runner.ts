@@ -65,7 +65,7 @@ import {
   switchPublishProfileAutoPublishSettings,
   getPublishProfileDetailById,
   getPublishVariableGroups,
-  getPublishVariableListByGroupId
+  getPublishVariableListByGroupId,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -214,143 +214,77 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
 };
 
 const handlePublishCommand = async (command: ProgramCommand, params: any) => {
-  if(command.fullCommandName === `${PROGRAM_NAME}-publish-createProfile`){
-    try{
-      await createPublishProfile({platform: params.platform, name: params.name});
-    }catch(e : any){
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
-    }
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profileList`) {
-    try{
-      const profiles = await getPublishProfiles({platform: params.platform});
-      commandWriter(CommandTypes.PUBLISH, {
-        fullCommandName: command.fullCommandName,
-        data: profiles,
-      });
-    }catch(e : any){
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
-    }
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-versionUpload`){
+  if (command.fullCommandName === `${PROGRAM_NAME}-publish-createProfile`) {
+    const profileRes = await createPublishProfile({ platform: params.platform, name: params.name });
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: profileRes,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profileList`) {
+    const profiles = await getPublishProfiles({ platform: params.platform });
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: profiles,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-versionUpload`) {
     const spinner = createOra('Try to upload the app version').start();
-    try{
+    try {
       const responseData = await uploadAppVersion(params);
       commandWriter(CommandTypes.PUBLISH, responseData);
       spinner.text = `App version uploaded successfully.\n\nTaskId: ${responseData.taskId}`;
       spinner.succeed();
-    }catch(e : any){
+    } catch (e: any) {
       spinner.fail('Upload failed');
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
+      throw e;
     }
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-versionDelete`){
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-versionDelete`) {
     const spinner = createOra('Try to remove the app version').start();
-    try{
+    try {
       const responseData = await deleteAppVersion(params);
       commandWriter(CommandTypes.PUBLISH, responseData);
       spinner.text = `App version removed successfully.\n\nTaskId: ${responseData.taskId}`;
       spinner.succeed();
-    }catch(e : any){
+    } catch (e: any) {
       spinner.fail('Remove failed');
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
+      throw e;
     }
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-startExistingFlow`){
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-startExistingFlow`) {
     const spinner = createOra('Publish flow starting').start();
-    try{
-      const publish = await getPublishByAppVersion(params);
-      const firstStep = publish.steps[0];
-      const startResponse = await startExistingPublishFlow({...params, publishId: firstStep.publishId})
-      commandWriter(CommandTypes.PUBLISH, startResponse);
-      spinner.text = `Publish started successfully.`;
-      spinner.succeed();
-    }catch(e: any){
-      spinner.fail('Process failed');
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
-    }
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-versionDownload`){
+    const publish = await getPublishByAppVersion(params);
+    const firstStep = publish.steps[0];
+    const startResponse = await startExistingPublishFlow({ ...params, publishId: firstStep.publishId });
+    commandWriter(CommandTypes.PUBLISH, startResponse);
+    spinner.text = `Publish started successfully.`;
+    spinner.succeed();
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-versionDownload`) {
     const spinner = createOra('Fetching app version download link').start();
-    try{
+    try {
       const responseData = await getAppVersionDownloadLink(params);
       commandWriter(CommandTypes.PUBLISH, responseData);
       spinner.text = `App version download link fetched successfully.\n\nDownload Link: ${responseData}`;
       spinner.succeed();
-    }catch(e : any){
+    } catch (e: any) {
       spinner.fail('Process failed');
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
+      throw e;
     }
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-markAsReleaseCandidate`){
-    try{
-      await setAppVersionReleaseCandidateStatus(params);
-    }catch(e : any){
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
-    }
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-setAsAutoPublish`){
-    try{
-      const publishProfileDetails = await getPublishProfileDetailById(params);
-      await switchPublishProfileAutoPublishSettings({...params, currentProfileSettings: publishProfileDetails.profileSettings});
-    }catch(e : any){
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
-    }
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-publishVariables-groups`){
-    try{
-      const variableGroups = await getPublishVariableGroups();
-      commandWriter(CommandTypes.PUBLISH, {
-        fullCommandName: command.fullCommandName,
-        data: variableGroups,
-      });
-    }catch(e : any){
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
-    }
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-publishVariables-variables`){
-    try{
-      const variables = await getPublishVariableListByGroupId(params);
-      commandWriter(CommandTypes.PUBLISH, {
-        fullCommandName: command.fullCommandName,
-        data: variables.variables,
-      });
-    }catch(e : any){
-      if(e?.response?.data?.message){
-        console.error(e.response.data.message)
-      }else {
-        throw e;
-      }
-    }
-  }
-  else {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-markAsReleaseCandidate`) {
+    await setAppVersionReleaseCandidateStatus(params);
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-setAsAutoPublish`) {
+    const publishProfileDetails = await getPublishProfileDetailById(params);
+    await switchPublishProfileAutoPublishSettings({ ...params, currentProfileSettings: publishProfileDetails.profileSettings });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-publishVariables-groups`) {
+    const variableGroups = await getPublishVariableGroups();
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: variableGroups,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-publishVariables-variables`) {
+    const variables = await getPublishVariableListByGroupId(params);
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: variables.variables,
+    });
+  } else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
     console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
   }
@@ -364,7 +298,7 @@ export const runCommand = async (command: ProgramCommand) => {
   //console.log('Full-Command-Name: ', command.fullCommandName, params);
 
   //In interactive mode, if any parameters have errors, we can't continue execution.
-  if(params.isError){
+  if (params.isError) {
     process.exit(1);
   }
 
@@ -377,7 +311,7 @@ export const runCommand = async (command: ProgramCommand) => {
     return handleOrganizationCommand(command, params);
   }
 
-  if(command.isGroupCommand(CommandTypes.PUBLISH)) {
+  if (command.isGroupCommand(CommandTypes.PUBLISH)) {
     return handlePublishCommand(command, params);
   }
 
