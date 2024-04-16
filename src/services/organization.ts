@@ -8,7 +8,7 @@ const prepareRoles = async (roles: string[]) => {
 
   //Create roles map by groupId
   const willAssingRolesMap: Record<string, RoleType[]> = {};
-  roles.forEach(r => {
+  roles.filter(r => r).forEach(r => {
     willAssingRolesMap[rolesMap[r].groupId] = willAssingRolesMap[rolesMap[r].groupId] ||[];
     willAssingRolesMap[rolesMap[r].groupId].push(rolesMap[r]);
   });
