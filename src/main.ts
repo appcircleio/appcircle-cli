@@ -28,7 +28,7 @@ const handleError = (error: any) => {
         console.error(`Run ${chalk.cyan(`"${PROGRAM_NAME} login --help"`)} command for more information.`);
       }
     } else if (error instanceof ProgramError) {
-      console.error(error.message);
+      console.error(chalk.red('✖'), error.message);
     } else {
       console.error(error);
     }
