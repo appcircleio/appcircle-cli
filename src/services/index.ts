@@ -92,8 +92,8 @@ export async function startBuild(
   }
   if (!workflowId && options.workflow) {
     const workflowsRes = await getWorkflows({ profileId: options.profileId || '' });
-    const workflowIndex = workflowsRes.workflows.findIndex((element: { [key: string]: any }) => element.workflowName === options.workflow);
-    workflowId = workflowsRes.workflows[workflowIndex].id;
+    const workflowIndex = workflowsRes.findIndex((element: { [key: string]: any }) => element.workflowName === options.workflow);
+    workflowId = workflowsRes[workflowIndex].id;
   }
   if (!commitId) {
     const allCommitsByBranchId = await getCommits({ branchId });
