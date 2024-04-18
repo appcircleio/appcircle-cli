@@ -71,7 +71,7 @@ export const Commands: CommandType[] = [
         arguments: [
           {
             name: 'key',
-            description: 'Config key [API_HOSTNAME, AUTH_HOSTMANE, AC_ACCESS_TOKEN]',
+            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN]',
             type: CommandParameterTypes.SELECT,
             params: Object.keys(DefaultEnvironmentVariables),
           },
@@ -84,7 +84,7 @@ export const Commands: CommandType[] = [
         arguments: [
           {
             name: 'key',
-            description: 'Config key [API_HOSTNAME, AUTH_HOSTMANE, AC_ACCESS_TOKEN]',
+            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN]',
             type: CommandParameterTypes.SELECT,
             params: Object.keys(DefaultEnvironmentVariables),
           },

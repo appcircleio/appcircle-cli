@@ -11,9 +11,9 @@ View and set Appcircle CLI properties
 ## Subcommands
 
 - [`list`](list.md)
-- [`get`](list.md)
+- [`get`](get.md)
 - [`set`](set.md)
-- [`current`](set.md)
-- [`reset`](set.md)
-- [`trust`](set.md)
+- [`current`](current.md)
+- [`reset`](reset.md)
+- [`trust`](trust.md)
 

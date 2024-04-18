@@ -54,8 +54,8 @@ Below is the list of commands currently supported by Appcircle CLI:
 Run `appcircle [commandName] --help` to view a list of  commands/subcommands in your terminal.
 
 - [appcircle config](/docs/config/index.md)
-- [appcircle login](/docs/login.md)
-- [appcircle build](/docs/build.md)
+- [appcircle login](/docs/login/index.md)
+- [appcircle build](/docs/build/index.md)
 - [appcircle distribution](/docs/distribution.md)
 - [appcircle organization](/docs/organization.md)
 - [appcircle publish](/docs/publish.md)
