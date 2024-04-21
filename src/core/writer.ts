@@ -70,7 +70,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
       console.table(
         data?.data?.map((workflow: any) => ({
           'Workflow Id': workflow.id,
-          'Workflow Name': workflow.configurationName,
+          'Workflow Name': workflow.workflowName,
           'Last Used': workflow.lastUsedTime ? moment(workflow.lastUsedTime).calendar() : 'No previous builds',
         }))
       );
