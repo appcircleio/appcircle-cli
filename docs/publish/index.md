@@ -1,9 +1,9 @@
-# `appcircle build`
+# `appcircle publish`
 
-Manage build actions.
+Manage publish module actions.
 
 ```plaintext
-appcircle build [command] [options]
+appcircle publish [command] [options]
 ```
 
 ## Options inherited from parent commands
@@ -14,9 +14,7 @@ appcircle build [command] [options]
 
 ## Subcommands
 
-- [`start`](start.md)
-- [`list`](list.md)
-- [`download`](download.md)
+- [`start`](view.md)
 - [`profile`](profile/index.md)
 - [`variable`](variable/index.md)
 

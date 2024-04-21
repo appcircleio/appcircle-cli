@@ -24,6 +24,19 @@ Appcircle CLI is a unified tool for accessing the Appcircle platform features fr
 - [Jenkins pipeline](#jenkins-pipeline)
 - [Docker image](#docker-image)
 
+## Installation
+
+To install Appcircle CLI globally, simply launch:
+
+```
+npm install -g @appcircle/cli
+```
+
+alternatively, you can install Appcircle CLI locally:
+
+```
+npm install @appcircle/cli
+```
 
 ## Usage
 
@@ -69,52 +82,6 @@ appcircle <command> <subcommand> ... <subcommand> [options]
 
 - Run `appcircle (-i, --interactive)` to proceed with the Appcircle GUI
 
-| Command                                                                                                                                 | Description                                             |
-| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `appcircle  (-i, --interactive)`                                                                                                        | AppCircle GUI                                           |
-| `appcircle  help [commandName]`                                                                                                         | Display help for command                                |
-| `appcircle config <subcommand> [argument] [options]`                                                                                                   | View and edit Appcircle CLI properties                  |
-| `appcircle login [--pat]`                                                                                                               | Get an access token for the session                     |
-| `appcircle organization <subcommand> [action] [options]`                                                                                                   | Manage organization users, roles, and details                  |
- `appcircle publish <subcommand> [options]`                                                                                                   | Manage publish module actions                  |
-| `appcircle listBuildProfiles`                                                                                                           | Get the list of build profiles                          |
-| `appcircle listDistributionProfiles`                                                                                                    | Get the list of distribution profiles                   |
-| `appcircle listBuildProfileWorkflows [--profileId]`                                                                                     | Get the list of workflows for the profile               |
-| `appcircle listBuildProfileConfigurations [--profileId]`                                                                                | Get the list of configurations for the profile          |
-| `appcircle listBuildProfileBuildsOfCommit [--profileId]`                                                                                | Get the list of commits of branch                       |
-| `appcircle listBuildProfileBuildsOfCommit [--profileId]`                                                                                | Get the list of builds of a commit                      |
-| `appcircle build [--profileId] [--branch] [--workflow]`                                                                                 | Start a new build                                       |
-| `appcircle download [--path] [--commitId] [--buildId]`                                                                                  | Download the artifact under the selected path           |
-| `appcircle upload [--app] [--message] [--profileId]`                                                                                    | Upload your app binary to selected distribution profile |
-| `appcircle createDistributionProfile [--name]`                                                                                          | Create a distribution profile                           |
-| `appcircle listEnvironmentVariableGroups`                                                                                               | Get list of environment variable groups                 |
-| `appcircle createEnvironmentVariableGroup [--name]`                                                                                     | Create an environment variable group                    |
-| `appcircle listEnvironmentVariables [--variableGroupId]`                                                                                | Get list of environment variables                       |
-| `appcircle createEnvironmentVariable [--type] [-isSecret, --isSecret] [--variableGroupId] [--key] [--value] [--filePath]`               | Create a file or text environment variable              |
-| `appcircle listEnterpriseProfiles`                                                                                                      | List Enterprise profiles                                |
-| `appcircle listEnterpriseAppVersions [--entProfileId] [--publishType]`                                                                  | List Enterprise app versions                            |
-| `appcircle publishEnterpriseAppVersion [--entProfileId] [--entVersionId] [--entVersionId] [--summary] [--releaseNotes] [--publishType]` | Publish Enterprise app version                          |
-| `appcircle publishEnterpriseAppVersion [--entProfileId] [--entVersionId]`                                                               | Unpublish Enterprise app version                        |
-| `appcircle removeEnterpriseAppVersion [--entProfileId] [--entVersionId]`                                                                | Remove Enterprise app version                           |
-| `appcircle notifyEnterpriseAppVersion [--entProfileId] [--entVersionId] [--subject] [--message]`                                        | Notify Enterprise app version                           |
-| `appcircle uploadEnterpriseApp [--app] `                                                                                                | Upload Enterprise app version without a profile         |
-| `appcircle uploadEnterpriseAppVersion [--entProfileId] [--app] `                                                                        | Upload enterprise app version for a profile             |
-| `appcircle getEnterpriseDownloadLink  [--entProfileId] [--entVersionId]`                                                                | Get enterprise app download link                        |
-
-
-## Installation
-
-To install Appcircle CLI globally, simply launch:
-
-```
-npm install -g @appcircle/cli
-```
-
-alternatively, you can install Appcircle CLI locally:
-
-```
-npm install @appcircle/cli
-```
 
 ## Environment variables
 - `AC_ACCESS_TOKEN`: an authentication token for API requests. Setting this avoids being

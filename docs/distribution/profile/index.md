@@ -1,9 +1,9 @@
-# `appcircle build profile branch`
+# `appcircle distribution profile`
 
-Manage branches of a build profile.
+Distribution profile actions
 
 ```plaintext
-appcircle build profile branch [command] [options]
+appcircle distribution profile [command] [options]
 ```
 
 ## Options inherited from parent commands
@@ -15,5 +15,4 @@ appcircle build profile branch [command] [options]
 ## Subcommands
 
 - [`list`](list.md)
-- [`commits`](commits.md)
-
+- [`create`](create.md)

@@ -345,7 +345,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Auto Publish': data.data.profileSettings.whenNewVersionRecieved ? 'Yes' : 'No',
         }]
       )
-    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-markAsRC` || data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-unmarkAsRC`){
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-mark-as-rc` || data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`){
       console.table(
         [{ 'Id:': data.data.id,
           'Name:': data.data.name,

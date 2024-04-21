@@ -2,6 +2,10 @@
 
 View and set Appcircle CLI properties
 
+```plaintext
+appcircle config [command] [options]
+```
+
 ## Options inherited from parent commands
 
 ```plaintext

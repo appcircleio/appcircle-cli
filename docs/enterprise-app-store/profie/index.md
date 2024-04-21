@@ -1,9 +1,9 @@
-# `appcircle build profile branch`
+# `appcircle enterprise-app-store profile`
 
-Manage branches of a build profile.
+Enterprise app profile actions
 
 ```plaintext
-appcircle build profile branch [command] [options]
+appcircle enterprise-app-store profile [command] [options]
 ```
 
 ## Options inherited from parent commands
@@ -15,5 +15,4 @@ appcircle build profile branch [command] [options]
 ## Subcommands
 
 - [`list`](list.md)
-- [`commits`](commits.md)
 

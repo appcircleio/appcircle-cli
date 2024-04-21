@@ -208,7 +208,7 @@ async function createFileEnvironmentVariable(options: OptionsType<{ key: string;
   console.log('options.filePath): ', options.filePath);
   form.append('Key', options.key);
   form.append('Value', path.basename(options.filePath));
-  form.append('IsSecret', options.isSecret || 'false');
+  form.append('IsSecret', 'false');
   form.append('Binary', file);
 
   const uploadResponse = await appcircleApi.post(`build/v1/variable-groups/${options.variableGroupId}/variables/files`, form, {

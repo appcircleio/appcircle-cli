@@ -1,9 +1,9 @@
-# `appcircle build profile branch`
+# `appcircle build variable group`
 
-Manage branches of a build profile.
+View and create environment variable groups.
 
 ```plaintext
-appcircle build profile branch [command] [options]
+appcircle build variable group [command] [options]
 ```
 
 ## Options inherited from parent commands
@@ -15,5 +15,5 @@ appcircle build profile branch [command] [options]
 ## Subcommands
 
 - [`list`](list.md)
-- [`commits`](commits.md)
+- [`create`](create.md)
 

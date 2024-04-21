@@ -298,13 +298,13 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       spinner.fail('Process failed');
       throw e;
     }
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-markAsRC`) {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-mark-as-rc`) {
     const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: true });
     commandWriter(CommandTypes.PUBLISH, {
       fullCommandName: command.fullCommandName,
       data: response,
     });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-unmarkAsRC`) {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`) {
     const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: false });
     commandWriter(CommandTypes.PUBLISH, {
       fullCommandName: command.fullCommandName,

@@ -902,7 +902,7 @@ export const Commands: CommandType[] = [
                 ],
               },
               {
-                command: 'markAsRC',
+                command: 'mark-as-rc',
                 description: 'Mark as Release Candidate',
                 longDescription: 'Mark an app version as Release Candidate',
                 params: [
@@ -924,7 +924,7 @@ export const Commands: CommandType[] = [
                 ],
               },
               {
-                command: 'unmarkAsRC',
+                command: 'unmark-as-rc',
                 description: 'Unmark as Release Candidate',
                 longDescription: 'Unmark an app version as Release Candidate',
                 params: [
