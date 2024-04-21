@@ -1,22 +1,17 @@
-# `appcircle config set`
+# `appcircle config add`
 
-Set a Appcircle CLI currently active configuration property.
-
-```plaintext
-appcircle config set <key> <value>
-```
-## Examples
+Add a new Appcircle CLI configuration environment.
 
 ```plaintext
-$ appcircle config set AUTH_HOSTNAME https://auth.example.com
-```
+appcircle config add <value>
+```            
 
 ## Arguments
 
 | Argument                                                                                                                                 | Description                                             |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `key`                                                                                                        | Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN] |
-`value` |     Config value                                   
+| `value`                                                                                                        | New configuration environment name                                           
+
 
 ## Options inherited from parent commands
 

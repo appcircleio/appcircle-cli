@@ -18,6 +18,7 @@ appcircle config [command] [options]
 - [`get`](get.md)
 - [`set`](set.md)
 - [`current`](current.md)
+- [`add`](add.md)
 - [`reset`](reset.md)
 - [`trust`](trust.md)
 

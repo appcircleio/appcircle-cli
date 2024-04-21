@@ -1,6 +1,6 @@
 # `appcircle config reset`
 
-Reset a Appcircle CLI configuration to default
+Reset a Appcircle CLI configuration to default.
 
 ```plaintext
 appcircle config reset

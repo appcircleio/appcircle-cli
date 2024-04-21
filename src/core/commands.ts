@@ -56,17 +56,17 @@ const platformParam = {
 export const Commands: CommandType[] = [
   {
     command: CommandTypes.CONFIG,
-    description: 'Config (View and set Appcircle CLI properties)',
+    description: 'View and set Appcircle CLI properties.',
     params: [],
     subCommands: [
       {
         command: 'list',
-        description: 'List Appcircle CLI properties for all configurations',
+        description: 'List Appcircle CLI properties for all configurations.',
         params: [],
       },
       {
         command: 'get',
-        description: 'Get Print the value of a Appcircle CLI currently active configuration property',
+        description: 'Get Print the value of a Appcircle CLI currently active configuration property.',
         params: [],
         arguments: [
           {
@@ -79,7 +79,7 @@ export const Commands: CommandType[] = [
       },
       {
         command: 'set',
-        description: 'Set a Appcircle CLI currently active configuration property',
+        description: 'Set a Appcircle CLI currently active configuration property.',
         params: [],
         arguments: [
           {
@@ -110,7 +110,7 @@ export const Commands: CommandType[] = [
       },
       {
         command: 'add',
-        description: 'Add a new Appcircle CLI configuration environment',
+        description: 'Add a new Appcircle CLI configuration environment.',
         params: [],
         arguments: [
           {
@@ -122,12 +122,12 @@ export const Commands: CommandType[] = [
       },
       {
         command: 'reset',
-        description: 'Reset a Appcircle CLI configuration to default',
+        description: 'Reset a Appcircle CLI configuration to default.',
         params: [],
       },
       {
         command: 'trust',
-        description: 'Trust the SSL certificate of the self-hosted Appcircle server',
+        description: 'Trust the SSL certificate of the self-hosted Appcircle server.',
         params: [],
       },
     ],
@@ -152,7 +152,7 @@ export const Commands: CommandType[] = [
     subCommands: [
       {
         command: 'start',
-        description: 'Start a new build',
+        description: 'Start a new build.',
         params: [
           {
             name: 'profileId',
@@ -212,7 +212,7 @@ export const Commands: CommandType[] = [
       },
       {
         command: "list",
-        description: 'Get list of builds of a commit',
+        description: 'Get list of builds of a commit.',
         params: [
           {
             name: 'profileId',
@@ -238,7 +238,7 @@ export const Commands: CommandType[] = [
       },
       {
         command: 'download',
-        description: 'Download your artifact to the given directory on your machine',
+        description: 'Download your artifact to the given directory on your machine.',
         params: [
           {
             name: 'path',
@@ -279,12 +279,12 @@ export const Commands: CommandType[] = [
       },
       {
         command:'profile',
-        description: 'Build profile actions',
+        description: 'Build profile actions.',
         subCommands: [
           {
             command: 'list',
             description: 'Build profile list',
-            longDescription: 'Get list of build profiles',
+            longDescription: 'Get list of build profiles.',
             params: [],
           },
           {
