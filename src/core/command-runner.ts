@@ -410,7 +410,6 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     } catch (e) {
       spinner.text = 'The file could not be downloaded.';
       spinner.fail();
-      throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-list`){
     const responseData = await getEnvironmentVariableGroups(params);
