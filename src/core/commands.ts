@@ -28,6 +28,7 @@ export type ParamType = {
   required?: boolean;
   params?: any[];
   requriedForInteractiveMode?: boolean;
+  skipForInteractiveMode?: boolean;
   paramType?: string;
   defaultValue?: any;
   from?: 'user' | 'default';
@@ -199,6 +200,8 @@ export const Commands: CommandType[] = [
             type: CommandParameterTypes.STRING,
             valueType: 'string',
             required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode:true,
             params: [],
           },
           {
@@ -207,6 +210,8 @@ export const Commands: CommandType[] = [
             type: CommandParameterTypes.STRING,
             valueType: 'string',
             required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode:true,
             params: [],
           },
         ],
