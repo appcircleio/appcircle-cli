@@ -23,7 +23,7 @@ Appcircle CLI is a unified tool for accessing the Appcircle platform features fr
 - [Publishing Guidelines](#publishing-guidelines)
 - [Jenkins Pipeline](#jenkins-pipeline)
 - [Docker Image](#docker-image)
-- [Migrations](#migrations)
+- [Migration Guides](#migration-guides)
 
 ## Installation Instructions
 
@@ -202,3 +202,7 @@ docker run --rm --env NPM_AUTH_TOKEN=abcd ac-cli npm publish --tag beta
 docker image build -t ac-cli --build-arg NPM_AUTH_TOKEN=abcd .
 docker run --rm --env NPM_AUTH_TOKEN=abcd ac-cli npm publish
 ```
+
+## Migration Guides
+
+- [1.x.x to 2.x.x](docs/migration-guides/1.x.x-to-2.x.x.md)
