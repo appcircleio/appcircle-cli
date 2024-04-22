@@ -13,12 +13,12 @@ Appcircle CLI is a unified tool for accessing the Appcircle platform features fr
 - [Environment Variables](#environment-variables)
 - [Interactive Mode](#interactive-mode)
 - [Logging Requests](#logging-requests)
-- [Guides](#guides)
-  - [How to Configure your Appcircle CLI environment?](#how-to-configure-your-appcircle-cli-environment)
-  - [How to Trust your Self-Hosted Appcircle Certificate?](#how-to-trust-your-self-hosted-appcircle-certificate)
-  - [How to Connect your Appcircle Account within CLI?](#how-to-connect-your-appcircle-account-within-cli)
-  - [How to start a new build via the Appcircle CLI?](#how-to-start-a-new-build-via-the-appcircle-cli)
-  - [How to distribute an app via the Appcircle CLI?](#how-to-distribute-an-app-via-the-appcircle-cli)
+- [Guides and Tutorials](#guides-and-tutorials)
+  - [Configuring Your Appcircle CLI Environment](#configuring-your-appcircle-cli-environment)
+  - [Trusting Your Self-Hosted Appcircle Certificate](#trusting-your-self-hosted-appcircle-certificate)
+  - [Connecting Your Appcircle Account via CLI](#connecting-your-appcircle-account-via-cli)
+  - [Starting a New Build via the Appcircle CLI](#starting-a-new-build-via-the-appcircle-cli)
+  - [Distributing an App via the Appcircle CLI](#distributing-an-app-via-the-appcircle-cli)
 - [How to Contribute](#how-to-contribute)
 - [Publishing Guidelines](#publishing-guidelines)
 - [Jenkins Pipeline](#jenkins-pipeline)
@@ -114,9 +114,9 @@ Example:
 CURL_LOGGING= appcircle
 ```
 
-## Guides
+## Guides and Tutorials
 
-### How to Configure your Appcircle CLI environment?
+### Configuring Your Appcircle CLI Environment
 
 - Using the Appcircle CLI, add your custom configuration for self-hosted Appcircle
 
@@ -128,7 +128,7 @@ CURL_LOGGING= appcircle
 - Set all these settings via interactive mode `appcircle -i`
 - Print help of config command `appcircle config -h`
 
-### How to Trust your Self-Hosted Appcircle Certificate?
+### Trusting Your Self-Hosted Appcircle Certificate
 
 - After you configure the Appcircle CLI, you can run the the command below to trust SSL certificate.
 
@@ -138,14 +138,14 @@ CURL_LOGGING= appcircle
 
 - For detailed usage, please refer to the [Trusting SSL Certificate](https://docs.appcircle.io/self-hosted-appcircle/configure-server/appcircle-cli#trusting-the-ssl-certificate-recommended) documentation.
 
-### How to Connect your Appcircle Account within CLI?
+### Connecting Your Appcircle Account via CLI
 
 - [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#generatingmanaging-the-personal-api-tokens)
 - Using the Appcircle CLI, create a full access API token using the following command with the personal access token specified as "pat": `appcircle login --pat="YOUR PERSONAL ACCESS TOKEN"`.
 
 > Your token will be stored internally. You should always revoke your access token if you do not plan to use it in the future.
 
-### How to start a new build via the Appcircle CLI?
+### Starting a New Build via the Appcircle CLI
 
 - Add a build profile and [connect a repository](https://docs.appcircle.io/build/adding-a-build-profile#connect-your-repository)
 
@@ -153,7 +153,7 @@ CURL_LOGGING= appcircle
 - Get the workflows of that build profile `appcircle build profile workflows --profileId="YOUR PROFILE ID"`
 - Start a new build using `appcircle build start --profileId="YOUR PROFILE ID" --branch="YOUR BRANCH" --workflow="YOUR WORKFLOW ID"`
 
-### How to distribute an app via the Appcircle CLI?
+### Distributing an App via the Appcircle CLI
 
 - Create a distribution profile and [share with the testers](https://docs.appcircle.io/distribute/create-or-select-a-distribution-profile)
 - Enable [auto sending](https://docs.appcircle.io/distribute/create-or-select-a-distribution-profile#auto-send-your-build-to-the-testers) of the build to the testers
