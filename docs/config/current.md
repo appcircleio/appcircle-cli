@@ -1,6 +1,6 @@
 # `appcircle config current`
 
-Set a Appcircle CLI currently active configuration environment.
+Set the currently active configuration environment in the Appcircle CLI.
 
 ```plaintext
 appcircle config current <value>

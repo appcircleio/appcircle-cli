@@ -1,6 +1,6 @@
 # `appcircle config list`
 
-List Appcircle CLI properties for all configurations.
+List all configuration properties in the Appcircle CLI.
 
 ```plaintext
 appcircle config list

@@ -1,6 +1,6 @@
 # `appcircle config get`
 
-Get Print the value of a Appcircle CLI currently active configuration property.
+Print the value of the currently active configuration property in the Appcircle CLI.
 
 ```plaintext
 appcircle config get <key>

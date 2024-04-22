@@ -4,27 +4,27 @@
 
 Appcircle CLI is a unified tool for accessing the Appcircle platform features from the command line.
 
-## Table of contents
+## Table of Contents
 
-- [Table of contents](#table-of-contents)
-- [Installation](#installation)
-- [Usage](#usage)
-   - [Commands](#commands)
+- [Table of Contents](#table-of-contents)
+- [Installation Instructions](#installation)
+- [Usage Guidelines](#usage-guidelines)
+   - [Command List](#core-commands)
 - [Environment Variables](#environment-variables)
 - [Interactive Mode](#interactive-mode)
-- [Logging requests](#logging-requests)
+- [Logging Requests](#logging-requests)
 - [Guides](#guides)
   - [How to Configure your Appcircle CLI environment?](#how-to-configure-your-appcircle-cli-environment)
   - [How to Trust your Self-Hosted Appcircle Certificate?](#how-to-trust-your-self-hosted-appcircle-certificate)
   - [How to Connect your Appcircle Account within CLI?](#how-to-connect-your-appcircle-account-within-cli)
   - [How to start a new build via the Appcircle CLI?](#how-to-start-a-new-build-via-the-appcircle-cli)
   - [How to distribute an app via the Appcircle CLI?](#how-to-distribute-an-app-via-the-appcircle-cli)
-- [Contribution](#contribution)
-- [Publishing](#publishing)
-- [Jenkins pipeline](#jenkins-pipeline)
-- [Docker image](#docker-image)
+- [How to Contribute](#how-to-contribute)
+- [Publishing Guidelines](#publishing-guidelines)
+- [Jenkins Pipeline](#jenkins-pipeline)
+- [Docker Image](#docker-image)
 
-## Installation
+## Installation Instructions
 
 To install Appcircle CLI globally, simply launch:
 
@@ -38,7 +38,7 @@ alternatively, you can install Appcircle CLI locally:
 npm install @appcircle/cli
 ```
 
-## Usage
+## Usage Guidelines
 
 To get started :
 
@@ -54,9 +54,9 @@ appcircle
 
 3. Set any needed [environment variables](#how-to-configure-your-appcircle-cli-environment).
 
-4. If you are using a self-signed SSL certificate on the self-hosted Appcircle server, [trust the SSL certificate](#how-to-trust-your-self-hosted-appcircle-certificate) of the Appcircle server to secure the network between the CLI and the server.
+4. If you are using a self-signed SSL certificate on a self-hosted Appcircle server, [trust the SSL certificate](#how-to-trust-your-self-hosted-appcircle-certificate) of the server to ensure secure communication between the CLI and the server.
 
-5. [Authenticate](https://docs.appcircle.io/appcircle-api/api-authentication) into your account of Appcircle
+5. [Authenticate](https://docs.appcircle.io/appcircle-api/api-authentication) into your Appcircle account.
 
 
 
@@ -74,7 +74,7 @@ Run `appcircle [commandName] --help` to view a list of  commands/subcommands in 
 - [appcircle enterprise-app-store](/docs/enterprise-app-store.md)
 - [appcircle organization](/docs/organization.md)
 
-Commands follow this pattern:
+The commands follow this pattern:
 
 ```shell
 appcircle <command> <subcommand> ... <subcommand> [options]
@@ -83,14 +83,14 @@ appcircle <command> <subcommand> ... <subcommand> [options]
 - Run `appcircle (-i, --interactive)` to proceed with the Appcircle GUI
 
 
-## Environment variables
-- `AC_ACCESS_TOKEN`: an authentication token for API requests. Setting this avoids being
+## Environment Variables
+- `AC_ACCESS_TOKEN`: An authentication token for API requests. Setting this avoids being
   prompted to authenticate and overrides any previously stored credentials.
   Can be set in the config with `appcircle config set AUTH_HOSTNAME xxxxxx`
 
-- `API_HOSTNAME`: specify the host where the API endpoint is found. [See also](#how-to-configure-your-appcircle-cli-environment) for more details.
+- `API_HOSTNAME`: Specifies the host where the API endpoint is located. [See also](#how-to-configure-your-appcircle-cli-environment) for more details.
 
-- `AUTH_HOSTNAME`: specify the host where your IAM(identity access management) server endpoint is found. [See also](#how-to-configure-your-appcircle-cli-environment) for more details.
+- `AUTH_HOSTNAME`: Specifies the host where your IAM (identity access management) server endpoint is located. [See also](#how-to-configure-your-appcircle-cli-environment) for more details.
 
 ## Interactive Mode
 
@@ -103,7 +103,7 @@ appcircle -i
 ### Demo
 ![Demo](https://cdn.appcircle.io/docs/assets/appcircle_gui_demo.gif)
 
-## Logging requests
+## Logging Requests
 
 If you want to log the requests as `curl` commands you can start appcircle CLI by setting the `CURL_LOGGING` environment variable.
 
@@ -159,7 +159,7 @@ CURL_LOGGING= appcircle
 - Get the distribution profile ID using `appcircle distribution profile list`
 - Upload your app binary to the selected distribution profile using `appcircle upload --app="YOUR APP PATH" --profileId="YOUR PROFILE ID" --message="YOUR RELEASE NOTES"`
 
-## Contribution
+## How to Contribute
 
 - Clone this repository
 - Install dependencies by using `yarn` command
@@ -167,12 +167,12 @@ CURL_LOGGING= appcircle
 - Make your changes
 - Submit a PR
 
-## Publishing
+## Publishing Guidelines
 
 - After changes, run the command `yarn run postversion`. It will push a new tag to the repository.
 - Jenkins will take care of the rest.
 
-## Jenkins pipeline
+## Jenkins Pipeline
 
 - Jenkins will look for the tag that matches `v*`, `v*-beta*`, `v*-alpha*`.
 
@@ -184,7 +184,7 @@ CURL_LOGGING= appcircle
 
 - If the tag is `v*-alpha*`, the app will be published to the alpha channel.
 
-## Docker image
+## Docker Image
 
 - Docker image is for building and publishing the application anywhere.
 
