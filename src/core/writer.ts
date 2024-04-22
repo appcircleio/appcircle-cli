@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { CommandTypes } from './commands';
-import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME } from '../constant';
+import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME, QueueItemStatus } from '../constant';
 import moment from 'moment';
 import { getConsoleOutputType } from '../config';
 
@@ -124,6 +124,45 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
       );
     } else if(data.fullCommandName === `${PROGRAM_NAME}-build-variable-create`){
       console.info(`\n${data?.data?.key} environment variable created successfully!`);
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-build-active-list` ) {
+      if(data?.data?.data?.length === 0) {
+        console.info('No active builds available.');
+        return;
+      }
+      console.table(
+        data?.data?.data?.map((build: any) => ({
+          'Build Id': build.id,
+          'Commit Id': build.commitId,
+          'Commit Hash': build.commitHash || '-',
+          'Profile Name': build.profileName || '-',
+          'Branch Name': build.branchName || '-',
+          'Status': build.queueItemStatus !== null || build.queueItemStatus !== undefined ? QueueItemStatus[String(build.queueItemStatus)] : '-',
+        }))
+      );
+    }
+    else if (data.fullCommandName === `${PROGRAM_NAME}-build-view` ) {
+      const build =  data?.data;
+      if(!build){
+        console.info('No builds available.');
+        return;
+      }
+      const parsedDuration = moment.duration(build.duration);
+      const minutes = parsedDuration.minutes() !== 0 ? `${parsedDuration.minutes()} minutes ` : '';
+      const seconds = parsedDuration.seconds() !== 0 ? `${parsedDuration.seconds()} seconds ` : '';
+      const hours = parsedDuration.hours() !== 0 ? `${parsedDuration.hours()} hours ` : '';
+      console.table(
+        {
+          'Build Id': build.id,
+          'Commit Id': build.commitId,
+          'Hash': build.hash || '-',
+          'Has Warning': !!build.hasWarning,
+          'Status': build.status !== null || build.status !== undefined ? BuildStatus[String(build.status)] : '-',
+          'Duration': build.duration ? `${hours}${minutes}${seconds}` : '-',
+          'Is Distributable': build.isDistributable || '-',
+          'Start Date': build.startDate ? moment(build.startDate).calendar() : 'Could not find date',
+          'End Date': build.endDate ? moment(build.endDate).calendar() : 'Could not find date',
+        }
+      );
     }
   },
   [CommandTypes.ENTERPRISE_APP_STORE]: (data: any) => {

@@ -70,6 +70,7 @@ import {
   renamePublishProfile,
   getAppVersions,
   downloadAppVersion,
+  getActiveBuilds,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -434,6 +435,19 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: { ...responseData, key: params.key },
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-active-list`){
+    const responseData = await getActiveBuilds();
+    commandWriter(CommandTypes.BUILD, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-view`){
+    const responseData = await getBuildsOfCommit(params);
+    const build = responseData?.builds?.find((build: any) => build.id === params.buildId);
+    commandWriter(CommandTypes.BUILD, {
+      fullCommandName: command.fullCommandName,
+      data: build,
     });
   }
   else {

@@ -77,6 +77,13 @@ export async function getBuildsOfCommit(options: OptionsType<{ commitId: string 
   return commits.data;
 }
 
+export async function getActiveBuilds() {
+  const builds = await appcircleApi.get(`/build/v1/queue/my-dashboard?page=1&size=1000`, {
+    headers: getHeaders(),
+  });
+  return builds.data;
+}
+
 export async function startBuild(
   options: OptionsType<{ profileId: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string }>
 ) {

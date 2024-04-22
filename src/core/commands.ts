@@ -212,6 +212,11 @@ export const Commands: CommandType[] = [
         ],
       },
       {
+        command: 'active-list',
+        description: 'Get a list of active builds in the queue.',
+        params: [],
+      },
+      {
         command: "list",
         description: 'Get list of builds of a commit.',
         params: [
@@ -236,6 +241,40 @@ export const Commands: CommandType[] = [
             valueType: 'uuid',
           },
         ],
+      },
+      {
+        command: 'view',
+        description: 'View details of a build.',
+        longDescription: 'View comprehensive details of a build, including its status, duration, and other relevant information.',
+        params: [
+          {
+            name: 'profileId',
+            description: 'Build profile ID',
+            type: CommandParameterTypes.SELECT,
+            requriedForInteractiveMode: true,
+            valueType: 'uuid',
+          },
+          {
+            name: 'branchId',
+            description: 'Branch ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'string',
+            requriedForInteractiveMode: true,
+            params: [],
+          },
+          {
+            name: 'commitId',
+            description: 'Commit ID of your build',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+          },
+          {
+            name: 'buildId',
+            description: 'Build ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+          },
+        ]
       },
       {
         command: 'download',

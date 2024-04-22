@@ -11,6 +11,10 @@ export const BuildStatus = {
   "99": "Unknown",
 };
 
+export const QueueItemStatus = {
+  "0": "Waiting",
+  "1": "Running",
+};
 export const AuthenticationTypes = {
   1: "None",
   2: "Individual Enrollment",

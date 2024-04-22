@@ -15,7 +15,9 @@ appcircle build [command] [options]
 ## Subcommands
 
 - [`start`](start.md)
+- [`active-list`](active-list.md) 
 - [`list`](list.md)
+- [`view`](view.md)
 - [`download`](download.md)
 - [`profile`](profile/index.md)
 - [`variable`](variable/index.md)
