@@ -56,7 +56,8 @@ const platformParam = {
 export const Commands: CommandType[] = [
   {
     command: CommandTypes.CONFIG,
-    description: 'View and set Appcircle CLI properties.',
+    description: 'Config',
+    longDescription: 'View and set Appcircle CLI properties.',
     params: [],
     subCommands: [
       {
@@ -511,225 +512,6 @@ export const Commands: CommandType[] = [
         params: []
       }
     ]
-  },
-  {
-    command: CommandTypes.ORGANIZATION,
-    description: 'Organization management',
-    longDescription: 'Manage organization users, roles, and details.',
-    subCommands: [
-      {
-        command: 'view',
-        description: 'View organizations details',
-        longDescription: 'View organization details. If "organizationId" not provided, will list all organizations.',
-        params: [{
-          name: 'organizationId',
-          description: 'Organization ID [Optional]',
-          type: CommandParameterTypes.SELECT,
-          defaultValue: 'all',
-          valueType: 'uuid',
-          required: false,
-        }],
-      },
-      {
-        command: 'user',
-        description: 'User management',
-        longDescription: 'Organization users management (view, invite, re-invite, remove ).',
-        subCommands: [
-          {
-            command: 'view',
-            description: 'View users of organization',
-            params: [ {
-              name: 'organizationId',
-              description: 'Organization ID [Optional]',
-              type: CommandParameterTypes.SELECT,
-              defaultValue: 'current',
-              valueType: 'uuid',
-              required: false,
-            }],
-          },
-          {
-            command: 'invite',
-            description: 'Invite user to organization',
-            params: [{
-              name: 'organizationId',
-              description: 'Organization ID [Optional]',
-              type: CommandParameterTypes.SELECT,
-              defaultValue: 'current',
-              valueType: 'uuid',
-              required: false,
-            },{
-              name: 'email',
-              description: 'Email',
-              type: CommandParameterTypes.STRING,
-              defaultValue: '',
-              valueType: 'string',
-              required: true,
-            },{
-              name: 'role',
-              description: 'Role',
-              type: CommandParameterTypes.MULTIPLE_SELECT,
-              valueType: 'string',
-              required: false,
-            }],
-          },
-          {
-            command: 're-invite',
-            description: 'Re-invite user to organization',
-            params: [
-              {
-                name: 'organizationId',
-                description: 'Organization ID [Optional]',
-                type: CommandParameterTypes.SELECT,
-                defaultValue: CURRENT_PARAM_VALUE,
-                valueType: 'uuid',
-                required: false,
-              },{
-                name: 'email',
-                description: 'Email',
-                type: CommandParameterTypes.SELECT,
-                defaultValue: '',
-                valueType: 'string',
-                required: true,
-              }
-            ],
-          },
-          {
-            command: 'remove',
-            description: 'Remove user or inivation from organization',
-            params: [{
-              name: 'organizationId',
-              description: 'Organization ID [Optional]',
-              type: CommandParameterTypes.SELECT,
-              defaultValue: CURRENT_PARAM_VALUE,
-              valueType: 'uuid',
-              required: false,
-            },{
-              name: 'userId',
-              description: 'User ID',
-              type: CommandParameterTypes.SELECT,
-              valueType: 'uuid',
-              required: false,
-            },{
-              name: 'email',
-              description: 'Email',
-              type: CommandParameterTypes.SELECT,
-              defaultValue: '',
-              valueType: 'string',
-              required: false,
-            }],
-          },
-        ],
-        params: [],
-      },
-      {
-        command: 'role',
-        description: 'Roles management',
-        longDescription: 'Organization users roles management (view, add, remove, clear ).',
-        subCommands: [
-          {
-            command: 'view',
-            description: 'View roles of the given userId within the organizationId.',
-            params: [
-              {
-                name: 'organizationId',
-                description: 'Organization ID [Optional]',
-                type: CommandParameterTypes.SELECT,
-                defaultValue: CURRENT_PARAM_VALUE,
-                valueType: 'uuid',
-                required: false,
-              },
-              {
-                name: 'userId',
-                description: 'User ID',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
-                required: true,
-              },
-            ],
-          },
-          {
-            command: 'add',
-            description: 'Add roles to the given userId within the organizationId.',
-            params: [
-              {
-                name: 'organizationId',
-                description: 'Organization ID [Optional]',
-                type: CommandParameterTypes.SELECT,
-                defaultValue: CURRENT_PARAM_VALUE,
-                valueType: 'uuid',
-                required: false,
-              },
-              {
-                name: 'userId',
-                description: 'User ID',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
-                required: true,
-              },
-              {
-                name: 'role',
-                description: 'Roles',
-                type: CommandParameterTypes.MULTIPLE_SELECT,
-                valueType: 'string',
-                required: true,
-              },
-            ],
-          },
-          {
-            command: 'remove',
-            description: 'Remove given roles from the given userId within the organizationId.',
-            params: [
-              {
-                name: 'organizationId',
-                description: 'Organization ID [Optional]',
-                type: CommandParameterTypes.SELECT,
-                defaultValue: CURRENT_PARAM_VALUE,
-                valueType: 'uuid',
-                required: false,
-              },
-              {
-                name: 'userId',
-                description: 'User ID',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
-                required: true,
-              },
-              {
-                name: 'role',
-                description: 'Roles',
-                type: CommandParameterTypes.MULTIPLE_SELECT,
-                from: 'user',
-                valueType: 'string',
-                required: true,
-              },
-            ],
-          },
-          {
-            command: 'clear',
-            description: 'Remove all roles from the given userId within the organizationId.',
-            params: [
-              {
-                name: 'organizationId',
-                description: 'Organization ID [Optional]',
-                type: CommandParameterTypes.SELECT,
-                defaultValue: CURRENT_PARAM_VALUE,
-                valueType: 'uuid',
-                required: false,
-              },
-              {
-                name: 'userId',
-                description: 'User ID',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
-                required: true,
-              }
-            ],
-          }
-        ],
-        params: [],
-      },
-    ],
-    params: [],
   },
   {
     command: CommandTypes.PUBLISH,
@@ -1255,5 +1037,224 @@ export const Commands: CommandType[] = [
         params: []
       }
     ]
+  },
+  {
+    command: CommandTypes.ORGANIZATION,
+    description: 'Organization management',
+    longDescription: 'Manage organization users, roles, and details.',
+    subCommands: [
+      {
+        command: 'view',
+        description: 'View organizations details',
+        longDescription: 'View organization details. If "organizationId" not provided, will list all organizations.',
+        params: [{
+          name: 'organizationId',
+          description: 'Organization ID [Optional]',
+          type: CommandParameterTypes.SELECT,
+          defaultValue: 'all',
+          valueType: 'uuid',
+          required: false,
+        }],
+      },
+      {
+        command: 'user',
+        description: 'User management',
+        longDescription: 'Organization users management (view, invite, re-invite, remove ).',
+        subCommands: [
+          {
+            command: 'view',
+            description: 'View users of organization',
+            params: [ {
+              name: 'organizationId',
+              description: 'Organization ID [Optional]',
+              type: CommandParameterTypes.SELECT,
+              defaultValue: 'current',
+              valueType: 'uuid',
+              required: false,
+            }],
+          },
+          {
+            command: 'invite',
+            description: 'Invite user to organization',
+            params: [{
+              name: 'organizationId',
+              description: 'Organization ID [Optional]',
+              type: CommandParameterTypes.SELECT,
+              defaultValue: 'current',
+              valueType: 'uuid',
+              required: false,
+            },{
+              name: 'email',
+              description: 'Email',
+              type: CommandParameterTypes.STRING,
+              defaultValue: '',
+              valueType: 'string',
+              required: true,
+            },{
+              name: 'role',
+              description: 'Role',
+              type: CommandParameterTypes.MULTIPLE_SELECT,
+              valueType: 'string',
+              required: false,
+            }],
+          },
+          {
+            command: 're-invite',
+            description: 'Re-invite user to organization',
+            params: [
+              {
+                name: 'organizationId',
+                description: 'Organization ID [Optional]',
+                type: CommandParameterTypes.SELECT,
+                defaultValue: CURRENT_PARAM_VALUE,
+                valueType: 'uuid',
+                required: false,
+              },{
+                name: 'email',
+                description: 'Email',
+                type: CommandParameterTypes.SELECT,
+                defaultValue: '',
+                valueType: 'string',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove user or inivation from organization',
+            params: [{
+              name: 'organizationId',
+              description: 'Organization ID [Optional]',
+              type: CommandParameterTypes.SELECT,
+              defaultValue: CURRENT_PARAM_VALUE,
+              valueType: 'uuid',
+              required: false,
+            },{
+              name: 'userId',
+              description: 'User ID',
+              type: CommandParameterTypes.SELECT,
+              valueType: 'uuid',
+              required: false,
+            },{
+              name: 'email',
+              description: 'Email',
+              type: CommandParameterTypes.SELECT,
+              defaultValue: '',
+              valueType: 'string',
+              required: false,
+            }],
+          },
+        ],
+        params: [],
+      },
+      {
+        command: 'role',
+        description: 'Roles management',
+        longDescription: 'Organization users roles management (view, add, remove, clear ).',
+        subCommands: [
+          {
+            command: 'view',
+            description: 'View roles of the given userId within the organizationId.',
+            params: [
+              {
+                name: 'organizationId',
+                description: 'Organization ID [Optional]',
+                type: CommandParameterTypes.SELECT,
+                defaultValue: CURRENT_PARAM_VALUE,
+                valueType: 'uuid',
+                required: false,
+              },
+              {
+                name: 'userId',
+                description: 'User ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              },
+            ],
+          },
+          {
+            command: 'add',
+            description: 'Add roles to the given userId within the organizationId.',
+            params: [
+              {
+                name: 'organizationId',
+                description: 'Organization ID [Optional]',
+                type: CommandParameterTypes.SELECT,
+                defaultValue: CURRENT_PARAM_VALUE,
+                valueType: 'uuid',
+                required: false,
+              },
+              {
+                name: 'userId',
+                description: 'User ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              },
+              {
+                name: 'role',
+                description: 'Roles',
+                type: CommandParameterTypes.MULTIPLE_SELECT,
+                valueType: 'string',
+                required: true,
+              },
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove given roles from the given userId within the organizationId.',
+            params: [
+              {
+                name: 'organizationId',
+                description: 'Organization ID [Optional]',
+                type: CommandParameterTypes.SELECT,
+                defaultValue: CURRENT_PARAM_VALUE,
+                valueType: 'uuid',
+                required: false,
+              },
+              {
+                name: 'userId',
+                description: 'User ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              },
+              {
+                name: 'role',
+                description: 'Roles',
+                type: CommandParameterTypes.MULTIPLE_SELECT,
+                from: 'user',
+                valueType: 'string',
+                required: true,
+              },
+            ],
+          },
+          {
+            command: 'clear',
+            description: 'Remove all roles from the given userId within the organizationId.',
+            params: [
+              {
+                name: 'organizationId',
+                description: 'Organization ID [Optional]',
+                type: CommandParameterTypes.SELECT,
+                defaultValue: CURRENT_PARAM_VALUE,
+                valueType: 'uuid',
+                required: false,
+              },
+              {
+                name: 'userId',
+                description: 'User ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          }
+        ],
+        params: [],
+      },
+    ],
+    params: [],
   }
 ];

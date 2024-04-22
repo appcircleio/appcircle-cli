@@ -70,9 +70,9 @@ Run `appcircle [commandName] --help` to view a list of  commands/subcommands in 
 - [appcircle login](/docs/login/index.md)
 - [appcircle build](/docs/build/index.md)
 - [appcircle distribution](/docs/distribution.md)
-- [appcircle organization](/docs/organization.md)
 - [appcircle publish](/docs/publish.md)
 - [appcircle enterprise-app-store](/docs/enterprise-app-store.md)
+- [appcircle organization](/docs/organization.md)
 
 Commands follow this pattern:
 
