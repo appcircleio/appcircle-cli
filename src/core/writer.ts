@@ -136,7 +136,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Commit Hash': build.commitHash || '-',
           'Profile Name': build.profileName || '-',
           'Branch Name': build.branchName || '-',
-          'Status': build.queueItemStatus !== null || build.queueItemStatus !== undefined ? QueueItemStatus[String(build.queueItemStatus)] : '-',
+          'Status': build.queueItemStatus !== null || build.queueItemStatus !== undefined ? (QueueItemStatus as any )[String(build.queueItemStatus)] : '-',
         }))
       );
     }
@@ -156,7 +156,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Commit Id': build.commitId,
           'Hash': build.hash || '-',
           'Has Warning': !!build.hasWarning,
-          'Status': build.status !== null || build.status !== undefined ? BuildStatus[String(build.status)] : '-',
+          'Status': build.status !== null || build.status !== undefined ? (BuildStatus as any)[String(build.status)] : '-',
           'Duration': build.duration ? `${hours}${minutes}${seconds}` : '-',
           'Is Distributable': build.isDistributable || '-',
           'Start Date': build.startDate ? moment(build.startDate).calendar() : 'Could not find date',
