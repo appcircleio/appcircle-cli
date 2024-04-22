@@ -23,6 +23,7 @@ Appcircle CLI is a unified tool for accessing the Appcircle platform features fr
 - [Publishing Guidelines](#publishing-guidelines)
 - [Jenkins Pipeline](#jenkins-pipeline)
 - [Docker Image](#docker-image)
+- [Migrations](#migrations)
 
 ## Installation Instructions
 
@@ -69,10 +70,10 @@ Run `appcircle [commandName] --help` to view a list of  commands/subcommands in 
 - [appcircle config](/docs/config/index.md)
 - [appcircle login](/docs/login/index.md)
 - [appcircle build](/docs/build/index.md)
-- [appcircle distribution](/docs/distribution.md)
-- [appcircle publish](/docs/publish.md)
-- [appcircle enterprise-app-store](/docs/enterprise-app-store.md)
-- [appcircle organization](/docs/organization.md)
+- [appcircle distribution](/docs/distribution/index.md)
+- [appcircle publish](/docs/publish/index.md)
+- [appcircle enterprise-app-store](/docs/enterprise-app-store/index.md)
+- [appcircle organization](/docs/organization/index.md)
 
 The commands follow this pattern:
 
