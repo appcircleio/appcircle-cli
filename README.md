@@ -85,9 +85,9 @@ appcircle <command> <subcommand> ... <subcommand> [options]
   prompted to authenticate and overrides any previously stored credentials.
   Can be set in the config with `appcircle config set AUTH_HOSTNAME xxxxxx`
 
-- `API_HOSTNAME`: Specifies the host where the API endpoint is located. [See also](#how-to-configure-your-appcircle-cli-environment) for more details.
+- `API_HOSTNAME`: Specifies the host where the API endpoint is located. [See also](#configuring-your-appcircle-cli-environment) for more details.
 
-- `AUTH_HOSTNAME`: Specifies the host where your IAM (identity access management) server endpoint is located. [See also](#how-to-configure-your-appcircle-cli-environment) for more details.
+- `AUTH_HOSTNAME`: Specifies the host where your IAM (identity access management) server endpoint is located. [See also](#configuring-your-appcircle-cli-environment) for more details.
 
 ## Interactive Mode
 
