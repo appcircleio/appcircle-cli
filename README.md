@@ -205,4 +205,4 @@ docker run --rm --env NPM_AUTH_TOKEN=abcd ac-cli npm publish
 
 ## Migration Guides
 
-- [1.x.x to 2.x.x](docs/migration-guides/1.x.x-to-2.x.x.md)
+- [1.x to 2.x](docs/migration-guides/1.x-to-2.x.md)
