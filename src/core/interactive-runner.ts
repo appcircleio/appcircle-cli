@@ -365,7 +365,7 @@ const handleInteractiveParamsOrArguments = async (
     // If has paramType and type  match to selected type
     if (!param.paramType || param.paramType === params.type) {
       // Prompt for parameter
-      if ([CommandParameterTypes.STRING, CommandParameterTypes.PASSWORD].includes(param.type)) {
+      if ([CommandParameterTypes.STRING, CommandParameterTypes.PASSWORD].includes(param.type) && !param.skipForInteractiveMode) {
         const stringPrompt = await prompt([
           {
             type: param.type,
@@ -383,7 +383,6 @@ const handleInteractiveParamsOrArguments = async (
           },
         ]);
         (params as any)[param.name] = (stringPrompt as any)[Object.keys(stringPrompt)[0]];
-
       } else if (param.type === CommandParameterTypes.BOOLEAN) {
         const booleanPrompt = new BooleanPrompt({
           name: param.name,

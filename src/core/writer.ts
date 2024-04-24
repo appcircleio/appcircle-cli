@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { CommandTypes } from './commands';
-import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME } from '../constant';
+import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME, QueueItemStatus } from '../constant';
 import moment from 'moment';
 import { getConsoleOutputType } from '../config';
 
@@ -14,211 +14,249 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
       )
     );
   },
-  [CommandTypes.LIST_BUILD_PROFILES]: (data: any) => {
-    if (data.length === 0) {
-      console.info('No build profiles available.');
-      return;
-    }
-    console.table(
-      data.map((buildProfile: any) => ({
-        'Profile Id': buildProfile.id,
-        'Profile Name': buildProfile.name,
-        Pinned: buildProfile.pinned,
-        'Target OS': (OperatingSystems as any)[buildProfile.os],
-        'Target Platform': (PlatformTypes as any)[buildProfile.buildPlatformType],
-        Repository: buildProfile.repositoryName ? buildProfile.repositoryName : 'No repository connected',
-        'Last Build': buildProfile.lastBuildDate ? moment(buildProfile.lastBuildDate).calendar() : 'No previous builds',
-        'Auto Distribute': buildProfile.autoDistributeCount === 0 ? 'Disabled' : `Enabled in ${buildProfile.autoDistributeCount} branch(es)`,
-        'Auto Build': buildProfile.autoBuildCount === 0 ? 'Disabled' : 'Enabled',
-      }))
-    );
-  },
-  [CommandTypes.LIST_BUILD_PROFILE_BRANCHES]: (data: any) => {
-    console.table(
-      data.branches.map((branch: any) => ({
-        'Branch Id': branch.id,
-        'Branch Name': branch.name,
-        'Last Build': branch.lastBuildDate ? moment(branch.lastBuildDate).calendar() : 'No previous builds',
-        //@ts-ignore
-        'Build Status': BuildStatus[String(branch.buildStatus)] || 'No previous builds',
-      }))
-    );
-  },
-  [CommandTypes.LIST_BUILD_PROFILE_WORKFLOWS]: (data: any) => {
-    console.table(
-      data.map((workflow: any) => ({
-        'Workflow Id': workflow.id,
-        'Workflow Name': workflow.workflowName,
-        'Last Used': workflow.lastUsedTime ? moment(workflow.lastUsedTime).calendar() : 'No previous builds',
-      }))
-    );
-  },
-  [CommandTypes.LIST_BUILD_PROFILE_CONFIGURATIONS]: (data: any) => {
-    console.table(
-      data.map((configuration: any) => ({
-        'Configuration Id': configuration.item1.id,
-        'Configuration Name': configuration.item1.configurationName,
-        'Update Date': configuration.item1.updateDate ? moment(configuration.item1.updateDate).calendar() : 'No updated before',
-      }))
-    );
-  },
-  [CommandTypes.LIST_BUILD_PROFILE_COMMITS]: (data: any) => {
-    if (data.length === 0) {
-      console.info('No commits available.');
-      return;
-    }
-    console.table(
-      data.map((commit: any) => ({
-        'Commit Id': commit.id,
-        Hash: commit.hash,
-        Date: commit.commitDate ? moment(commit.commitDate).calendar() : 'Could not find date',
-        Author: commit.author || '',
-        Message: commit.message || '',
-      }))
-    );
-  },
-  [CommandTypes.LIST_BUILD_PROFILE_BUILDS_OF_COMMIT]: (data: any) => {
-    if (data.builds.length === 0) {
-      console.info('No builds available.');
-      return;
-    }
-    console.table(
-      data.builds?.map((build: any) => ({
-        'Build Id': build.id,
-        Hash: build.hash,
-
-        'Has Warning': !!build.hasWarning,
-        Status: build.status,
-        'Start Date': build.startDate ? moment(build.startDate).calendar() : 'Could not find date',
-        'End Date': build.endDate ? moment(build.endDate).calendar() : 'Could not find date',
-      }))
-    );
-  },
-  [CommandTypes.LIST_DISTRIBUTION_PROFILES]: (data: any) => {
-    if (data.length === 0) {
-      console.info('No distribution profiles available.');
-      return;
-    }
-    console.table(
-      data.map((distributionProfile: any) => ({
-        'Profile Id': distributionProfile.id,
-        'Profile Name': distributionProfile.name,
-        Pinned: distributionProfile.pinned,
-        'iOS Version': distributionProfile.iOSVersion ? distributionProfile.iOSVersion : 'No versions available',
-        'Android Version': distributionProfile.androidVersion ? distributionProfile.androidVersion : 'No versions available',
-        'Last Updated': moment(distributionProfile.updateDate).fromNow(),
-        'Last Shared': distributionProfile.lastAppVersionSharedDate ? moment(distributionProfile.lastAppVersionSharedDate).fromNow() : 'Not Shared',
-        Authentication: (AuthenticationTypes as any)[distributionProfile.settings.authenticationType],
-        'Auto Send': distributionProfile.testingGroupIds ? 'Enabled' : 'Disabled',
-      }))
-    );
-  },
-  [CommandTypes.BUILD]: (data: any) => {},
-  [CommandTypes.DOWNLOAD]: (data: any) => {},
-  [CommandTypes.UPLOAD]: (data: any) => {},
-  [CommandTypes.CREATE_DISTRIBUTION_PROFILE]: (data: any) => {
-    console.info(`\n${data.name} distribution profile created successfully!`);
-  },
-  [CommandTypes.LIST_ENVIRONMENT_VARIABLE_GROUPS]: (data: any) => {
-    console.table(data.map((x: any) => ({ 'Variable Groups ID': x.id, 'Variable Groups Name': x.name })));
-  },
-  [CommandTypes.CREATE_ENVIRONMENT_VARIABLE_GROUP]: (data: any) => {
-    console.info(`\n${data.name} environment variable group created successfully!`);
-  },
-  [CommandTypes.LIST_ENVIRONMENT_VARIABLES]: (data: any) => {
-    console.table(
-      data.map((environmentVariable: any) => ({
-        'Key Name': environmentVariable.key,
-        'Key Value': environmentVariable.isSecret ? '********' : environmentVariable.value,
-      }))
-    );
-  },
-  [CommandTypes.CREATE_ENVIRONMENT_VARIABLE]: (data: any) => {
-    console.info(`\n${data.key} environment variable created successfully!`);
-  },
-  [CommandTypes.LIST_ENTERPRISE_PROFILES]: (data: any) => {
-    if (data.length === 0) {
-      console.info('No build profiles available.');
-      return;
-    }
-    console.table(
-      data.map((buildProfile: any) => ({
-        'Profile Id': buildProfile.id,
-        'Profile Name': buildProfile.name,
-        Version: buildProfile.version,
-        Downloads: buildProfile.totalDownloadCount,
-        'Latest Publish': buildProfile.latestPublishDate ? moment(buildProfile.latestPublishDate).calendar() : '-',
-        'Last Received': buildProfile.lastBinaryReceivedDate ? moment(buildProfile.lastBinaryReceivedDate).calendar() : '-',
-      }))
-    );
-  },
-  [CommandTypes.LIST_ENTERPRISE_APP_VERSIONS]: (data: any) => {
-    if (data.length === 0) {
-      console.info('No app versions available.');
-      return;
-    }
-    console.table(
-      data.map((buildProfile: any) => ({
-        'Version Name': buildProfile.name,
-        Summary: buildProfile.summary,
-        Version: buildProfile.version,
-        'Version Code': buildProfile.versionCode,
-        'Publish Type': (PublishTypes as any)[buildProfile.publishType],
-        'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() : '-',
-        'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
-        Downloads: buildProfile.downloadCount,
-        Created: buildProfile.createDate ? moment(buildProfile.createDate).calendar() : '-',
-        Updated: buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() : '-',
-      }))
-    );
-  },
-  [CommandTypes.PUBLISH_ENTERPRISE_APP_VERSION]: (data: any) => {
-    console.table(
-      [data].map((buildProfile: any) => ({
-        'Profile Name': buildProfile.name,
-        Summary: buildProfile.summary,
-        Version: buildProfile.version,
-        'Version Code': buildProfile.versionCode,
-        'Publish Type': (PublishTypes as any)[buildProfile.publishType],
-        'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() : '-',
-        'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
-        Downloads: buildProfile.downloadCount,
-        Created: buildProfile.createDate ? moment(buildProfile.createDate).calendar() : '-',
-        Updated: buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() : '-',
-      }))
-    );
-  },
-  [CommandTypes.UNPUBLISH_ENTERPRISE_APP_VERSION]: (data: any) => {
-    if (data.length === 0) {
-      console.info('No app versions available.');
-      return;
-    }
-    console.table(
-      [data].map((buildProfile: any) => ({
-        'Profile Name': buildProfile.name,
-        Summary: buildProfile.summary,
-        Version: buildProfile.version,
-        'Version Code': buildProfile.versionCode,
-        'Publish Type': (PublishTypes as any)[buildProfile.publishType],
-        'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() : '-',
-        'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
-        Downloads: buildProfile.downloadCount,
-        Created: buildProfile.createDate ? moment(buildProfile.createDate).calendar() : '-',
-        Updated: buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() : '-',
-      }))
-    );
-  },
-  [CommandTypes.REMOVE_ENTERPRISE_APP_VERSION]: (data: any) => {},
-  [CommandTypes.NOTIFY_ENTERPRISE_APP_VERSION]: (data: any) => {
-    if (data.length === 0) {
-      console.info('No app versions available.');
-      return;
+  [CommandTypes.TESTING_DISTRIBUTION]: (data: any) => {
+    if(data.fullCommandName === `${PROGRAM_NAME}-distribution-profile-list`){
+      if (data?.data?.length === 0) {
+        console.info('No distribution profiles available.');
+        return;
+      }
+      console.table(
+        data?.data?.map((distributionProfile: any) => ({
+          'Profile Id': distributionProfile.id,
+          'Profile Name': distributionProfile.name,
+          Pinned: distributionProfile.pinned,
+          'iOS Version': distributionProfile.iOSVersion ? distributionProfile.iOSVersion : 'No versions available',
+          'Android Version': distributionProfile.androidVersion ? distributionProfile.androidVersion : 'No versions available',
+          'Last Updated': moment(distributionProfile.updateDate).fromNow(),
+          'Last Shared': distributionProfile.lastAppVersionSharedDate ? moment(distributionProfile.lastAppVersionSharedDate).fromNow() : 'Not Shared',
+          Authentication: (AuthenticationTypes as any)[distributionProfile.settings.authenticationType],
+          'Auto Send': distributionProfile.testingGroupIds ? 'Enabled' : 'Disabled',
+        }))
+      );
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-distribution-profile-create`){
+      console.info(`\n${data.data.name} distribution profile created successfully!`);
     }
   },
-  [CommandTypes.UPLOAD_ENTERPRISE_APP]: (data: any) => {},
-  [CommandTypes.UPLOAD_ENTERPRISE_APP_VERSION]: (data: any) => {},
-  [CommandTypes.GET_ENTERPRISE_DOWNLOAD_LINK]: (data: any) => {
-    console.log(`Download Link: ${data}`);
+  [CommandTypes.BUILD]: (data: any) => {
+    if(data.fullCommandName === `${PROGRAM_NAME}-build-profile-list`){
+      if (data?.data?.length === 0) {
+        console.info('No build profiles available.');
+        return;
+      }
+      console.table(
+        data?.data?.map((buildProfile: any) => ({
+          'Profile Id': buildProfile.id,
+          'Profile Name': buildProfile.name,
+          Pinned: buildProfile.pinned,
+          'Target OS': (OperatingSystems as any)[buildProfile.os],
+          'Target Platform': (PlatformTypes as any)[buildProfile.buildPlatformType],
+          Repository: buildProfile.repositoryName ? buildProfile.repositoryName : 'No repository connected',
+          'Last Build': buildProfile.lastBuildDate ? moment(buildProfile.lastBuildDate).calendar() : 'No previous builds',
+          'Auto Distribute': buildProfile.autoDistributeCount === 0 ? 'Disabled' : `Enabled in ${buildProfile.autoDistributeCount} branch(es)`,
+          'Auto Build': buildProfile.autoBuildCount === 0 ? 'Disabled' : 'Enabled',
+        }))
+      );
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`) {
+      console.table(
+        data?.data?.branches.map((branch: any) => ({
+          'Branch Id': branch.id,
+          'Branch Name': branch.name,
+          'Last Build': branch.lastBuildDate ? moment(branch.lastBuildDate).calendar() : 'No previous builds',
+          //@ts-ignore
+          'Build Status': BuildStatus[String(branch.buildStatus)] || 'No previous builds',
+        }))
+      );
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-build-profile-workflows`) {
+      console.table(
+        data?.data?.map((workflow: any) => ({
+          'Workflow Id': workflow.id,
+          'Workflow Name': workflow.workflowName,
+          'Last Used': workflow.lastUsedTime ? moment(workflow.lastUsedTime).calendar() : 'No previous builds',
+        }))
+      );
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-build-profile-configurations`){
+      console.table(
+        data?.data?.map((configuration: any) => ({
+          'Configuration Id': configuration.item1.id,
+          'Configuration Name': configuration.item1.configurationName,
+          'Update Date': configuration.item1.updateDate ? moment(configuration.item1.updateDate).calendar() : 'No updated before',
+        }))
+      );
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-commits`){
+      if (data?.data?.length === 0) {
+        console.info('No commits available.');
+        return;
+      }
+      console.table(
+        data?.data?.map((commit: any) => ({
+          'Commit Id': commit.id,
+          Hash: commit.hash,
+          Date: commit.commitDate ? moment(commit.commitDate).calendar() : 'Could not find date',
+          Author: commit.author || '',
+          Message: commit.message || '',
+        }))
+      );
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-build-list`){
+      if (data?.data?.builds?.length === 0) {
+        console.info('No builds available.');
+        return;
+      }
+      console.table(
+        data?.data?.builds?.map((build: any) => ({
+          'Build Id': build.id,
+          Hash: build.hash,
+          'Has Warning': !!build.hasWarning,
+          Status: build.status,
+          'Start Date': build.startDate ? moment(build.startDate).calendar() : 'Could not find date',
+          'End Date': build.endDate ? moment(build.endDate).calendar() : 'Could not find date',
+        }))
+      );
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-build-variable-group-list`){
+      console.table(data?.data?.map((x: any) => ({ 'Variable Groups ID': x.id, 'Variable Groups Name': x.name })));
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-build-variable-group-create`){
+      console.info(`\n${data?.data?.name} environment variable group created successfully!`);
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-build-variable-view`){
+      console.table(
+        data?.data?.map((environmentVariable: any) => ({
+          'Key Name': environmentVariable.key,
+          'Key Value': environmentVariable.isSecret ? '********' : environmentVariable.value,
+        }))
+      );
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-build-variable-create`){
+      console.info(`\n${data?.data?.key} environment variable created successfully!`);
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-build-active-list` ) {
+      if(data?.data?.data?.length === 0) {
+        console.info('No active builds available.');
+        return;
+      }
+      console.table(
+        data?.data?.data?.map((build: any) => ({
+          'Build Id': build.id,
+          'Commit Id': build.commitId,
+          'Commit Hash': build.commitHash || '-',
+          'Profile Name': build.profileName || '-',
+          'Branch Name': build.branchName || '-',
+          'Status': build.queueItemStatus !== null || build.queueItemStatus !== undefined ? (QueueItemStatus as any )[String(build.queueItemStatus)] : '-',
+        }))
+      );
+    }
+    else if (data.fullCommandName === `${PROGRAM_NAME}-build-view` ) {
+      const build =  data?.data;
+      if(!build){
+        console.info('No builds available.');
+        return;
+      }
+      const parsedDuration = moment.duration(build.duration);
+      const minutes = parsedDuration.minutes() !== 0 ? `${parsedDuration.minutes()} minutes ` : '';
+      const seconds = parsedDuration.seconds() !== 0 ? `${parsedDuration.seconds()} seconds ` : '';
+      const hours = parsedDuration.hours() !== 0 ? `${parsedDuration.hours()} hours ` : '';
+      console.table(
+        {
+          'Build Id': build.id,
+          'Commit Id': build.commitId,
+          'Hash': build.hash || '-',
+          'Has Warning': !!build.hasWarning,
+          'Status': build.status !== null || build.status !== undefined ? (BuildStatus as any)[String(build.status)] : '-',
+          'Duration': build.duration ? `${hours}${minutes}${seconds}` : '-',
+          'Is Distributable': build.isDistributable || '-',
+          'Start Date': build.startDate ? moment(build.startDate).calendar() : 'Could not find date',
+          'End Date': build.endDate ? moment(build.endDate).calendar() : 'Could not find date',
+        }
+      );
+    }
+  },
+  [CommandTypes.ENTERPRISE_APP_STORE]: (data: any) => {
+    if(data.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-profile-list`) {
+      if (data?.data?.length === 0) {
+        console.info('No build profiles available.');
+        return;
+      }
+      console.table(
+        data?.data?.map((buildProfile: any) => ({
+          'Profile Id': buildProfile.id,
+          'Profile Name': buildProfile.name,
+          Version: buildProfile.version,
+          Downloads: buildProfile.totalDownloadCount,
+          'Latest Publish': buildProfile.latestPublishDate ? moment(buildProfile.latestPublishDate).calendar() : '-',
+          'Last Received': buildProfile.lastBinaryReceivedDate ? moment(buildProfile.lastBinaryReceivedDate).calendar() : '-',
+        }))
+      );
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-list`){
+      if (data?.data?.length === 0) {
+        console.info('No app versions available.');
+        return;
+      }
+      console.table(
+        data?.data?.map((buildProfile: any) => ({
+          'Version Name': buildProfile.name,
+          Summary: buildProfile.summary,
+          Version: buildProfile.version,
+          'Version Code': buildProfile.versionCode,
+          'Publish Type': (PublishTypes as any)[buildProfile.publishType],
+          'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() : '-',
+          'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
+          Downloads: buildProfile.downloadCount,
+          Created: buildProfile.createDate ? moment(buildProfile.createDate).calendar() : '-',
+          Updated: buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() : '-',
+        }))
+      );
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-publish`){
+      console.table(
+        [data?.data]?.map((buildProfile: any) => ({
+          'Profile Name': buildProfile.name,
+          Summary: buildProfile.summary,
+          Version: buildProfile.version,
+          'Version Code': buildProfile.versionCode,
+          'Publish Type': (PublishTypes as any)[buildProfile.publishType],
+          'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() : '-',
+          'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
+          Downloads: buildProfile.downloadCount,
+          Created: buildProfile.createDate ? moment(buildProfile.createDate).calendar() : '-',
+          Updated: buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() : '-',
+        }))
+      );
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-unpublish`){
+      console.table(
+        [data?.data]?.map((buildProfile: any) => ({
+          'Profile Name': buildProfile.name,
+          Summary: buildProfile.summary,
+          Version: buildProfile.version,
+          'Version Code': buildProfile.versionCode,
+          'Publish Type': (PublishTypes as any)[buildProfile.publishType],
+          'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() : '-',
+          'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
+          Downloads: buildProfile.downloadCount,
+          Created: buildProfile.createDate ? moment(buildProfile.createDate).calendar() : '-',
+          Updated: buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() : '-',
+        }))
+      );
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-unpublish`) {
+      if (data?.data?.length === 0) {
+        console.info('No app versions available.');
+        return;
+      }
+      console.table(
+        [data?.data]?.map((buildProfile: any) => ({
+          'Profile Name': buildProfile.name,
+          Summary: buildProfile.summary,
+          Version: buildProfile.version,
+          'Version Code': buildProfile.versionCode,
+          'Publish Type': (PublishTypes as any)[buildProfile.publishType],
+          'Latest Publish': buildProfile.publishDate ? moment(buildProfile.publishDate).calendar() : '-',
+          'Target Platform': (OperatingSystems as any)[buildProfile.platformType],
+          Downloads: buildProfile.downloadCount,
+          Created: buildProfile.createDate ? moment(buildProfile.createDate).calendar() : '-',
+          Updated: buildProfile.updateDate ? moment(buildProfile.updateDate).calendar() : '-',
+        }))
+      );
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-notify`){
+      if (data?.data?.length === 0) {
+        console.info('No app versions available.');
+        return;
+      }
+    } else if (data.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-download-link`) {
+      console.log(`Download Link: ${data?.data}`);
+    }
   },
   [CommandTypes.ORGANIZATION]: (data: any) => {
     if (data.fullCommandName === `${PROGRAM_NAME}-organization-view`) {
@@ -346,7 +384,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Auto Publish': data.data.profileSettings.whenNewVersionRecieved ? 'Yes' : 'No',
         }]
       )
-    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-markAsRC` || data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-unmarkAsRC`){
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-mark-as-rc` || data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`){
       console.table(
         [{ 'Id:': data.data.id,
           'Name:': data.data.name,
