@@ -7,9 +7,10 @@ import { getConsoleOutputType, setConsoleOutputType } from './config';
 import { error } from 'console';
 import { ProgramError } from './core/ProgramError';
 import { PROGRAM_NAME } from './constant';
+import chalk from 'chalk';
 
 const collectErrorMessageFromData = (data: any) => {
-  return data ?  '\n↳ ' + Object.keys(data).map(key => data[key]).join('\n↳ '): '';
+  return data ?  '\n↳ ' + Object.keys(data).filter(k => k !== 'stackTrace').map(key =>  ' -' +key +': ' + data[key]).join('\n↳ '): '';
 }
 
 const handleError = (error: any) => {
@@ -22,12 +23,12 @@ const handleError = (error: any) => {
   } else {
     if (axios.isAxiosError(error)) {
       const data = error.response?.data as any;
-      console.error(`\n${error.message} ${error.response?.statusText}${collectErrorMessageFromData(data)}`);
+      console.error(`\n${chalk.red('✖')} ${error.message} ${chalk.red(error.response?.statusText)}${collectErrorMessageFromData(data)}`);
       if(error.response?.status === 401) {
-        console.error(`Run "${PROGRAM_NAME} login --help" command for more information.`);
+        console.error(`Run ${chalk.cyan(`"${PROGRAM_NAME} login --help"`)} command for more information.`);
       }
     } else if (error instanceof ProgramError) {
-      console.error(error.message);
+      console.error(chalk.red('✖'), error.message);
     } else {
       console.error(error);
     }

@@ -77,6 +77,13 @@ export async function getBuildsOfCommit(options: OptionsType<{ commitId: string 
   return commits.data;
 }
 
+export async function getActiveBuilds() {
+  const builds = await appcircleApi.get(`/build/v1/queue/my-dashboard?page=1&size=1000`, {
+    headers: getHeaders(),
+  });
+  return builds.data;
+}
+
 export async function startBuild(
   options: OptionsType<{ profileId: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string }>
 ) {
@@ -92,8 +99,8 @@ export async function startBuild(
   }
   if (!workflowId && options.workflow) {
     const workflowsRes = await getWorkflows({ profileId: options.profileId || '' });
-    const workflowIndex = workflowsRes.workflows.findIndex((element: { [key: string]: any }) => element.workflowName === options.workflow);
-    workflowId = workflowsRes.workflows[workflowIndex].id;
+    const workflowIndex = workflowsRes.findIndex((element: { [key: string]: any }) => element.workflowName === options.workflow);
+    workflowId = workflowsRes[workflowIndex].id;
   }
   if (!commitId) {
     const allCommitsByBranchId = await getCommits({ branchId });
@@ -208,7 +215,7 @@ async function createFileEnvironmentVariable(options: OptionsType<{ key: string;
   console.log('options.filePath): ', options.filePath);
   form.append('Key', options.key);
   form.append('Value', path.basename(options.filePath));
-  form.append('IsSecret', options.isSecret || 'false');
+  form.append('IsSecret', 'false');
   form.append('Binary', file);
 
   const uploadResponse = await appcircleApi.post(`build/v1/variable-groups/${options.variableGroupId}/variables/files`, form, {
@@ -395,3 +402,4 @@ export const getUserInfo = async () => {
 };
 
 export * from './organization';
+export * from './publish';

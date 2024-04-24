@@ -8,7 +8,10 @@ const prepareRoles = async (roles: string[]) => {
 
   //Create roles map by groupId
   const willAssingRolesMap: Record<string, RoleType[]> = {};
-  roles.forEach(r => {
+  roles.filter(r => r).forEach(r => {
+    if(!rolesMap[r]){
+      throw new ProgramError(`Invalid role "${r}" \n↳ Assignable roles: ${Object.keys(rolesMap).join(', ')}`);
+    }
     willAssingRolesMap[rolesMap[r].groupId] = willAssingRolesMap[rolesMap[r].groupId] ||[];
     willAssingRolesMap[rolesMap[r].groupId].push(rolesMap[r]);
   });
