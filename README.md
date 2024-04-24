@@ -7,7 +7,7 @@ Appcircle CLI is a unified tool for accessing the Appcircle platform features fr
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
-- [Installation Instructions](#installation)
+- [Installation Instructions](#installation-instructions)
 - [Usage Guidelines](#usage-guidelines)
    - [Command List](#core-commands)
 - [Environment Variables](#environment-variables)
