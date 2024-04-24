@@ -55,7 +55,7 @@ appcircle
 
 3. Set any needed [environment variables](#how-to-configure-your-appcircle-cli-environment).
 
-4. If you are using a self-signed SSL certificate on a self-hosted Appcircle server, [trust the SSL certificate](#how-to-trust-your-self-hosted-appcircle-certificate) of the server to ensure secure communication between the CLI and the server.
+4. If you are using a self-signed SSL certificate on a self-hosted Appcircle server, [trust the SSL certificate](#trusting-your-self-hosted-appcircle-certificate) of the server to ensure secure communication between the CLI and the server.
 
 5. [Authenticate](https://docs.appcircle.io/appcircle-api/api-authentication) into your Appcircle account.
 
