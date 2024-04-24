@@ -43,7 +43,7 @@ npm install @appcircle/cli
 
 To get started :
 
-1. Follow the [installation instructions](#installation)
+1. Follow the [installation instructions](#installation-instructions)
 
 2. Simply launch the command on your Terminal/Command Line
 
