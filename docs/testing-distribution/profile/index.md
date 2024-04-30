@@ -1,9 +1,9 @@
-# `appcircle distribution profile`
+# `appcircle testing-distribution profile`
 
 Distribution profile actions
 
 ```plaintext
-appcircle distribution profile [command] [options]
+appcircle testing-distribution profile [command] [options]
 ```
 
 ## Options inherited from parent commands

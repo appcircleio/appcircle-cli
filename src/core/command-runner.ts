@@ -457,19 +457,19 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
 }
 
 const handleDistributionCommand = async (command: ProgramCommand, params: any) => {
-  if (command.fullCommandName === `${PROGRAM_NAME}-distribution-profile-list`) {
+  if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`) {
     const responseData = await getDistributionProfiles(params);
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-distribution-profile-create`){
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-create`){
     const responseData = await createDistributionProfile(params);
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
       fullCommandName: command.fullCommandName,
       data: { ...responseData, name: params.name },
     });
-  }else if (command.fullCommandName === `${PROGRAM_NAME}-distribution-upload`){
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-upload`){
     const spinner = createOra('Try to upload the app').start();
     try {
       const responseData = await uploadArtifact(params);

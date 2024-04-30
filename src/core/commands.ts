@@ -15,7 +15,7 @@ export enum CommandTypes {
   ORGANIZATION = 'organization',
   PUBLISH = 'publish',
   BUILD = 'build',
-  TESTING_DISTRIBUTION= 'distribution',
+  TESTING_DISTRIBUTION= 'testing-distribution',
   ENTERPRISE_APP_STORE= 'enterprise-app-store',
 }
 

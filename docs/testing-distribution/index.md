@@ -1,9 +1,9 @@
-# `appcircle distribution`
+# `appcircle testing-distribution`
 
 Testing distribution management
 
 ```plaintext
-appcircle distribution [command] [options]
+appcircle testing-distribution [command] [options]
 ```
 
 ## Options inherited from parent commands

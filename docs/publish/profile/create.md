@@ -1,6 +1,6 @@
 # `appcircle publish profile create`
 
-Create a distribution profile.
+Create a publish profile.
 
 ```plaintext
 appcircle publish profile create [options]

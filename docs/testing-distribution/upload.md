@@ -1,9 +1,9 @@
-# `appcircle distribution upload`
+# `appcircle testing-distribution upload`
 
 Upload your mobile app to selected distribution profile.
 
 ```plaintext
-appcircle distribution upload [options]
+appcircle testing-distribution upload [options]
 ```
 
 ## Options

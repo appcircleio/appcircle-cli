@@ -15,7 +15,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
     );
   },
   [CommandTypes.TESTING_DISTRIBUTION]: (data: any) => {
-    if(data.fullCommandName === `${PROGRAM_NAME}-distribution-profile-list`){
+    if(data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`){
       if (data?.data?.length === 0) {
         console.info('No distribution profiles available.');
         return;
@@ -33,7 +33,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Auto Send': distributionProfile.testingGroupIds ? 'Enabled' : 'Disabled',
         }))
       );
-    } else if(data.fullCommandName === `${PROGRAM_NAME}-distribution-profile-create`){
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-create`){
       console.info(`\n${data.data.name} distribution profile created successfully!`);
     }
   },

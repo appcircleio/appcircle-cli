@@ -66,7 +66,7 @@ Run `appcircle [commandName] --help` to view a list of  commands/subcommands in 
 - [appcircle config](/docs/config/index.md)
 - [appcircle login](/docs/login/index.md)
 - [appcircle build](/docs/build/index.md)
-- [appcircle distribution](/docs/distribution/index.md)
+- [appcircle testing-distribution](/docs/testing-distribution/index.md)
 - [appcircle publish](/docs/publish/index.md)
 - [appcircle enterprise-app-store](/docs/enterprise-app-store/index.md)
 - [appcircle organization](/docs/organization/index.md)
@@ -153,8 +153,8 @@ CURL_LOGGING= appcircle
 
 - Create a distribution profile and [share with the testers](https://docs.appcircle.io/distribute/create-or-select-a-distribution-profile)
 - Enable [auto sending](https://docs.appcircle.io/distribute/create-or-select-a-distribution-profile#auto-send-your-build-to-the-testers) of the build to the testers
-- Get the distribution profile ID using `appcircle distribution profile list`
-- Upload your app binary to the selected distribution profile using `appcircle distribution upload --app="YOUR APP PATH" --profileId="YOUR PROFILE ID" --message="YOUR RELEASE NOTES"`
+- Get the distribution profile ID using `appcircle testing-distribution profile list`
+- Upload your app binary to the selected distribution profile using `appcircle testing-distribution upload --app="YOUR APP PATH" --profileId="YOUR PROFILE ID" --message="YOUR RELEASE NOTES"`
 
 
 ## Migration Guides

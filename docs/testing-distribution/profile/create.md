@@ -1,9 +1,9 @@
-# `appcircle distribution profile create`
+# `appcircle testing-distribution profile create`
 
 Create a distribution profile.
 
 ```plaintext
-appcircle distribution profile create [options]
+appcircle testing-distribution profile create [options]
 ```
 
 ## Options
