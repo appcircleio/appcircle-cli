@@ -17,6 +17,7 @@ export enum CommandTypes {
   BUILD = 'build',
   TESTING_DISTRIBUTION= 'testing-distribution',
   ENTERPRISE_APP_STORE= 'enterprise-app-store',
+  SIGNING_IDENTITY= 'signing-identity',
 }
 
 export type ParamType = {
@@ -500,6 +501,127 @@ export const Commands: CommandType[] = [
       }
     ],
     params: []
+  },
+  {
+    command: CommandTypes.SIGNING_IDENTITY,
+    description: 'Signing Identities',
+    longDescription: 'Signing Identities management',
+    params: [],
+    subCommands:[
+      {
+        command: 'certificate',
+        description: 'iOS Certificate actions',
+        longDescription: 'iOS Certificate actions',
+        params:[],
+        subCommands: [
+          {
+            command: 'list',
+            description: 'Certificates list',
+            longDescription: 'Get list of uploaded/installed certificates',
+            params:[],
+          },
+          {
+            command: 'upload',
+            description: 'Upload certificate bundle (.p12)',
+            longDescription: 'Upload a new P12 certificate',
+            params:[
+              {
+                name: 'path',
+                description: 'Certificate path',
+                type: CommandParameterTypes.STRING,
+                valueType: 'path',
+                required: true
+              },
+              {
+                name: 'password',
+                description: 'Certificate password',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: true
+              },
+            ],
+          },
+          {
+            command: 'create',
+            description: 'Generate signing request to create certificates.',
+            longDescription: 'Generate signing request to create certificates.',
+            params:[
+              {
+                name: 'name',
+                description: 'Certificate name',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: true,
+              },
+              {
+                name: 'email',
+                description: 'Email',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: true,
+              },
+              {
+                name: 'countryCode',
+                description: 'Country code',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'string',
+                required: true,
+              },
+            ],
+          },
+          {
+            command: 'view',
+            description: 'View details of a certificate bundle. (.p12)',
+            longDescription: 'View details of a certificate bundle. (.p12)',
+            params:[
+              {
+                name: 'certificateBundleId',
+                description: 'Certificate Bundle ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'download',
+            description: 'Download certificate.',
+            longDescription: 'Download certificate to the given directory on your machine.',
+            params:[
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for certificate to be downloaded:',
+                longDescription:'[OPTIONAL] The path for certificate to be downloaded: (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+              },
+              {
+                name: 'certificateId',
+                description: 'Certificate ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove certificate.',
+            longDescription: 'Remove certificate.',
+            params:[
+              {
+                name: 'certificateId',
+                description: 'Certificate ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          }
+        ]
+      }
+    ]
   },
   {
     command: CommandTypes.TESTING_DISTRIBUTION,

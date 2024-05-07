@@ -28,6 +28,9 @@ import {
   getPublishProfiles,
   getAppVersions,
   getPublishVariableGroups,
+  getCountries,
+  getiOSP12Certificates,
+  getiOSCSRCertificates,
 } from '../services';
 import { DefaultEnvironmentVariables, getConfigStore } from '../config';
 import { ProgramCommand, createCommandActionCallback } from '../program';
@@ -360,6 +363,36 @@ const handleInteractiveParamsOrArguments = async (
       spinner.succeed();
     }else if (param.name === 'value' && params.isSecret) {
       param.type = CommandParameterTypes.PASSWORD;
+    }else if (param.name === 'countryCode' && param.type === CommandParameterTypes.SELECT) {
+      const countries = await getCountries();
+      param.params = countries.map((country) => ({ name: country.alpha2, message: `${country.name}` }));
+    }else if (param.name === 'certificateBundleId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Certificate Bundles fetching').start();
+      const p12Certs = await getiOSP12Certificates();
+      const certificates = [...p12Certs];
+      if (!certificates || certificates.length === 0) {
+        spinner.text = 'No certificate bundle available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = certificates.map((certificate:any) => ({name:certificate.id, message: ` ${certificate.id} (${certificate.name})`}));
+        spinner.text = 'Certificate Bundles Fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'certificateId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Certificates fetching').start();
+      const p12Certs = await getiOSP12Certificates();
+      const csrCerts = await getiOSCSRCertificates();
+      const certificates = [...p12Certs,...csrCerts];
+      if (!certificates || certificates.length === 0) {
+        spinner.text = 'No certificate available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = certificates.map((certificate:any) => ({name:certificate.id, message: ` ${certificate.id} (${certificate.name})`}));
+        spinner.text = 'Certificates Fetched';
+        spinner.succeed();
+      }
     }
 
     // If has paramType and type  match to selected type

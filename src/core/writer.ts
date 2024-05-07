@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { CommandTypes } from './commands';
-import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME, QueueItemStatus } from '../constant';
+import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME, QueueItemStatus, IOSCertificateStoreTypes } from '../constant';
 import moment from 'moment';
 import { getConsoleOutputType } from '../config';
 
@@ -397,6 +397,45 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
     }
     else {
       console.log(data.data)
+    }
+  },
+  [CommandTypes.SIGNING_IDENTITY]: (data: any) => {
+    if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((certificate: any) => ({
+          'Certificate Id': certificate.id || '-',
+          'Certificate Name': certificate.name || '-',
+          'Stored By': certificate.storeType?.toString() ? (IOSCertificateStoreTypes as any)[certificate.storeType.toString()]  :'-',
+          'Extension': certificate.extension || '-',
+          'Expire Date': certificate.expireDate ? moment(certificate.expireDate).calendar() : '-',
+        }))
+      ) : console.log('  No iOS certificate found');
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-upload`){
+      data.data ? console.table({
+        'Certificate Id': data.data.id || '-',
+        'Certificate Name': data.data.name || '-',
+        'Stored By': data.data.storeType?.toString() ? (IOSCertificateStoreTypes as any)[data.data.storeType.toString()]  :'-',
+        'File Name': data.data.filename || '-',
+        'Expire Date': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
+      }):console.log('  No iOS certificate found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-create`){
+      data.data ? console.table({
+        'Certificate Id': data.data.id || '-',
+        'Certificate Name': data.data.name || '-',
+        'Stored By': data.data.storeType?.toString() ? (IOSCertificateStoreTypes as any)[data.data.storeType.toString()]  :'-',
+        'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+      }):console.log('  No iOS certificate found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-view`){
+      data.data ? console.table({
+        'Certificate Id': data.data.id || '-',
+        'Certificate Name': data.data.name || '-',
+        'File Name': data.data.filename || '-',
+        'Stored By': data.data.storeType?.toString() ? (IOSCertificateStoreTypes as any)[data.data.storeType.toString()]  :'-',
+        'Expire Date': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
+        'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+        'Updated': data.data.updateDate ? moment(data.data.updateDate).calendar() : '-',
+      }):console.log('  No iOS certificate found')
     }
   }
 };

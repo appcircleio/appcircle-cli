@@ -71,6 +71,13 @@ import {
   getAppVersions,
   downloadAppVersion,
   getActiveBuilds,
+  getiOSCSRCertificates,
+  getiOSP12Certificates,
+  uploadP12Certificate,
+  createCSRCertificateRequest,
+  getCertificateDetailById,
+  downloadCertificateById,
+  removeCSRorP12CertificateById,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -490,6 +497,77 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
   }
 }
 
+const handleSigningIdentityCommand = async (command: ProgramCommand, params: any) => {
+  if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-list`) {
+    const p12Certs = await getiOSP12Certificates();
+    const csrCerts = await getiOSCSRCertificates();
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: [...p12Certs,...csrCerts],
+    });
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-upload`){
+    const spinner = createOra('Try to upload the certificate').start();
+    try {
+      const responseData = await uploadP12Certificate(params);
+      commandWriter(CommandTypes.SIGNING_IDENTITY, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+      spinner.text = `Certificate uploaded successfully.\n\n`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Upload failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-create`){
+    const spinner = createOra('Try to create the certificate request').start();
+    try {
+      const responseData = await createCSRCertificateRequest(params);
+      commandWriter(CommandTypes.SIGNING_IDENTITY, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+      spinner.text = `Certificate request created successfully.\n\n`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Create failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-view`){
+    const responseData = await getCertificateDetailById(params);
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: responseData
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-download`){
+    const p12Certs = await getiOSP12Certificates();
+    const p12Cert = p12Certs?.find((certificate:any) => certificate.id === params.certificateId);
+    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const fileName = p12Cert ? p12Cert.filename : 'download.cer';
+    const spinner = createOra(`Downloading ${p12Cert ? `certificate bundle: ${p12Cert.filename}` : '.cer file'} `).start();
+    try {
+      await downloadCertificateById(params, downloadPath,fileName, p12Cert ? 'p12': 'csr');
+      spinner.text = `The file ${fileName} is downloaded successfully under path:\n${downloadPath}`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.text = 'The file could not be downloaded.';
+      spinner.fail();
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-remove`){
+    const spinner = createOra('Try to remove the certificate').start();
+    try {
+      const csrCerts = await getiOSCSRCertificates();
+      const csrCert = csrCerts?.find((certificate:any) => certificate.id === params.certificateId);
+      await removeCSRorP12CertificateById(params, csrCert ? 'csr': 'p12');
+      spinner.text = `Certificate removed successfully.\n\n`;
+      spinner.succeed();
+    } catch (e: any) {
+      spinner.fail('Remove failed');
+      throw e;
+    }
+
+  }
+}
 const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-profile-list`){
     const responseData = await getEnterpriseProfiles();
@@ -617,6 +695,9 @@ export const runCommand = async (command: ProgramCommand) => {
   }
   if (command.isGroupCommand(CommandTypes.ENTERPRISE_APP_STORE)) {
     return handleEnterpriseAppStoreCommand(command, params);
+  }
+  if (command.isGroupCommand(CommandTypes.SIGNING_IDENTITY)) {
+    return handleSigningIdentityCommand(command, params);
   }
   switch (commandName) {
     case CommandTypes.LOGIN: {
