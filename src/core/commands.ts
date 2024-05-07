@@ -620,6 +620,135 @@ export const Commands: CommandType[] = [
             ],
           }
         ]
+      },
+      {
+        command: 'keystore',
+        description: 'Android Keystore actions',
+        longDescription: 'Android Keystore actions',
+        params:[],
+        subCommands: [
+          {
+            command: 'list',
+            description: 'Keystores list',
+            longDescription: 'Get list of uploaded/installed keystores',
+            params: [],
+          },
+          {
+            command: 'create',
+            description: 'Generate a new keystore.',
+            longDescription: 'Generate a new keystore.',
+            params: [
+            {
+              name: 'name',
+              description: 'Keystore name',
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+            },
+            {
+              name: 'password',
+              description: 'Keystore password',
+              type: CommandParameterTypes.PASSWORD,
+              valueType: 'string',
+            },
+            {
+              name: 'alias',
+              description: 'Alias',
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+            },
+            {
+              name: 'aliasPassword',
+              description: 'Alias password.',
+              type: CommandParameterTypes.PASSWORD,
+              valueType: 'string',
+            },
+            {
+              name: 'validity',
+              description: 'Validity (Years)',
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+            }
+            ],
+          },
+          {
+            command: 'upload',
+            description: 'Upload keystore file (.jks or .keystore)',
+            longDescription: 'Upload keystore file (.jks or .keystore)',
+            params: [
+              {
+                name: 'path',
+                description: 'Keystore path',
+                type: CommandParameterTypes.STRING,
+                valueType: 'path',
+                required: true
+              },
+              {
+                name: 'password',
+                description: 'Keystore password',
+                type: CommandParameterTypes.PASSWORD,
+                valueType: 'string',
+                required: true
+              },
+              {
+                name: 'aliasPassword',
+                description: 'Alias password',
+                type: CommandParameterTypes.PASSWORD,
+                valueType: 'string',
+                required: true
+              },
+            ]
+          },
+          {
+            command: 'download',
+            description: 'Download keystore file (.jks or .keystore)',
+            longDescription: 'Download keystore file (.jks or .keystore) to the given directory on your machine.',
+            params: [
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for keystore file to be downloaded:',
+                longDescription:'[OPTIONAL] The path for keystore file to be downloaded: (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+              },
+              {
+                name: 'keystoreId',
+                description: 'Keystore ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ]
+          },
+          {
+            command: 'view',
+            description: 'View detais of keystore.',
+            longDescription: 'View details of keystore.',
+            params:[
+              {
+                name: 'keystoreId',
+                description: 'Keystore ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove keystore.',
+            longDescription: 'Remove keystore.',
+            params:[
+              {
+                name: 'keystoreId',
+                description: 'Keystore ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          }
+        ]
       }
     ]
   },

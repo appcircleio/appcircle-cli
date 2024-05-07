@@ -78,6 +78,12 @@ import {
   getCertificateDetailById,
   downloadCertificateById,
   removeCSRorP12CertificateById,
+  getAndroidKeystores,
+  generateNewKeystore,
+  uploadAndroidKeystoreFile,
+  downloadKeystoreById,
+  getKeystoreDetailById,
+  removeKeystore,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -565,7 +571,60 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail('Remove failed');
       throw e;
     }
-
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-list`){
+    const keystores = await getAndroidKeystores();
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: keystores
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-create`){
+    const spinner = createOra('Trying to generate new keystore.').start();
+    try{
+      await generateNewKeystore(params);
+      spinner.text = `Keystore generated successfully.\n\n Keystore name: ${params.name}`;
+      spinner.succeed();
+    }catch(e: any){
+      spinner.fail('Generation failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-upload`){
+    const spinner = createOra('Trying to upload the keystore file').start();
+    try {
+      await uploadAndroidKeystoreFile(params);
+      spinner.text = `Keystore file uploaded successfully.\n\n`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Upload failed: Keystore was tampered with, or password was incorrect');
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-download`){
+    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const spinner = createOra(`Searching file...`).start();
+    try {
+      const keystoreDetail = await getKeystoreDetailById(params);
+      spinner.text = `Downloading file ${keystoreDetail.fileName}`;
+      await downloadKeystoreById(params, downloadPath, keystoreDetail.fileName);
+      spinner.text = `The file ${keystoreDetail.fileName} is downloaded successfully under path:\n${downloadPath}`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.text = 'The file could not be downloaded.';
+      spinner.fail();
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-view`){
+    const keystore = await getKeystoreDetailById(params);
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: keystore
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-remove`){
+    const spinner = createOra('Try to remove the keystore').start();
+    try {
+      await removeKeystore(params);
+      spinner.text = `Keystore removed successfully.\n\n`;
+      spinner.succeed();
+    } catch (e: any) {
+      spinner.fail('Remove failed');
+      throw e;
+    }
   }
 }
 const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: any) => {

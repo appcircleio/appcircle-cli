@@ -31,6 +31,7 @@ import {
   getCountries,
   getiOSP12Certificates,
   getiOSCSRCertificates,
+  getAndroidKeystores,
 } from '../services';
 import { DefaultEnvironmentVariables, getConfigStore } from '../config';
 import { ProgramCommand, createCommandActionCallback } from '../program';
@@ -391,6 +392,18 @@ const handleInteractiveParamsOrArguments = async (
       }else {
         param.params = certificates.map((certificate:any) => ({name:certificate.id, message: ` ${certificate.id} (${certificate.name})`}));
         spinner.text = 'Certificates Fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'keystoreId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Keystores fetching').start();
+      const keystores = await getAndroidKeystores();
+      if (!keystores || keystores.length === 0) {
+        spinner.text = 'No keystore available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = keystores.map((keystore:any) => ({name:keystore.id, message: ` ${keystore.id} (${keystore.name})`}));
+        spinner.text = 'Keystores Fetched';
         spinner.succeed();
       }
     }

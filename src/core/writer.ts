@@ -436,6 +436,26 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
         'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
         'Updated': data.data.updateDate ? moment(data.data.updateDate).calendar() : '-',
       }):console.log('  No iOS certificate found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-list`){
+      data.data?.length > 0 ? console.table(
+        data.data?.map((keystore:any) => ({
+          'Keystore Id': keystore.id || '-',
+          'Keystore Name': keystore.name || '-',
+          'File Name': keystore.fileName || '-',
+          'Expires': keystore.expireDate ? moment(keystore.expireDate).calendar() : '-',
+        }))
+      ):console.log('  No Android keystore found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-view`){
+      data.data ? console.table(
+        {
+          'Keystore Id': data.data.id || '-',
+          'Keystore Name': data.data.name || '-',
+          'Alias': data.data.alias || '-',
+          'File Name': data.data.fileName || '-',
+          'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+          'Expires': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
+        }
+      ):console.log('  No Android keystore found')
     }
   }
 };

@@ -17,11 +17,79 @@ const ROOTPATH = 'signing-identity';
     return result;
   }
 
+  export async function getAndroidKeystores() {
+    const keystores = await appcircleApi.get(`${ROOTPATH}/v2/keystores`, {
+      headers: getHeaders(),
+    });
+
+    return keystores.data;
+  }
+  
+  export async function uploadAndroidKeystoreFile(options: OptionsType<{ name: string, password: string, aliasPassword: string }>){
+    const data = new FormData();
+    data.append('Binary', fs.createReadStream(options.path));
+    data.append('KeystorePassword', options.password);
+    data.append('AliasPassword', options.aliasPassword);
+    const uploadResponse = await appcircleApi.post(`${ROOTPATH}/v2/keystores/binary`,data, {
+        maxBodyLength: Infinity,
+        headers: {
+          ...getHeaders(),
+          ...data.getHeaders(),
+        }
+    });
+    return uploadResponse.data;
+  }
+
+  export async function generateNewKeystore(options: OptionsType<{ name: string, password: string, passwordConfirm: string, validity: string,alias: string, aliasPassword: string, aliasPasswordConfirm :string }>) {
+    const keystores = await appcircleApi.post(`${ROOTPATH}/v2/keystores`,options, {
+      headers: getHeaders(),
+    });
+
+    return keystores.data;
+  }
+
   export async function getCertificateDetailById(options: OptionsType<{ certificateBundleId: string }>) {
     const certificate = await appcircleApi.get(`${ROOTPATH}/v2/certificates/${options.certificateBundleId}`, {
         headers: getHeaders(),
       });
       return certificate.data;
+  }
+  export async function getKeystoreDetailById(options: OptionsType<{ keystoreId: string }>) {
+    const keystore = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${options.keystoreId}`, {
+        headers: getHeaders(),
+      });
+      return keystore.data;
+  }
+
+  export async function downloadKeystoreById(options: OptionsType<{ keystoreId: string, path: string }>, downloadPath: string,fileName:string){
+    const data = new FormData();
+    data.append('Path', downloadPath);
+    data.append('Keystore Id', options.keystoreId);
+    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${options.keystoreId}`, {
+        responseType:'stream',
+        headers: {
+            ...getHeaders(),
+            ...data.getHeaders(),
+        },
+      });
+
+      return new Promise((resolve, reject) => {
+        const writer = fs.createWriteStream(`${downloadPath}/${fileName}`);
+        downloadResponse.data.pipe(writer);
+        let error: any = null;
+        writer.on('error', (err) => {
+          error = err;
+          writer.close();
+          reject(err);
+        });
+        writer.on('close', () => {
+          if (!error) {
+            resolve(true);
+          }
+          //no need to call the reject here, as it will have been called in the
+          //'error' stream;
+        });
+      });
   }
   export async function downloadCertificateById(options: OptionsType<{ certificateId: string, path: string }>,downloadPath: string,fileName: string,extension: 'p12' | 'csr') {
     const url = extension === 'p12' ? `${ROOTPATH}/v2/certificates/${options.certificateId}` : `${ROOTPATH}/v1/csr/${options.certificateId}`
@@ -61,7 +129,15 @@ const ROOTPATH = 'signing-identity';
         headers: getHeaders(),
     });
     return response.data;
-}
+  }
+
+  export async function removeKeystore(options: OptionsType<{ keystoreId: string }>){
+    const response = await appcircleApi.delete(`${ROOTPATH}/v2/keystores/${options.keystoreId}`, {
+        headers: getHeaders(),
+    });
+    return response.data;
+  }
+
   export async function getiOSCSRCertificates() {
     const certificates = await appcircleApi.get(`${ROOTPATH}/v1/csr`, {
       headers: getHeaders(),
