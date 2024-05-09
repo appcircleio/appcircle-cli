@@ -66,6 +66,7 @@ Run `appcircle [commandName] --help` to view a list of  commands/subcommands in 
 - [appcircle config](/docs/config/index.md)
 - [appcircle login](/docs/login/index.md)
 - [appcircle build](/docs/build/index.md)
+- [appcircle signing-identity](/docs/signing-identity/index.md)
 - [appcircle testing-distribution](/docs/testing-distribution/index.md)
 - [appcircle publish](/docs/publish/index.md)
 - [appcircle enterprise-app-store](/docs/enterprise-app-store/index.md)

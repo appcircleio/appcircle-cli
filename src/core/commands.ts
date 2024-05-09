@@ -522,8 +522,8 @@ export const Commands: CommandType[] = [
           },
           {
             command: 'upload',
-            description: 'Upload certificate bundle (.p12)',
-            longDescription: 'Upload a new P12 certificate',
+            description: 'Upload a new certificate bundle (.p12)',
+            longDescription: 'Upload a new certificate bundle (.p12)',
             params:[
               {
                 name: 'path',
@@ -636,7 +636,7 @@ export const Commands: CommandType[] = [
           {
             command: 'upload',
             description: 'Upload a provisioning profile (.mobileprovision).',
-            longDescription: 'Upload and create a new provisioning profile.',
+            longDescription: 'Upload and create a new provisioning profile (.mobileprovision).',
             params:[{
               name: 'path',
               description: 'Provisioning profile path',
