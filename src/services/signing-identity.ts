@@ -146,6 +146,68 @@ const ROOTPATH = 'signing-identity';
     const result = certificates.data?.map((certificate : any) => ({...certificate,extension: 'CSR',storeType: 1}));
     return result;
   }
+
+  export async function getProvisioningProfiles() {
+    const result = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles`, {
+      headers: getHeaders(),
+    });
+    return result.data;
+  }
+  export async function downloadProvisioningProfileById(options: OptionsType<{ provisioningProfileId: string }>, downloadPath: string, fileName:string){
+    const data = new FormData();
+    data.append('Path', downloadPath);
+    data.append('Profisioning Profile Id', options.provisioningProfileId);
+    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${options.provisioningProfileId}`, {
+        responseType:'stream',
+        headers: {
+            ...getHeaders(),
+            ...data.getHeaders(),
+        },
+      });
+
+      return new Promise((resolve, reject) => {
+        const writer = fs.createWriteStream(`${downloadPath}/${fileName}`);
+        downloadResponse.data.pipe(writer);
+        let error: any = null;
+        writer.on('error', (err) => {
+          error = err;
+          writer.close();
+          reject(err);
+        });
+        writer.on('close', () => {
+          if (!error) {
+            resolve(true);
+          }
+          //no need to call the reject here, as it will have been called in the
+          //'error' stream;
+        });
+      });
+  }
+  export async function getProvisioningProfileDetailById(options: OptionsType<{ provisioningProfileId: string }>){
+    const result = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${options.provisioningProfileId}`, {
+      headers: getHeaders(),
+    });
+    return result.data;
+  }
+  export async function uploadProvisioningProfile(options: OptionsType<{ path: string }>){
+    const data = new FormData();
+    data.append('Binary', fs.createReadStream(options.path));
+    const uploadResponse = await appcircleApi.post(`${ROOTPATH}/v2/provisioning-profiles`,data, {
+        maxBodyLength: Infinity,
+        headers: {
+          ...getHeaders(),
+          ...data.getHeaders(),
+        }
+    });
+    return uploadResponse.data;
+  }
+
+  export async function removeProvisioningProfile(options: OptionsType<{ provisioningProfileId: string }>){
+    const response = await appcircleApi.delete(`${ROOTPATH}/v1/provisioning-profiles/${options.provisioningProfileId}`, {
+        headers: getHeaders(),
+    });
+    return response.data;
+  }
   export async function uploadP12Certificate(options: OptionsType<{ path: string, password: string }>) {
     const data = new FormData();
     data.append('binary', fs.createReadStream(options.path));

@@ -84,6 +84,11 @@ import {
   downloadKeystoreById,
   getKeystoreDetailById,
   removeKeystore,
+  getProvisioningProfiles,
+  uploadProvisioningProfile,
+  getProvisioningProfileDetailById,
+  downloadProvisioningProfileById,
+  removeProvisioningProfile,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -620,6 +625,50 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
     try {
       await removeKeystore(params);
       spinner.text = `Keystore removed successfully.\n\n`;
+      spinner.succeed();
+    } catch (e: any) {
+      spinner.fail('Remove failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-list`) {
+    const profiles = await getProvisioningProfiles();
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: profiles
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-upload`) {
+    const spinner = createOra('Trying to upload the provisioning profile').start();
+    try {
+      await uploadProvisioningProfile(params);
+      spinner.text = `Provisioning profile uploaded successfully.\n\n`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Upload failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-download`) {
+    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const spinner = createOra('Trying to download the provisioning profile').start();
+    try {
+      const profile = await getProvisioningProfileDetailById(params);
+      await downloadProvisioningProfileById(params, downloadPath, profile.filename);
+      spinner.text = `The file ${profile.filename} is downloaded successfully under path:\n${downloadPath}`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Download failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`) {
+    const profile = await getProvisioningProfileDetailById(params);
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: profile
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-remove`) {
+    const spinner = createOra('Try to remove the provisioning profile').start();
+    try {
+      await removeProvisioningProfile(params);
+      spinner.text = `Provisioning profile removed successfully.\n\n`;
       spinner.succeed();
     } catch (e: any) {
       spinner.fail('Remove failed');

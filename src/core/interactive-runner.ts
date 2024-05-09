@@ -32,6 +32,7 @@ import {
   getiOSP12Certificates,
   getiOSCSRCertificates,
   getAndroidKeystores,
+  getProvisioningProfiles,
 } from '../services';
 import { DefaultEnvironmentVariables, getConfigStore } from '../config';
 import { ProgramCommand, createCommandActionCallback } from '../program';
@@ -404,6 +405,18 @@ const handleInteractiveParamsOrArguments = async (
       }else {
         param.params = keystores.map((keystore:any) => ({name:keystore.id, message: ` ${keystore.id} (${keystore.name})`}));
         spinner.text = 'Keystores Fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'provisioningProfileId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Provisioning profiles fetching').start();
+      const profiles = await getProvisioningProfiles();
+      if (!profiles || profiles.length === 0) {
+        spinner.text = 'No provisioning profile available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = profiles.map((profile:any) => ({name:profile.id, message: ` ${profile.id} (${profile.name})`}));
+        spinner.text = 'Provisioning profiles Fetched';
         spinner.succeed();
       }
     }

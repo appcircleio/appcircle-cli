@@ -622,6 +622,82 @@ export const Commands: CommandType[] = [
         ]
       },
       {
+        command: 'provisioning-profile',
+        description: 'iOS Provisioning Profile actions',
+        longDescription: 'iOS Provisioning Profile actions',
+        params:[],
+        subCommands: [
+          {
+            command: 'list',
+            description: 'Provisioning profile list',
+            longDescription: 'Get list of uploaded/installed provisioning profiles.',
+            params:[],
+          },
+          {
+            command: 'upload',
+            description: 'Upload a provisioning profile (.mobileprovision).',
+            longDescription: 'Upload and create a new provisioning profile.',
+            params:[{
+              name: 'path',
+              description: 'Provisioning profile path',
+              type: CommandParameterTypes.STRING,
+              valueType: 'path',
+              required: true
+            }],
+          },
+          {
+            command: 'download',
+            description: 'Download provisioning profile.',
+            longDescription: 'Download provisioning profile to the given directory on your machine.',
+            params:[
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for provisioning profile to be downloaded:',
+                longDescription:'[OPTIONAL] The path for provisioning profile to be downloaded: (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+              },
+              {
+                name: 'provisioningProfileId',
+                description: 'Provisioning Profile ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'view',
+            description: 'View details of a provisioning profile.',
+            longDescription: 'View details of a provisioning profile.',
+            params:[
+              {
+                name: 'provisioningProfileId',
+                description: 'Provisioning Profile ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove provisioning profile.',
+            longDescription: 'Remove provisioning profile.',
+            params:[
+              {
+                name: 'provisioningProfileId',
+                description: 'Provisioning Profile ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+        ],
+      },
+      {
         command: 'keystore',
         description: 'Android Keystore actions',
         longDescription: 'Android Keystore actions',

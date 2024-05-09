@@ -456,6 +456,30 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Expires': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
         }
       ):console.log('  No Android keystore found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-list`){
+      data.data?.length > 0 ? console.table(
+        data.data?.map((profile:any) => ({
+          'Id': profile.id || '-',
+          'Name': profile.name || '-',
+          'Associated App ID': profile.appId || '-',
+          'Stored By': profile.storeType?.toString() ? (IOSCertificateStoreTypes as any)[profile.storeType.toString()]  :'-',
+          'Has Certificate': profile.hasCertificate || false,
+          'Expires': profile.expireDate ? moment(profile.expireDate).calendar() : '-',
+        }))
+      ):console.log('  No Provisioning Profile found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`){
+      const profile = data.data;
+      profile ? console.table(
+        {
+          'Id': profile.id || '-',
+          'Name': profile.name || '-',
+          'Associated App ID': profile.appId || '-',
+          'Stored By': profile.storeType?.toString() ? (IOSCertificateStoreTypes as any)[profile.storeType.toString()]  :'-',
+          'Has Certificate': profile.hasCertificate || false,
+          'Expires': profile.expireDate ? moment(profile.expireDate).calendar() : '-',
+          'Created': profile.createDate ? moment(profile.createDate).calendar() : '-',
+        }
+      ):console.log('  No Provisioning Profile found')
     }
   }
 };
