@@ -161,3 +161,4 @@ CURL_LOGGING= appcircle
 ## Migration Guides
 
 - [1.x to 2.x](docs/migration-guides/1.x-to-2.x.md)
+- [2.0 to 2.x](docs/migration-guides/2.0-to-2.x.md)
