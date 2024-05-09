@@ -879,8 +879,133 @@ export const Commands: CommandType[] = [
               },
             ],
           },
+          {
+            command: 'settings',
+            description: 'Distribution profile settings',
+            params: [],
+            subCommands:[
+              {
+                command: 'auto-send',
+                description: 'Select the test groups for automated distribution.',
+                params: [
+                  {
+                    name: 'distProfileId',
+                    description: 'Distribution profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                  },
+                  {
+                    name: 'testingGroupIds',
+                    description: 'Testing group IDs for automated distribution.',
+                    longDescription: 'Testing group IDs for automated distribution.',
+                    type: CommandParameterTypes.MULTIPLE_SELECT,
+                    valueType: 'string'
+                  }
+                ],
+              }
+            ]
+          },
         ],
         params: []
+      },
+      {
+        command: 'testing-group',
+        description: 'Testing group actions',
+        longDescription: 'Testing group actions',
+        params: [],
+        subCommands: [
+          {
+            command: 'list',
+            description: 'Get all testing group list of current organization.',
+            longDescription:'Get all testing group list of current organization.',
+            params: [],
+          },
+          {
+            command: 'view',
+            description: 'View detais of testing group.',
+            longDescription:'View detais of testing group.',
+            params: [
+              {
+                name: 'testingGroupId',
+                description: 'Testing group ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+              }
+            ],
+          },
+          {
+            command: 'create',
+            description: 'Create a new testing group.',
+            longDescription:'Create a new testing group.',
+            params: [
+              {
+                name: 'name',
+                description: 'Testing group name',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+              }
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove testing group.',
+            longDescription:'Remove testing group.',
+            params: [
+              {
+                name: 'testingGroupId',
+                description: 'Testing group ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+              }
+            ],
+          },
+          {
+            command: 'tester',
+            description: 'Testing group tester actions.',
+            longDescription: 'Testing group tester actions.',
+            params:[],
+            subCommands: [
+              {
+                command: 'add',
+                description: 'Add tester to selected testing group.',
+                longDescription: 'Add tester to selected testing group.',
+                params: [
+                  {
+                    name: 'testingGroupId',
+                    description: 'Testing group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                  },
+                  {
+                    name: 'testerEmail',
+                    description: 'Email of tester',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                  }
+                ]
+              },
+              {
+                command: 'remove',
+                description: 'Remove selected tester from selected testing group.',
+                longDescription: 'Remove selected tester from selected testing group.',
+                params: [
+                  {
+                    name: 'testingGroupId',
+                    description: 'Testing group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                  },
+                  {
+                    name: 'testerEmail',
+                    description: 'Email of tester',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'string',
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     ]
   },

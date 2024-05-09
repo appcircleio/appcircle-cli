@@ -33,6 +33,9 @@ import {
   getiOSCSRCertificates,
   getAndroidKeystores,
   getProvisioningProfiles,
+  getTestingGroups,
+  getDistributionProfileById,
+  getTestingGroupById,
 } from '../services';
 import { DefaultEnvironmentVariables, getConfigStore } from '../config';
 import { ProgramCommand, createCommandActionCallback } from '../program';
@@ -417,6 +420,50 @@ const handleInteractiveParamsOrArguments = async (
       }else {
         param.params = profiles.map((profile:any) => ({name:profile.id, message: ` ${profile.id} (${profile.name})`}));
         spinner.text = 'Provisioning profiles Fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'testingGroupIds' && param.type === CommandParameterTypes.MULTIPLE_SELECT) {
+      const spinner = ora('Testing groups fetching').start();
+      const groups = await getTestingGroups();
+      const selectedProfile = await getDistributionProfileById(params);
+      if (!groups || groups.length === 0) {
+        spinner.text = 'No testing group available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = groups.map((group:any) => ({name:group.id, message: ` ${group.id} (${group.name})`}));
+        param.defaultValue = selectedProfile?.testingGroupIds ? selectedProfile?.testingGroupIds?.map?.((id: any, index:number) => {
+          const _index = groups.findIndex((group: any) => group.id === id);
+          if(_index !== -1){
+            return _index;
+          }
+        }) : [];
+        spinner.text = 'Testing groups fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'testingGroupId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Testing groups fetching').start();
+      const groups = await getTestingGroups();
+      if (!groups || groups.length === 0) {
+        spinner.text = 'No testing group available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = groups.map((group:any) => ({name:group.id, message: ` ${group.id} (${group.name})`}));
+        spinner.text = 'Testing groups fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'testerEmail' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Testers fetching').start();
+      const group = await getTestingGroupById(params);
+      const testers = group?.testers;
+      if (!testers || testers.length === 0) {
+        spinner.text = 'No tester available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = testers.map((tester:any) => ({name:tester, message: tester}));
+        spinner.text = 'Testers fetched';
         spinner.succeed();
       }
     }

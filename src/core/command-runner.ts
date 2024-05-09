@@ -89,6 +89,13 @@ import {
   getProvisioningProfileDetailById,
   downloadProvisioningProfileById,
   removeProvisioningProfile,
+  getTestingGroups,
+  updateDistributionProfileSettings,
+  getTestingGroupById,
+  createTestingGroup,
+  deleteTestingGroup,
+  addTesterToTestingGroup,
+  removeTesterFromTestingGroup,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -501,6 +508,40 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       spinner.fail('Upload failed');
       throw e;
     }
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-settings-auto-send`){
+    const spinner = createOra('Testing groups saving').start();
+    try{
+      params.testingGroupIds = Array.isArray(params.testingGroupIds) ? params.testingGroupIds : params.testingGroupIds.split(' '); 
+      await updateDistributionProfileSettings(params);
+      spinner.succeed('Testing groups saved successfully.');
+    }catch(e){
+      spinner.fail('Saving failed');
+    }
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-list`) {
+    const responseData = await getTestingGroups();
+    commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-view`) {
+    const responseData = await getTestingGroupById(params);
+    commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  }
+  else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-create`) {
+    const responseData = await createTestingGroup(params);
+    console.info(`Testing group named ${responseData.name} created successfully!`);
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-remove`) {
+    await deleteTestingGroup(params);
+    console.info(`Selected testing group removed successfully!`);
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-add`) {
+    await addTesterToTestingGroup(params);
+    console.info(`Tester has been successfully added to the selected testing group!`);
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-remove`) {
+    await removeTesterFromTestingGroup(params);
+    console.info(`Tester has been successfully removed from the selected testing group!`);
   }
   else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
