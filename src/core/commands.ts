@@ -535,7 +535,7 @@ export const Commands: CommandType[] = [
               {
                 name: 'password',
                 description: 'Certificate password',
-                type: CommandParameterTypes.STRING,
+                type: CommandParameterTypes.PASSWORD,
                 valueType: 'string',
                 required: true
               },
