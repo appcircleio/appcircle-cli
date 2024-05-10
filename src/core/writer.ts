@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { CommandTypes } from './commands';
-import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME, QueueItemStatus } from '../constant';
+import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME, QueueItemStatus, IOSCertificateStoreTypes } from '../constant';
 import moment from 'moment';
 import { getConsoleOutputType } from '../config';
 
@@ -15,7 +15,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
     );
   },
   [CommandTypes.TESTING_DISTRIBUTION]: (data: any) => {
-    if(data.fullCommandName === `${PROGRAM_NAME}-distribution-profile-list`){
+    if(data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`){
       if (data?.data?.length === 0) {
         console.info('No distribution profiles available.');
         return;
@@ -33,7 +33,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Auto Send': distributionProfile.testingGroupIds ? 'Enabled' : 'Disabled',
         }))
       );
-    } else if(data.fullCommandName === `${PROGRAM_NAME}-distribution-profile-create`){
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-create`){
       console.info(`\n${data.data.name} distribution profile created successfully!`);
     }
   },
@@ -397,6 +397,89 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
     }
     else {
       console.log(data.data)
+    }
+  },
+  [CommandTypes.SIGNING_IDENTITY]: (data: any) => {
+    if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((certificate: any) => ({
+          'Certificate Id': certificate.id || '-',
+          'Certificate Name': certificate.name || '-',
+          'Stored By': certificate.storeType?.toString() ? (IOSCertificateStoreTypes as any)[certificate.storeType.toString()]  :'-',
+          'Extension': certificate.extension || '-',
+          'Expire Date': certificate.expireDate ? moment(certificate.expireDate).calendar() : '-',
+        }))
+      ) : console.log('  No iOS certificate found');
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-upload`){
+      data.data ? console.table({
+        'Certificate Id': data.data.id || '-',
+        'Certificate Name': data.data.name || '-',
+        'Stored By': data.data.storeType?.toString() ? (IOSCertificateStoreTypes as any)[data.data.storeType.toString()]  :'-',
+        'File Name': data.data.filename || '-',
+        'Expire Date': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
+      }):console.log('  No iOS certificate found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-create`){
+      data.data ? console.table({
+        'Certificate Id': data.data.id || '-',
+        'Certificate Name': data.data.name || '-',
+        'Stored By': data.data.storeType?.toString() ? (IOSCertificateStoreTypes as any)[data.data.storeType.toString()]  :'-',
+        'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+      }):console.log('  No iOS certificate found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-view`){
+      data.data ? console.table({
+        'Certificate Id': data.data.id || '-',
+        'Certificate Name': data.data.name || '-',
+        'File Name': data.data.filename || '-',
+        'Stored By': data.data.storeType?.toString() ? (IOSCertificateStoreTypes as any)[data.data.storeType.toString()]  :'-',
+        'Expire Date': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
+        'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+        'Updated': data.data.updateDate ? moment(data.data.updateDate).calendar() : '-',
+      }):console.log('  No iOS certificate found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-list`){
+      data.data?.length > 0 ? console.table(
+        data.data?.map((keystore:any) => ({
+          'Keystore Id': keystore.id || '-',
+          'Keystore Name': keystore.name || '-',
+          'File Name': keystore.fileName || '-',
+          'Expires': keystore.expireDate ? moment(keystore.expireDate).calendar() : '-',
+        }))
+      ):console.log('  No Android keystore found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-view`){
+      data.data ? console.table(
+        {
+          'Keystore Id': data.data.id || '-',
+          'Keystore Name': data.data.name || '-',
+          'Alias': data.data.alias || '-',
+          'File Name': data.data.fileName || '-',
+          'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+          'Expires': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
+        }
+      ):console.log('  No Android keystore found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-list`){
+      data.data?.length > 0 ? console.table(
+        data.data?.map((profile:any) => ({
+          'Id': profile.id || '-',
+          'Name': profile.name || '-',
+          'Associated App ID': profile.appId || '-',
+          'Stored By': profile.storeType?.toString() ? (IOSCertificateStoreTypes as any)[profile.storeType.toString()]  :'-',
+          'Has Certificate': profile.hasCertificate || false,
+          'Expires': profile.expireDate ? moment(profile.expireDate).calendar() : '-',
+        }))
+      ):console.log('  No Provisioning Profile found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`){
+      const profile = data.data;
+      profile ? console.table(
+        {
+          'Id': profile.id || '-',
+          'Name': profile.name || '-',
+          'Associated App ID': profile.appId || '-',
+          'Stored By': profile.storeType?.toString() ? (IOSCertificateStoreTypes as any)[profile.storeType.toString()]  :'-',
+          'Has Certificate': profile.hasCertificate || false,
+          'Expires': profile.expireDate ? moment(profile.expireDate).calendar() : '-',
+          'Created': profile.createDate ? moment(profile.createDate).calendar() : '-',
+        }
+      ):console.log('  No Provisioning Profile found')
     }
   }
 };

@@ -4,7 +4,7 @@ import path from 'path';
 import FormData from 'form-data';
 import axios from 'axios';
 import moment from 'moment';
-import { EnvironmentVariableTypes } from '../constant';
+import { CountriesList, EnvironmentVariableTypes } from '../constant';
 import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
 import { ProgramError } from '../core/ProgramError';
 
@@ -401,5 +401,14 @@ export const getUserInfo = async () => {
   return userInfo.data;
 };
 
+
+export function getCountries() : {alpha2:string, name: string}[]{
+  return CountriesList.map((country: any) => ({
+      alpha2: country[1],
+      name: country[0]
+  }));
+}
+
 export * from './organization';
 export * from './publish';
+export * from './signing-identity'

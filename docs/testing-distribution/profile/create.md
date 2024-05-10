@@ -1,15 +1,14 @@
-# `appcircle publish profile create`
+# `appcircle testing-distribution profile create`
 
-Create a publish profile.
+Create a distribution profile.
 
 ```plaintext
-appcircle publish profile create [options]
+appcircle testing-distribution profile create [options]
 ```
 
 ## Options
 
 ```plaintext
-      --platform <string>  Platform (ios/android)
       --name <string>  Profile name
 ```
 ## Options inherited from parent commands
