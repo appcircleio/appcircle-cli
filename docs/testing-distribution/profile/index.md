@@ -16,3 +16,4 @@ appcircle testing-distribution profile [command] [options]
 
 - [`list`](list.md)
 - [`create`](create.md)
+- [`settings`](settings/index.md)

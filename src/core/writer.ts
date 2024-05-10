@@ -35,6 +35,31 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
       );
     } else if(data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-create`){
       console.info(`\n${data.data.name} distribution profile created successfully!`);
+    }else if (data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((group: any) => ({
+          'ID': group.id || '-',
+          'Name': group.name || '-',
+        }))
+      ) : console.log('  No testing group found');
+    }else if (data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-view`){
+      const group = data?.data;
+      group ?  
+      console.table(
+        {
+          'ID': group.id || '-',
+          'Name': group.name || '-',
+          'Created': group.createDate ? moment(group.createDate).calendar() : '-',
+          'Updated': group.updateDate ? moment(group.updateDate).calendar() : '-',
+        }
+      ) : console.log('  No testing group found');
+      if(group){
+        console.log('*************');
+        console.info('  Testers:');
+        group?.testers?.length > 0 ? console.table(group.testers.map((tester : any) => tester)) : console.log('  No tester available')
+        console.log('*************');
+      }
     }
   },
   [CommandTypes.BUILD]: (data: any) => {

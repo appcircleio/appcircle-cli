@@ -18,44 +18,6 @@ export async function getToken(options: OptionsType<{ pat: string }>) {
   return response.data;
 }
 
-export async function getDistributionProfiles(options: OptionsType = {}) {
-  const distributionProfiles = await appcircleApi.get(`distribution/v2/profiles`, {
-    headers: getHeaders(),
-  });
-  return distributionProfiles.data;
-}
-
-export async function createDistributionProfile(options: OptionsType<{ name: string }>) {
-  const response = await appcircleApi.post(
-    `distribution/v1/profiles`,
-    { name: options.name },
-    {
-      headers: getHeaders(),
-    }
-  );
-  return response.data;
-}
-
-export async function getTestingGroups(options: OptionsType) {
-  const response = await appcircleApi.get(`distribution/v2/testing-groups`, {
-    headers: getHeaders(),
-  });
-  if (options.output === 'json') {
-    console.log(JSON.stringify(response.data));
-  } else {
-    console.table(
-      response.data.map((testingGroup: any) => ({
-        ID: testingGroup.id,
-        Name: testingGroup.name,
-        'Organization ID': testingGroup.organizationId,
-        Created: testingGroup.createDate ? moment(testingGroup.createDate).calendar() : 'No created data',
-        'Last Updated': testingGroup.createDate ? moment(testingGroup.createDate).fromNow() : 'No update data',
-      }))
-    );
-  }
-  return response.data;
-}
-
 export async function getBuildProfiles(options: OptionsType = {}) {
   const buildProfiles = await appcircleApi.get(`build/v2/profiles`, {
     headers: getHeaders(),
@@ -411,4 +373,5 @@ export function getCountries() : {alpha2:string, name: string}[]{
 
 export * from './organization';
 export * from './publish';
-export * from './signing-identity'
+export * from './signing-identity';
+export * from './testing-distribution';

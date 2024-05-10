@@ -16,3 +16,4 @@ appcircle testing-distribution [command] [options]
 
 - [`upload`](upload.md)
 - [`profile`](profile/index.md)
+- [`testing-group`](testing-group/index.md)
