@@ -10,7 +10,7 @@ import { PROGRAM_NAME } from './constant';
 import chalk from 'chalk';
 
 const collectErrorMessageFromData = (data: any) => {
-  if(data && typeof data === 'string'){
+  if(data && (typeof data === 'string' || data instanceof String || data instanceof ArrayBuffer)) {
     return data;
   }
   return data ?  '\n↳ ' + Object.keys(data).filter(k => k !== 'stackTrace').map(key =>  ' -' +key +': ' + data[key]).join('\n↳ '): '';
