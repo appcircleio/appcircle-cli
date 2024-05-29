@@ -22,6 +22,23 @@
 - After changes, run the command `yarn run postversion`. It will push a new tag to the repository.
 - Jenkins will take care of the rest.
 
+### Publishing to NPM
+
+To publish a new version on NPM, use the following command:
+
+```shell
+npm version <version>
+```
+
+#### Examples
+
+```shell
+## To publish a beta version
+$ npm version 1.0.0-beta.1
+
+$ npm version 1.0.0
+```
+
 ## Jenkins Pipeline
 
 - Jenkins will look for the tag that matches `v*`, `v*-beta*`, `v*-alpha*`.
@@ -33,6 +50,7 @@
 - If the tag is `v*-beta*`, the app will be published to the beta channel.
 
 - If the tag is `v*-alpha*`, the app will be published to the alpha channel.
+
 
 ## Docker Image
 
