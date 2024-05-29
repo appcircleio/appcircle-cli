@@ -80,6 +80,13 @@ appcircle <command> <subcommand> ... <subcommand> [options]
 
 - Run `appcircle (-i, --interactive)` to proceed with the Appcircle GUI
 
+#### JSON Output
+
+To receive the command outputs in JSON format, append the following to the end of the command:
+
+```shell
+appcircle <command> <subcommand> ... <subcommand> [options] -o json
+```
 
 ## Environment Variables
 - `AC_ACCESS_TOKEN`: An authentication token for API requests. Setting this avoids being

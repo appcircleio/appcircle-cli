@@ -232,14 +232,12 @@ export async function getConfigurations(options: OptionsType<{ profileId: string
   return configurationsResponse.data;
 }
 
-/*
-export async function getBuildTaskStatus(options: OptionsType<{ latestCommitId: string; taskId: string }>) {
-  const taskStatus = await appcircleApi.get(`build/v2/commits/${options.latestCommitId}/builds/${options.taskId}/status`, {
+export async function getTaskStatus(options: OptionsType<{ taskId: string }>) {
+  const task = await appcircleApi.get(`task/v1/tasks/${options.taskId}`, {
     headers: getHeaders(),
   });
-  return taskStatus.data;
+  return task.data;
 }
-*/
 
 export async function getEnterpriseProfiles(options: OptionsType = {}) {
   const buildProfiles = await appcircleApi.get(`store/v2/profiles`, {

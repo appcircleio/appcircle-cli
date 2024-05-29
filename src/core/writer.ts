@@ -419,6 +419,72 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Release Candidate': data.data.releaseCandidate ? 'Yes' : 'No',
         }]
       )
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((version: any) => ({
+          'App Version Id': version.id || '-',
+          'Version/App Name': `${version.version || '-'}(${version.versionCode || '-'}) - ${version.name || '-'}`,
+          'Binary Received': version.createDate ? moment(version.createDate).calendar() : '-',
+          'Release Candidate': version.releaseCandidate ? 'Yes' : 'No',
+          'File Size': version.fileSize ? (version.fileSize / 1000000).toFixed(2) + ' MB' : '-',
+          'Last Step':  version.latestFlowStatus !== null || version.latestFlowStatus !== undefined ? (BuildStatus as any)[String(version.latestFlowStatus)] || 'Not Started' : '-',
+        }))
+      ) : console.log('  No app version found');
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-view`){
+      const version = data.data;
+      version ?  
+      console.table(
+        {
+          'App Version Id': version.id || '-',
+          'Version/App Name': `${version.version || '-'}(${version.versionCode || '-'}) - ${version.name || '-'}`,
+          'Binary Received': version.createDate ? moment(version.createDate).calendar() : '-',
+          'File Size': version.fileSize ? (version.fileSize / 1000000).toFixed(2) + ' MB' : '-',
+          'Last Step':  version.latestFlowStatus !== null || version.latestFlowStatus !== undefined ? (BuildStatus as any)[String(version.latestFlowStatus)] || 'Not Started' : '-',
+          'Release Candidate': version.releaseCandidate ? 'Yes' : 'No',
+          'ReleaseNotes': version.summary || '-',
+          'Unique Name': version.uniqueName || '-',
+          'Updated': version.updateDate ? moment(version.updateDate).calendar() : '-',
+        }
+      ) : console.log('  No app version found');
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-active-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((publish: any) => ({
+          'Publish Id': publish.publishId || '-',
+          'Profile Name': publish.profileName,
+          'Step Name': publish.stepName || '-',
+          'Status': publish.queueItemStatus !== null || publish.queueItemStatus !== undefined ? (QueueItemStatus as any )[String(publish.queueItemStatus)] : '-',
+          'Started By': publish.email || '-',
+          'Started': publish.startQueueDateTime ? moment(publish.startQueueDateTimee).calendar() : '-',
+          'Target OS': (OperatingSystems as any)[publish.os],
+          'Profile Id': publish.profileId || '-',
+          'App Version Id': publish.appVersionId || '-',
+        }))
+      ) : console.log('  No active publishing process available.');
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-view`){
+      const publish = data.data;
+      publish ?  
+      console.table(
+        {
+          'Publish Id': publish.id || '-',
+          'Status': publish.status !== null || publish.status !== undefined ? (BuildStatus as any)[String(publish.status)] || 'Not Started' : '-',
+          'Started On': publish.startedOn ? moment(publish.startedOn).calendar() : '-',
+        }
+      ) : console.log('  No publishing process found');
+
+      if(publish){
+        console.log('*************');
+        console.info('  Steps:');
+        publish?.steps?.length > 0 ? console.table(publish.steps.map((step : any) => ({
+          'Name': step.name || '-',
+          'Status': step.status !== null || step.status !== undefined ? (BuildStatus as any)[String(step.status)] || 'Not Started' : '-',
+          'Started By': step?.startedByUser?.email || '-',
+          'Started On': step.startedOn ? moment(step.startedOn).calendar() : '-',
+          'Finished On': step.finishedOn ? moment(step.finishedOn).calendar() : '-',
+        }))) : console.log('  No step available')
+        console.log('*************');
+      }
     }
     else {
       console.log(data.data)

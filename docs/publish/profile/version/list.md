@@ -1,18 +1,18 @@
-# `appcircle publish start`
+# `appcircle publish profile version list`
 
-Starts a publish.
+Get list of app versions by given publish profile.
 
 ```plaintext
-appcircle publish start [options]
+appcircle publish profile version list [options]
 ```
 
 ## Options
 
 ```plaintext
      --platform <string>        Platform (ios/android)
-     --publishProfileId <uuid>  Publish profile ID
-     --appVersionId <uuid>      App version
+     --publishProfileId <uuid>  Publish Profile ID
 ```
+
 ## Options inherited from parent commands
 
 ```plaintext
