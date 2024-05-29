@@ -14,9 +14,12 @@ appcircle publish profile version [command] [options]
 
 ## Subcommands
 
+- [`list`](list.md)
+- [`view`](view.md)
 - [`upload`](upload.md)
 - [`download`](download.md)
 - [`delete`](delete.md)
 - [`mark-as-rc`](mark-as-rc.md)
 - [`unmark-as-rc`](unmark-as-rc.md)
+- [`update-release-note`](update-release-note.md)
 
