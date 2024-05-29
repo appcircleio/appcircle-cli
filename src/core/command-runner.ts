@@ -96,10 +96,15 @@ import {
   deleteTestingGroup,
   addTesterToTestingGroup,
   removeTesterFromTestingGroup,
+  setAppVersionReleaseNote,
+  getTaskStatus,
+  getAppVersionDetail,
+  getActivePublishes,
+  getPublisDetailById,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
-import { CURRENT_PARAM_VALUE, PROGRAM_NAME, UNKNOWN_PARAM_VALUE } from '../constant';
+import { CURRENT_PARAM_VALUE, PROGRAM_NAME, TaskStatus, UNKNOWN_PARAM_VALUE } from '../constant';
 import { ProgramError } from './ProgramError';
 
 const handleConfigCommand = (command: ProgramCommand) => {
@@ -285,8 +290,25 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
     const spinner = createOra('Try to upload the app version').start();
     try {
       const responseData = await uploadAppVersion(params);
-      commandWriter(CommandTypes.PUBLISH, responseData);
-      spinner.text = `App version uploaded successfully.\n\nTaskId: ${responseData.taskId}`;
+      let taskStatus = await getTaskStatus({taskId: responseData.taskId});
+      const shouldMarkAsReleaseCandidate = params.markAsRc || false;
+      // Wait for the task to complete
+      while(taskStatus.stateValue === TaskStatus.BEGIN){
+        taskStatus = await getTaskStatus({taskId: responseData.taskId});
+        if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
+          spinner.fail('Upload failed: Please make sure that the app version number is unique in selected publish profile.');
+          process.exit(1);
+        }
+      }
+      if(shouldMarkAsReleaseCandidate){
+        let appVersionList = await getAppVersions(params);
+        const appVersion = appVersionList.shift();
+        await setAppVersionReleaseCandidateStatus({...params, appVersionId: appVersion.id, releaseCandidate: true});
+        if(params.summary !== undefined && params.summary !== null && params.summary.trim() !== ""){
+          await setAppVersionReleaseNote({ ...params, appVersionId: appVersion.id });
+        }
+      }
+      spinner.text = `App version uploaded and ${shouldMarkAsReleaseCandidate ? 'marked as release candidate' : ''} successfully.\n\nTaskId: ${responseData.taskId}`;
       spinner.succeed();
     } catch (e: any) {
       spinner.fail('Upload failed');
@@ -367,7 +389,49 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       fullCommandName: command.fullCommandName,
       data: variables.variables,
     });
-  } else {
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
+    const spinner = createOra('Fetching...').start();
+    const appVersions = await getAppVersions(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: appVersions,
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
+    const spinner = createOra('Fetching...').start();
+    const appVersion = await getAppVersionDetail(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: appVersion,
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-update-release-note`){
+    const spinner = createOra('Try to update relase note of the app version').start();
+    try{
+      await setAppVersionReleaseNote(params);
+      spinner.succeed("Release note updated successfully.");
+    }catch(e: any){
+      spinner.fail('Update failed');
+      throw e;
+    }
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
+    const spinner = createOra('Fetching...').start();
+    const responseData = await getActivePublishes();
+    spinner.succeed();
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
+    const spinner = createOra('Fetching...').start();
+    const responseData = await getPublisDetailById(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } 
+  else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
     console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
   }

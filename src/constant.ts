@@ -1,5 +1,12 @@
 export const APPCIRCLE_COLOR = "#ff8F34";
 
+export enum TaskStatus {
+  BEGIN = 1,
+  CANCELED= 2,
+  COMPLETED = 3
+}
+
+
 export const BuildStatus = {
   "0": "Success",
   "1": "Failed",
@@ -9,6 +16,7 @@ export const BuildStatus = {
   "91": "Running",
   "92": "Completing",
   "99": "Unknown",
+  "201": "Stopped",
 };
 
 export const QueueItemStatus = {

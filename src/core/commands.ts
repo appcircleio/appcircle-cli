@@ -1037,6 +1037,32 @@ export const Commands: CommandType[] = [
         ],
       },
       {
+        command: 'active-list',
+        description: 'Get a list of active publishing processes currently in the queue.',
+        params: [],
+      },
+      {
+        command: 'view',
+        description: 'View details of the publishing process by app version.',
+        params: [
+          platformParam,
+          {
+            name: 'publishProfileId',
+            description: 'Publish Profile ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          },
+          {
+            name: 'appVersionId',
+            description: 'App version',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          }
+        ],
+      },
+      {
         command: 'profile',
         description: 'Publish profile actions',
         longDescription: 'Publish profile actions',
@@ -1106,6 +1132,41 @@ export const Commands: CommandType[] = [
             params: [],
             subCommands: [
               {
+                command: 'list',
+                description: 'App version list',
+                longDescription: 'Get list of app versions by given publish profile.',
+                params: [platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  }
+                ],
+              },
+              {
+                command: 'view',
+                description: 'View detais of app version.',
+                longDescription: 'View detais of app version.',
+                params: [platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'appVersionId',
+                    description: 'App version',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                ],
+              },
+              {
                 command: 'upload',
                 description: 'Upload a new app version',
                 longDescription: 'Upload a new version to given publish profile',
@@ -1124,6 +1185,23 @@ export const Commands: CommandType[] = [
                     type: CommandParameterTypes.STRING,
                     valueType: 'path',
                     required: true
+                  },
+                  {
+                    name: 'markAsRc',
+                    description: 'Mark binary as release candidate automatically. [OPTIONAL]',
+                    longDescription: 'Mark binary as release candidate automatically. [OPTIONAL]',
+                    type: CommandParameterTypes.BOOLEAN,
+                    valueType: 'boolean',
+                    defaultValue: false,
+                    required: false
+                  },
+                  {
+                    name: 'summary',
+                    description: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.) [OPTIONAL]',
+                    longDescription: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.) [OPTIONAL]',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false
                   }
                 ],
               },
@@ -1219,6 +1297,36 @@ export const Commands: CommandType[] = [
                     description: 'App version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
+                    required: true
+                  }
+                ],
+              },
+              {
+                command: 'update-release-note',
+                description: 'Update the release notes for the app version.',
+                longDescription: 'Update the release notes for the app version.',
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'appVersionId',
+                    description: 'App version',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'summary',
+                    description: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.)',
+                    longDescription: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
                     required: true
                   }
                 ],

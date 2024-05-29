@@ -38,6 +38,14 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
     return response.data;
   }
 
+
+  export async function getAppVersionDetail(options: OptionsType<{  publishProfileId: string, platform:string, appVersionId: string}>) {
+    const response = await appcircleApi.get(
+      `publish/v1/profiles/${options.platform}/${options.publishProfileId}/app-versions/${options.appVersionId}`,
+      { headers: getHeaders() }
+    );
+    return response.data;
+  }
   export async function startExistingPublishFlow(options: OptionsType<{ publishProfileId: string, platform:string, publishId: string }>) {
     const startResponse = await appcircleApi.post(`publish/v2/profiles/${options.platform}/${options.publishProfileId}/publish/${options.publishId}?action=restart`,"{}", 
     {
@@ -46,7 +54,12 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
     );
     return startResponse.data;
   }
-
+  export async function getActivePublishes() {
+    const publishes = await appcircleApi.get(`/build/v1/queue/my-dashboard?page=1&size=1000`, {
+      headers: getHeaders(),
+    });
+    return publishes.data?.data?.filter((publish: any) => publish.publishId !== null);
+  }
   export async function getPublishVariableGroups() {
 
     const response = await appcircleApi.get(`publish/v2/variable-groups`,
@@ -79,6 +92,19 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
   
     return response.data;
   }
+
+  export async function setAppVersionReleaseNote(options: OptionsType<{ publishProfileId: string, platform:string, appVersionId: string, summary: string }>) {
+  
+    const response = await appcircleApi.patch(`publish/v2/profiles/${options.platform}/${options.publishProfileId}/app-versions/${options.appVersionId}?action=releaseNotes`,{
+      summary: options.summary
+    },
+    {
+      headers: getHeaders()
+    }
+    );
+  
+    return response.data;
+  }
   
   export async function switchPublishProfileAutoPublishSettings(options: OptionsType<{ publishProfileId: string, platform:string, appVersionId: string, enable: boolean, currentProfileSettings: any }>) {
     const response = await appcircleApi.patch(`publish/v2/profiles/${options.platform}/${options.publishProfileId}`,{
@@ -95,7 +121,6 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
   export async function uploadAppVersion(options: OptionsType<{ app: string; publishProfileId: string, platform:string }>) {
     const data = new FormData();
     data.append('File', fs.createReadStream(options.app));
-  
     const uploadResponse = await appcircleApi.post(`publish/v2/profiles/${options.platform}/${options.publishProfileId}/app-versions`, data, {
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
@@ -128,6 +153,17 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
   export async function getAppVersionDownloadLink(options: OptionsType<{ publishProfileId: string, platform:string, appVersionId: string }>) {
   
     const downloadResponse = await appcircleApi.get(`publish/v2/profiles/${options.platform}/${options.publishProfileId}/app-versions/${options.appVersionId}?action=download`, 
+    {
+      headers: getHeaders()
+    }
+    );
+  
+    return downloadResponse.data;
+  }
+
+  export async function getPublisDetailById(options: OptionsType<{ publishProfileId: string, platform:string, appVersionId: string }>) {
+  
+    const downloadResponse = await appcircleApi.get(`publish/v2/profiles/${options.platform}/${options.publishProfileId}/app-versions/${options.appVersionId}/publish`, 
     {
       headers: getHeaders()
     }
