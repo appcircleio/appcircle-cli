@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { CommandTypes } from './commands';
-import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME, QueueItemStatus } from '../constant';
+import { AuthenticationTypes, OperatingSystems, PlatformTypes, PublishTypes, BuildStatus, PROGRAM_NAME, QueueItemStatus, IOSCertificateStoreTypes } from '../constant';
 import moment from 'moment';
 import { getConsoleOutputType } from '../config';
 
@@ -15,7 +15,7 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
     );
   },
   [CommandTypes.TESTING_DISTRIBUTION]: (data: any) => {
-    if(data.fullCommandName === `${PROGRAM_NAME}-distribution-profile-list`){
+    if(data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`){
       if (data?.data?.length === 0) {
         console.info('No distribution profiles available.');
         return;
@@ -33,8 +33,33 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Auto Send': distributionProfile.testingGroupIds ? 'Enabled' : 'Disabled',
         }))
       );
-    } else if(data.fullCommandName === `${PROGRAM_NAME}-distribution-profile-create`){
+    } else if(data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-create`){
       console.info(`\n${data.data.name} distribution profile created successfully!`);
+    }else if (data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((group: any) => ({
+          'ID': group.id || '-',
+          'Name': group.name || '-',
+        }))
+      ) : console.log('  No testing group found');
+    }else if (data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-view`){
+      const group = data?.data;
+      group ?  
+      console.table(
+        {
+          'ID': group.id || '-',
+          'Name': group.name || '-',
+          'Created': group.createDate ? moment(group.createDate).calendar() : '-',
+          'Updated': group.updateDate ? moment(group.updateDate).calendar() : '-',
+        }
+      ) : console.log('  No testing group found');
+      if(group){
+        console.log('*************');
+        console.info('  Testers:');
+        group?.testers?.length > 0 ? console.table(group.testers.map((tester : any) => tester)) : console.log('  No tester available')
+        console.log('*************');
+      }
     }
   },
   [CommandTypes.BUILD]: (data: any) => {
@@ -394,9 +419,158 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
           'Release Candidate': data.data.releaseCandidate ? 'Yes' : 'No',
         }]
       )
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((version: any) => ({
+          'App Version Id': version.id || '-',
+          'Version/App Name': `${version.version || '-'}(${version.versionCode || '-'}) - ${version.name || '-'}`,
+          'Binary Received': version.createDate ? moment(version.createDate).calendar() : '-',
+          'Release Candidate': version.releaseCandidate ? 'Yes' : 'No',
+          'File Size': version.fileSize ? (version.fileSize / 1000000).toFixed(2) + ' MB' : '-',
+          'Last Step':  version.latestFlowStatus !== null || version.latestFlowStatus !== undefined ? (BuildStatus as any)[String(version.latestFlowStatus)] || 'Not Started' : '-',
+        }))
+      ) : console.log('  No app version found');
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-profile-version-view`){
+      const version = data.data;
+      version ?  
+      console.table(
+        {
+          'App Version Id': version.id || '-',
+          'Version/App Name': `${version.version || '-'}(${version.versionCode || '-'}) - ${version.name || '-'}`,
+          'Binary Received': version.createDate ? moment(version.createDate).calendar() : '-',
+          'File Size': version.fileSize ? (version.fileSize / 1000000).toFixed(2) + ' MB' : '-',
+          'Last Step':  version.latestFlowStatus !== null || version.latestFlowStatus !== undefined ? (BuildStatus as any)[String(version.latestFlowStatus)] || 'Not Started' : '-',
+          'Release Candidate': version.releaseCandidate ? 'Yes' : 'No',
+          'ReleaseNotes': version.summary || '-',
+          'Unique Name': version.uniqueName || '-',
+          'Updated': version.updateDate ? moment(version.updateDate).calendar() : '-',
+        }
+      ) : console.log('  No app version found');
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-active-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((publish: any) => ({
+          'Publish Id': publish.publishId || '-',
+          'Profile Name': publish.profileName,
+          'Step Name': publish.stepName || '-',
+          'Status': publish.queueItemStatus !== null || publish.queueItemStatus !== undefined ? (QueueItemStatus as any )[String(publish.queueItemStatus)] : '-',
+          'Started By': publish.email || '-',
+          'Started': publish.startQueueDateTime ? moment(publish.startQueueDateTimee).calendar() : '-',
+          'Target OS': (OperatingSystems as any)[publish.os],
+          'Profile Id': publish.profileId || '-',
+          'App Version Id': publish.appVersionId || '-',
+        }))
+      ) : console.log('  No active publishing process available.');
+    }else if(data.fullCommandName ===`${PROGRAM_NAME}-publish-view`){
+      const publish = data.data;
+      publish ?  
+      console.table(
+        {
+          'Publish Id': publish.id || '-',
+          'Status': publish.status !== null || publish.status !== undefined ? (BuildStatus as any)[String(publish.status)] || 'Not Started' : '-',
+          'Started On': publish.startedOn ? moment(publish.startedOn).calendar() : '-',
+        }
+      ) : console.log('  No publishing process found');
+
+      if(publish){
+        console.log('*************');
+        console.info('  Steps:');
+        publish?.steps?.length > 0 ? console.table(publish.steps.map((step : any) => ({
+          'Name': step.name || '-',
+          'Status': step.status !== null || step.status !== undefined ? (BuildStatus as any)[String(step.status)] || 'Not Started' : '-',
+          'Started By': step?.startedByUser?.email || '-',
+          'Started On': step.startedOn ? moment(step.startedOn).calendar() : '-',
+          'Finished On': step.finishedOn ? moment(step.finishedOn).calendar() : '-',
+        }))) : console.log('  No step available')
+        console.log('*************');
+      }
     }
     else {
       console.log(data.data)
+    }
+  },
+  [CommandTypes.SIGNING_IDENTITY]: (data: any) => {
+    if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-list`){
+      data.data.length > 0 ?  
+      console.table(
+        data.data.map((certificate: any) => ({
+          'Certificate Id': certificate.id || '-',
+          'Certificate Name': certificate.name || '-',
+          'Stored By': certificate.storeType?.toString() ? (IOSCertificateStoreTypes as any)[certificate.storeType.toString()]  :'-',
+          'Extension': certificate.extension || '-',
+          'Expire Date': certificate.expireDate ? moment(certificate.expireDate).calendar() : '-',
+        }))
+      ) : console.log('  No iOS certificate found');
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-upload`){
+      data.data ? console.table({
+        'Certificate Id': data.data.id || '-',
+        'Certificate Name': data.data.name || '-',
+        'Stored By': data.data.storeType?.toString() ? (IOSCertificateStoreTypes as any)[data.data.storeType.toString()]  :'-',
+        'File Name': data.data.filename || '-',
+        'Expire Date': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
+      }):console.log('  No iOS certificate found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-create`){
+      data.data ? console.table({
+        'Certificate Id': data.data.id || '-',
+        'Certificate Name': data.data.name || '-',
+        'Stored By': data.data.storeType?.toString() ? (IOSCertificateStoreTypes as any)[data.data.storeType.toString()]  :'-',
+        'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+      }):console.log('  No iOS certificate found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-view`){
+      data.data ? console.table({
+        'Certificate Id': data.data.id || '-',
+        'Certificate Name': data.data.name || '-',
+        'File Name': data.data.filename || '-',
+        'Stored By': data.data.storeType?.toString() ? (IOSCertificateStoreTypes as any)[data.data.storeType.toString()]  :'-',
+        'Expire Date': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
+        'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+        'Updated': data.data.updateDate ? moment(data.data.updateDate).calendar() : '-',
+      }):console.log('  No iOS certificate found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-list`){
+      data.data?.length > 0 ? console.table(
+        data.data?.map((keystore:any) => ({
+          'Keystore Id': keystore.id || '-',
+          'Keystore Name': keystore.name || '-',
+          'File Name': keystore.fileName || '-',
+          'Expires': keystore.expireDate ? moment(keystore.expireDate).calendar() : '-',
+        }))
+      ):console.log('  No Android keystore found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-view`){
+      data.data ? console.table(
+        {
+          'Keystore Id': data.data.id || '-',
+          'Keystore Name': data.data.name || '-',
+          'Alias': data.data.alias || '-',
+          'File Name': data.data.fileName || '-',
+          'Created': data.data.createDate ? moment(data.data.createDate).calendar() : '-',
+          'Expires': data.data.expireDate ? moment(data.data.expireDate).calendar() : '-',
+        }
+      ):console.log('  No Android keystore found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-list`){
+      data.data?.length > 0 ? console.table(
+        data.data?.map((profile:any) => ({
+          'Id': profile.id || '-',
+          'Name': profile.name || '-',
+          'Associated App ID': profile.appId || '-',
+          'Stored By': profile.storeType?.toString() ? (IOSCertificateStoreTypes as any)[profile.storeType.toString()]  :'-',
+          'Has Certificate': profile.hasCertificate || false,
+          'Expires': profile.expireDate ? moment(profile.expireDate).calendar() : '-',
+        }))
+      ):console.log('  No Provisioning Profile found')
+    }else if(data.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`){
+      const profile = data.data;
+      profile ? console.table(
+        {
+          'Id': profile.id || '-',
+          'Name': profile.name || '-',
+          'Associated App ID': profile.appId || '-',
+          'Stored By': profile.storeType?.toString() ? (IOSCertificateStoreTypes as any)[profile.storeType.toString()]  :'-',
+          'Has Certificate': profile.hasCertificate || false,
+          'Expires': profile.expireDate ? moment(profile.expireDate).calendar() : '-',
+          'Created': profile.createDate ? moment(profile.createDate).calendar() : '-',
+        }
+      ):console.log('  No Provisioning Profile found')
     }
   }
 };

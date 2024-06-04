@@ -1,6 +1,6 @@
 # `appcircle publish start`
 
-Remove given roles from the given userId within the organizationId.
+Starts a publish.
 
 ```plaintext
 appcircle publish start [options]

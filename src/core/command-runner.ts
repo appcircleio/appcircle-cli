@@ -71,10 +71,40 @@ import {
   getAppVersions,
   downloadAppVersion,
   getActiveBuilds,
+  getiOSCSRCertificates,
+  getiOSP12Certificates,
+  uploadP12Certificate,
+  createCSRCertificateRequest,
+  getCertificateDetailById,
+  downloadCertificateById,
+  removeCSRorP12CertificateById,
+  getAndroidKeystores,
+  generateNewKeystore,
+  uploadAndroidKeystoreFile,
+  downloadKeystoreById,
+  getKeystoreDetailById,
+  removeKeystore,
+  getProvisioningProfiles,
+  uploadProvisioningProfile,
+  getProvisioningProfileDetailById,
+  downloadProvisioningProfileById,
+  removeProvisioningProfile,
+  getTestingGroups,
+  updateDistributionProfileSettings,
+  getTestingGroupById,
+  createTestingGroup,
+  deleteTestingGroup,
+  addTesterToTestingGroup,
+  removeTesterFromTestingGroup,
+  setAppVersionReleaseNote,
+  getTaskStatus,
+  getAppVersionDetail,
+  getActivePublishes,
+  getPublisDetailById,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
-import { CURRENT_PARAM_VALUE, PROGRAM_NAME, UNKNOWN_PARAM_VALUE } from '../constant';
+import { CURRENT_PARAM_VALUE, PROGRAM_NAME, TaskStatus, UNKNOWN_PARAM_VALUE } from '../constant';
 import { ProgramError } from './ProgramError';
 
 const handleConfigCommand = (command: ProgramCommand) => {
@@ -130,14 +160,18 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
   }
   params.role = Array.isArray(params.role) ? params.role : [params.role];
   if (command.fullCommandName === `${PROGRAM_NAME}-organization-view`) {
+    const spinner = createOra('Fetching...').start();
     const response = params.organizationId === 'all' || !params.organizationId ? await getOrganizations() : await getOrganizationDetail(params);
+    spinner.succeed();
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
       data: response,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-view`) {
+    const spinner = createOra('Fetching...').start();
     const users = await getOrganizationUsersWithRoles(params);
     const invitations = await getOrganizationInvitations(params);
+    spinner.succeed();
     //console.log('users', invitations[0].organizationsAndRoles);
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
@@ -181,7 +215,9 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       });
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
+    const spinner = createOra('Fetching...').start();
     const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+    spinner.succeed();
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
       data: userInfo.roles,
@@ -229,7 +265,9 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       data: profileRes,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-list`) {
+    const spinner = createOra('Fetching...').start();
     const profiles = await getPublishProfiles({ platform: params.platform });
+    spinner.succeed();
     commandWriter(CommandTypes.PUBLISH, {
       fullCommandName: command.fullCommandName,
       data: profiles,
@@ -252,8 +290,25 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
     const spinner = createOra('Try to upload the app version').start();
     try {
       const responseData = await uploadAppVersion(params);
-      commandWriter(CommandTypes.PUBLISH, responseData);
-      spinner.text = `App version uploaded successfully.\n\nTaskId: ${responseData.taskId}`;
+      let taskStatus = await getTaskStatus({taskId: responseData.taskId});
+      const shouldMarkAsReleaseCandidate = params.markAsRc || false;
+      // Wait for the task to complete
+      while(taskStatus.stateValue === TaskStatus.BEGIN){
+        taskStatus = await getTaskStatus({taskId: responseData.taskId});
+        if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
+          spinner.fail('Upload failed: Please make sure that the app version number is unique in selected publish profile.');
+          process.exit(1);
+        }
+      }
+      if(shouldMarkAsReleaseCandidate){
+        let appVersionList = await getAppVersions(params);
+        const appVersion = appVersionList.shift();
+        await setAppVersionReleaseCandidateStatus({...params, appVersionId: appVersion.id, releaseCandidate: true});
+        if(params.summary !== undefined && params.summary !== null && params.summary.trim() !== ""){
+          await setAppVersionReleaseNote({ ...params, appVersionId: appVersion.id });
+        }
+      }
+      spinner.text = `App version uploaded and ${shouldMarkAsReleaseCandidate ? 'marked as release candidate' : ''} successfully.\n\nTaskId: ${responseData.taskId}`;
       spinner.succeed();
     } catch (e: any) {
       spinner.fail('Upload failed');
@@ -319,18 +374,64 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       data: response,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`) {
+    const spinner = createOra('Fetching...').start();
     const variableGroups = await getPublishVariableGroups();
+    spinner.succeed();
     commandWriter(CommandTypes.PUBLISH, {
       fullCommandName: command.fullCommandName,
       data: variableGroups,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`) {
+    const spinner = createOra('Fetching...').start();
     const variables = await getPublishVariableListByGroupId(params);
+    spinner.succeed();
     commandWriter(CommandTypes.PUBLISH, {
       fullCommandName: command.fullCommandName,
       data: variables.variables,
     });
-  } else {
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
+    const spinner = createOra('Fetching...').start();
+    const appVersions = await getAppVersions(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: appVersions,
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
+    const spinner = createOra('Fetching...').start();
+    const appVersion = await getAppVersionDetail(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: appVersion,
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-update-release-note`){
+    const spinner = createOra('Try to update relase note of the app version').start();
+    try{
+      await setAppVersionReleaseNote(params);
+      spinner.succeed("Release note updated successfully.");
+    }catch(e: any){
+      spinner.fail('Update failed');
+      throw e;
+    }
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
+    const spinner = createOra('Fetching...').start();
+    const responseData = await getActivePublishes();
+    spinner.succeed();
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
+    const spinner = createOra('Fetching...').start();
+    const responseData = await getPublisDetailById(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.PUBLISH, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } 
+  else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
     console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
   }
@@ -361,37 +462,49 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         throw e;
       }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getBuildProfiles(params);
+    spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`) {
+    const spinner = createOra('Fetching...').start();
     const responseData = await getBranches(params);
+    spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflows`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getWorkflows(params);
+    spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-configurations`) {
+    const spinner = createOra('Fetching...').start();
     const responseData = await getConfigurations(params);
+    spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-commits`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getCommits(params);
+    spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-list`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getBuildsOfCommit(params);
+    spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -412,7 +525,9 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       spinner.fail();
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-list`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getEnvironmentVariableGroups(params);
+    spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -424,7 +539,9 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: { ...responseData, name: params.name },
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-view`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getEnvironmentVariables(params);
+    spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -436,13 +553,17 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: { ...responseData, key: params.key },
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-active-list`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getActiveBuilds();
+    spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-view`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getBuildsOfCommit(params);
+    spinner.succeed();
     const build = responseData?.builds?.find((build: any) => build.id === params.buildId);
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
@@ -457,19 +578,21 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
 }
 
 const handleDistributionCommand = async (command: ProgramCommand, params: any) => {
-  if (command.fullCommandName === `${PROGRAM_NAME}-distribution-profile-list`) {
+  if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`) {
+    const spinner = createOra('Fetching...').start();
     const responseData = await getDistributionProfiles(params);
+    spinner.succeed();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-distribution-profile-create`){
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-create`){
     const responseData = await createDistributionProfile(params);
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
       fullCommandName: command.fullCommandName,
       data: { ...responseData, name: params.name },
     });
-  }else if (command.fullCommandName === `${PROGRAM_NAME}-distribution-upload`){
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-upload`){
     const spinner = createOra('Try to upload the app').start();
     try {
       const responseData = await uploadArtifact(params);
@@ -483,6 +606,44 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       spinner.fail('Upload failed');
       throw e;
     }
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-settings-auto-send`){
+    const spinner = createOra('Testing groups saving').start();
+    try{
+      params.testingGroupIds = Array.isArray(params.testingGroupIds) ? params.testingGroupIds : params.testingGroupIds.split(' '); 
+      await updateDistributionProfileSettings(params);
+      spinner.succeed('Testing groups saved successfully.');
+    }catch(e){
+      spinner.fail('Saving failed');
+    }
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-list`) {
+    const spinner = createOra('Fetching...').start();
+    const responseData = await getTestingGroups();
+    spinner.succeed();
+    commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-view`) {
+    const spinner = createOra('Fetching...').start();
+    const responseData = await getTestingGroupById(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  }
+  else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-create`) {
+    const responseData = await createTestingGroup(params);
+    console.info(`Testing group named ${responseData.name} created successfully!`);
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-remove`) {
+    await deleteTestingGroup(params);
+    console.info(`Selected testing group removed successfully!`);
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-add`) {
+    await addTesterToTestingGroup(params);
+    console.info(`Tester has been successfully added to the selected testing group!`);
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-remove`) {
+    await removeTesterFromTestingGroup(params);
+    console.info(`Tester has been successfully removed from the selected testing group!`);
   }
   else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
@@ -490,15 +651,199 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
   }
 }
 
+const handleSigningIdentityCommand = async (command: ProgramCommand, params: any) => {
+  if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-list`) {
+    const spinner = createOra('Fetching...').start();
+    const p12Certs = await getiOSP12Certificates();
+    const csrCerts = await getiOSCSRCertificates();
+    spinner.succeed();
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: [...p12Certs,...csrCerts],
+    });
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-upload`){
+    const spinner = createOra('Try to upload the certificate').start();
+    try {
+      const responseData = await uploadP12Certificate(params);
+      commandWriter(CommandTypes.SIGNING_IDENTITY, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+      spinner.text = `Certificate uploaded successfully.\n\n`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Upload failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-create`){
+    const spinner = createOra('Try to create the certificate request').start();
+    try {
+      const responseData = await createCSRCertificateRequest(params);
+      commandWriter(CommandTypes.SIGNING_IDENTITY, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+      spinner.text = `Certificate request created successfully.\n\n`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Create failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-view`){
+    const spinner = createOra('Fetching...').start();
+    const responseData = await getCertificateDetailById(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: responseData
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-download`){
+    const p12Certs = await getiOSP12Certificates();
+    const p12Cert = p12Certs?.find((certificate:any) => certificate.id === params.certificateId);
+    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const fileName = p12Cert ? p12Cert.filename : 'download.cer';
+    const spinner = createOra(`Downloading ${p12Cert ? `certificate bundle: ${p12Cert.filename}` : '.cer file'} `).start();
+    try {
+      await downloadCertificateById(params, downloadPath,fileName, p12Cert ? 'p12': 'csr');
+      spinner.text = `The file ${fileName} is downloaded successfully under path:\n${downloadPath}`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.text = 'The file could not be downloaded.';
+      spinner.fail();
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-remove`){
+    const spinner = createOra('Try to remove the certificate').start();
+    try {
+      const csrCerts = await getiOSCSRCertificates();
+      const csrCert = csrCerts?.find((certificate:any) => certificate.id === params.certificateId);
+      await removeCSRorP12CertificateById(params, csrCert ? 'csr': 'p12');
+      spinner.text = `Certificate removed successfully.\n\n`;
+      spinner.succeed();
+    } catch (e: any) {
+      spinner.fail('Remove failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-list`){
+    const spinner = createOra('Fetching...').start();
+    const keystores = await getAndroidKeystores();
+    spinner.succeed();
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: keystores
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-create`){
+    const spinner = createOra('Trying to generate new keystore.').start();
+    try{
+      await generateNewKeystore(params);
+      spinner.text = `Keystore generated successfully.\n\n Keystore name: ${params.name}`;
+      spinner.succeed();
+    }catch(e: any){
+      spinner.fail('Generation failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-upload`){
+    const spinner = createOra('Trying to upload the keystore file').start();
+    try {
+      await uploadAndroidKeystoreFile(params);
+      spinner.text = `Keystore file uploaded successfully.\n\n`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Upload failed: Keystore was tampered with, or password was incorrect');
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-download`){
+    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const spinner = createOra(`Searching file...`).start();
+    try {
+      const keystoreDetail = await getKeystoreDetailById(params);
+      spinner.text = `Downloading file ${keystoreDetail.fileName}`;
+      await downloadKeystoreById(params, downloadPath, keystoreDetail.fileName);
+      spinner.text = `The file ${keystoreDetail.fileName} is downloaded successfully under path:\n${downloadPath}`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.text = 'The file could not be downloaded.';
+      spinner.fail();
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-view`){
+    const spinner = createOra('Fetching...').start();
+    const keystore = await getKeystoreDetailById(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: keystore
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-remove`){
+    const spinner = createOra('Try to remove the keystore').start();
+    try {
+      await removeKeystore(params);
+      spinner.text = `Keystore removed successfully.\n\n`;
+      spinner.succeed();
+    } catch (e: any) {
+      spinner.fail('Remove failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-list`) {
+    const spinner = createOra('Fetching...').start();
+    const profiles = await getProvisioningProfiles();
+    spinner.succeed();
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: profiles
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-upload`) {
+    const spinner = createOra('Trying to upload the provisioning profile').start();
+    try {
+      await uploadProvisioningProfile(params);
+      spinner.text = `Provisioning profile uploaded successfully.\n\n`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Upload failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-download`) {
+    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const spinner = createOra('Trying to download the provisioning profile').start();
+    try {
+      const profile = await getProvisioningProfileDetailById(params);
+      await downloadProvisioningProfileById(params, downloadPath, profile.filename);
+      spinner.text = `The file ${profile.filename} is downloaded successfully under path:\n${downloadPath}`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Download failed');
+      throw e;
+    }
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`) {
+    const spinner = createOra('Fetching...').start();
+    const profile = await getProvisioningProfileDetailById(params);
+    spinner.succeed();
+    commandWriter(CommandTypes.SIGNING_IDENTITY, {
+      fullCommandName: command.fullCommandName,
+      data: profile
+    });
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-remove`) {
+    const spinner = createOra('Try to remove the provisioning profile').start();
+    try {
+      await removeProvisioningProfile(params);
+      spinner.text = `Provisioning profile removed successfully.\n\n`;
+      spinner.succeed();
+    } catch (e: any) {
+      spinner.fail('Remove failed');
+      throw e;
+    }
+  }
+}
 const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-profile-list`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getEnterpriseProfiles();
+    spinner.succeed();
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-list`){
+    const spinner = createOra('Fetching...').start();
     const responseData = await getEnterpriseAppVersions(params);
+    spinner.succeed();
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -617,6 +962,9 @@ export const runCommand = async (command: ProgramCommand) => {
   }
   if (command.isGroupCommand(CommandTypes.ENTERPRISE_APP_STORE)) {
     return handleEnterpriseAppStoreCommand(command, params);
+  }
+  if (command.isGroupCommand(CommandTypes.SIGNING_IDENTITY)) {
+    return handleSigningIdentityCommand(command, params);
   }
   switch (commandName) {
     case CommandTypes.LOGIN: {

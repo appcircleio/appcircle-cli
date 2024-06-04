@@ -28,6 +28,14 @@ import {
   getPublishProfiles,
   getAppVersions,
   getPublishVariableGroups,
+  getCountries,
+  getiOSP12Certificates,
+  getiOSCSRCertificates,
+  getAndroidKeystores,
+  getProvisioningProfiles,
+  getTestingGroups,
+  getDistributionProfileById,
+  getTestingGroupById,
 } from '../services';
 import { DefaultEnvironmentVariables, getConfigStore } from '../config';
 import { ProgramCommand, createCommandActionCallback } from '../program';
@@ -360,6 +368,104 @@ const handleInteractiveParamsOrArguments = async (
       spinner.succeed();
     }else if (param.name === 'value' && params.isSecret) {
       param.type = CommandParameterTypes.PASSWORD;
+    }else if (param.name === 'countryCode' && param.type === CommandParameterTypes.SELECT) {
+      const countries = await getCountries();
+      param.params = countries.map((country) => ({ name: country.alpha2, message: `${country.name}` }));
+    }else if (param.name === 'certificateBundleId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Certificate Bundles fetching').start();
+      const p12Certs = await getiOSP12Certificates();
+      const certificates = [...p12Certs];
+      if (!certificates || certificates.length === 0) {
+        spinner.text = 'No certificate bundle available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = certificates.map((certificate:any) => ({name:certificate.id, message: ` ${certificate.id} (${certificate.name})`}));
+        spinner.text = 'Certificate Bundles Fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'certificateId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Certificates fetching').start();
+      const p12Certs = await getiOSP12Certificates();
+      const csrCerts = await getiOSCSRCertificates();
+      const certificates = [...p12Certs,...csrCerts];
+      if (!certificates || certificates.length === 0) {
+        spinner.text = 'No certificate available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = certificates.map((certificate:any) => ({name:certificate.id, message: ` ${certificate.id} (${certificate.name})`}));
+        spinner.text = 'Certificates Fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'keystoreId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Keystores fetching').start();
+      const keystores = await getAndroidKeystores();
+      if (!keystores || keystores.length === 0) {
+        spinner.text = 'No keystore available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = keystores.map((keystore:any) => ({name:keystore.id, message: ` ${keystore.id} (${keystore.name})`}));
+        spinner.text = 'Keystores Fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'provisioningProfileId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Provisioning profiles fetching').start();
+      const profiles = await getProvisioningProfiles();
+      if (!profiles || profiles.length === 0) {
+        spinner.text = 'No provisioning profile available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = profiles.map((profile:any) => ({name:profile.id, message: ` ${profile.id} (${profile.name})`}));
+        spinner.text = 'Provisioning profiles Fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'testingGroupIds' && param.type === CommandParameterTypes.MULTIPLE_SELECT) {
+      const spinner = ora('Testing groups fetching').start();
+      const groups = await getTestingGroups();
+      const selectedProfile = await getDistributionProfileById(params);
+      if (!groups || groups.length === 0) {
+        spinner.text = 'No testing group available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = groups.map((group:any) => ({name:group.id, message: ` ${group.id} (${group.name})`}));
+        param.defaultValue = selectedProfile?.testingGroupIds ? selectedProfile?.testingGroupIds?.map?.((id: any, index:number) => {
+          const _index = groups.findIndex((group: any) => group.id === id);
+          if(_index !== -1){
+            return _index;
+          }
+        }) : [];
+        spinner.text = 'Testing groups fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'testingGroupId' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Testing groups fetching').start();
+      const groups = await getTestingGroups();
+      if (!groups || groups.length === 0) {
+        spinner.text = 'No testing group available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = groups.map((group:any) => ({name:group.id, message: ` ${group.id} (${group.name})`}));
+        spinner.text = 'Testing groups fetched';
+        spinner.succeed();
+      }
+    }else if (param.name === 'testerEmail' && param.type === CommandParameterTypes.SELECT) {
+      const spinner = ora('Testers fetching').start();
+      const group = await getTestingGroupById(params);
+      const testers = group?.testers;
+      if (!testers || testers.length === 0) {
+        spinner.text = 'No tester available';
+        spinner.fail();
+        return { isError: true };
+      }else {
+        param.params = testers.map((tester:any) => ({name:tester, message: tester}));
+        spinner.text = 'Testers fetched';
+        spinner.succeed();
+      }
     }
 
     // If has paramType and type  match to selected type

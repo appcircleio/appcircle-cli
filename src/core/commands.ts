@@ -15,8 +15,9 @@ export enum CommandTypes {
   ORGANIZATION = 'organization',
   PUBLISH = 'publish',
   BUILD = 'build',
-  TESTING_DISTRIBUTION= 'distribution',
+  TESTING_DISTRIBUTION= 'testing-distribution',
   ENTERPRISE_APP_STORE= 'enterprise-app-store',
+  SIGNING_IDENTITY= 'signing-identity',
 }
 
 export type ParamType = {
@@ -502,6 +503,332 @@ export const Commands: CommandType[] = [
     params: []
   },
   {
+    command: CommandTypes.SIGNING_IDENTITY,
+    description: 'Signing Identities',
+    longDescription: 'Signing Identities management',
+    params: [],
+    subCommands:[
+      {
+        command: 'certificate',
+        description: 'iOS Certificate actions',
+        longDescription: 'iOS Certificate actions',
+        params:[],
+        subCommands: [
+          {
+            command: 'list',
+            description: 'Certificates list',
+            longDescription: 'Get list of uploaded/installed certificates',
+            params:[],
+          },
+          {
+            command: 'upload',
+            description: 'Upload a new certificate bundle (.p12)',
+            longDescription: 'Upload a new certificate bundle (.p12)',
+            params:[
+              {
+                name: 'path',
+                description: 'Certificate path',
+                type: CommandParameterTypes.STRING,
+                valueType: 'path',
+                required: true
+              },
+              {
+                name: 'password',
+                description: 'Certificate password',
+                type: CommandParameterTypes.PASSWORD,
+                valueType: 'string',
+                required: true
+              },
+            ],
+          },
+          {
+            command: 'create',
+            description: 'Generate signing request to create certificates.',
+            longDescription: 'Generate signing request to create certificates.',
+            params:[
+              {
+                name: 'name',
+                description: 'Certificate name',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: true,
+              },
+              {
+                name: 'email',
+                description: 'Email',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: true,
+              },
+              {
+                name: 'countryCode',
+                description: 'Country code',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'string',
+                required: true,
+              },
+            ],
+          },
+          {
+            command: 'view',
+            description: 'View details of a certificate bundle. (.p12)',
+            longDescription: 'View details of a certificate bundle. (.p12)',
+            params:[
+              {
+                name: 'certificateBundleId',
+                description: 'Certificate Bundle ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'download',
+            description: 'Download certificate.',
+            longDescription: 'Download certificate to the given directory on your machine.',
+            params:[
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for certificate to be downloaded:',
+                longDescription:'[OPTIONAL] The path for certificate to be downloaded: (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+              },
+              {
+                name: 'certificateId',
+                description: 'Certificate ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove certificate.',
+            longDescription: 'Remove certificate.',
+            params:[
+              {
+                name: 'certificateId',
+                description: 'Certificate ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          }
+        ]
+      },
+      {
+        command: 'provisioning-profile',
+        description: 'iOS Provisioning Profile actions',
+        longDescription: 'iOS Provisioning Profile actions',
+        params:[],
+        subCommands: [
+          {
+            command: 'list',
+            description: 'Provisioning profile list',
+            longDescription: 'Get list of uploaded/installed provisioning profiles.',
+            params:[],
+          },
+          {
+            command: 'upload',
+            description: 'Upload a provisioning profile (.mobileprovision).',
+            longDescription: 'Upload and create a new provisioning profile (.mobileprovision).',
+            params:[{
+              name: 'path',
+              description: 'Provisioning profile path',
+              type: CommandParameterTypes.STRING,
+              valueType: 'path',
+              required: true
+            }],
+          },
+          {
+            command: 'download',
+            description: 'Download provisioning profile.',
+            longDescription: 'Download provisioning profile to the given directory on your machine.',
+            params:[
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for provisioning profile to be downloaded:',
+                longDescription:'[OPTIONAL] The path for provisioning profile to be downloaded: (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+              },
+              {
+                name: 'provisioningProfileId',
+                description: 'Provisioning Profile ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'view',
+            description: 'View details of a provisioning profile.',
+            longDescription: 'View details of a provisioning profile.',
+            params:[
+              {
+                name: 'provisioningProfileId',
+                description: 'Provisioning Profile ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove provisioning profile.',
+            longDescription: 'Remove provisioning profile.',
+            params:[
+              {
+                name: 'provisioningProfileId',
+                description: 'Provisioning Profile ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+        ],
+      },
+      {
+        command: 'keystore',
+        description: 'Android Keystore actions',
+        longDescription: 'Android Keystore actions',
+        params:[],
+        subCommands: [
+          {
+            command: 'list',
+            description: 'Keystores list',
+            longDescription: 'Get list of uploaded/installed keystores',
+            params: [],
+          },
+          {
+            command: 'create',
+            description: 'Generate a new keystore.',
+            longDescription: 'Generate a new keystore.',
+            params: [
+            {
+              name: 'name',
+              description: 'Keystore name',
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+            },
+            {
+              name: 'password',
+              description: 'Keystore password',
+              type: CommandParameterTypes.PASSWORD,
+              valueType: 'string',
+            },
+            {
+              name: 'alias',
+              description: 'Alias',
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+            },
+            {
+              name: 'aliasPassword',
+              description: 'Alias password.',
+              type: CommandParameterTypes.PASSWORD,
+              valueType: 'string',
+            },
+            {
+              name: 'validity',
+              description: 'Validity (Years)',
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+            }
+            ],
+          },
+          {
+            command: 'upload',
+            description: 'Upload keystore file (.jks or .keystore)',
+            longDescription: 'Upload keystore file (.jks or .keystore)',
+            params: [
+              {
+                name: 'path',
+                description: 'Keystore path',
+                type: CommandParameterTypes.STRING,
+                valueType: 'path',
+                required: true
+              },
+              {
+                name: 'password',
+                description: 'Keystore password',
+                type: CommandParameterTypes.PASSWORD,
+                valueType: 'string',
+                required: true
+              },
+              {
+                name: 'aliasPassword',
+                description: 'Alias password',
+                type: CommandParameterTypes.PASSWORD,
+                valueType: 'string',
+                required: true
+              },
+            ]
+          },
+          {
+            command: 'download',
+            description: 'Download keystore file (.jks or .keystore)',
+            longDescription: 'Download keystore file (.jks or .keystore) to the given directory on your machine.',
+            params: [
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for keystore file to be downloaded:',
+                longDescription:'[OPTIONAL] The path for keystore file to be downloaded: (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+              },
+              {
+                name: 'keystoreId',
+                description: 'Keystore ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ]
+          },
+          {
+            command: 'view',
+            description: 'View detais of keystore.',
+            longDescription: 'View details of keystore.',
+            params:[
+              {
+                name: 'keystoreId',
+                description: 'Keystore ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove keystore.',
+            longDescription: 'Remove keystore.',
+            params:[
+              {
+                name: 'keystoreId',
+                description: 'Keystore ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+                required: true,
+              }
+            ],
+          }
+        ]
+      }
+    ]
+  },
+  {
     command: CommandTypes.TESTING_DISTRIBUTION,
     description: 'Testing Distribution',
     longDescription: 'Testing Distribution management',
@@ -552,8 +879,133 @@ export const Commands: CommandType[] = [
               },
             ],
           },
+          {
+            command: 'settings',
+            description: 'Distribution profile settings',
+            params: [],
+            subCommands:[
+              {
+                command: 'auto-send',
+                description: 'Select the test groups for automated distribution.',
+                params: [
+                  {
+                    name: 'distProfileId',
+                    description: 'Distribution profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                  },
+                  {
+                    name: 'testingGroupIds',
+                    description: 'Testing group IDs for automated distribution.',
+                    longDescription: 'Testing group IDs for automated distribution.',
+                    type: CommandParameterTypes.MULTIPLE_SELECT,
+                    valueType: 'string'
+                  }
+                ],
+              }
+            ]
+          },
         ],
         params: []
+      },
+      {
+        command: 'testing-group',
+        description: 'Testing group actions',
+        longDescription: 'Testing group actions',
+        params: [],
+        subCommands: [
+          {
+            command: 'list',
+            description: 'Get all testing group list of current organization.',
+            longDescription:'Get all testing group list of current organization.',
+            params: [],
+          },
+          {
+            command: 'view',
+            description: 'View detais of testing group.',
+            longDescription:'View detais of testing group.',
+            params: [
+              {
+                name: 'testingGroupId',
+                description: 'Testing group ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+              }
+            ],
+          },
+          {
+            command: 'create',
+            description: 'Create a new testing group.',
+            longDescription:'Create a new testing group.',
+            params: [
+              {
+                name: 'name',
+                description: 'Testing group name',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+              }
+            ],
+          },
+          {
+            command: 'remove',
+            description: 'Remove testing group.',
+            longDescription:'Remove testing group.',
+            params: [
+              {
+                name: 'testingGroupId',
+                description: 'Testing group ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+              }
+            ],
+          },
+          {
+            command: 'tester',
+            description: 'Testing group tester actions.',
+            longDescription: 'Testing group tester actions.',
+            params:[],
+            subCommands: [
+              {
+                command: 'add',
+                description: 'Add tester to selected testing group.',
+                longDescription: 'Add tester to selected testing group.',
+                params: [
+                  {
+                    name: 'testingGroupId',
+                    description: 'Testing group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                  },
+                  {
+                    name: 'testerEmail',
+                    description: 'Email of tester',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                  }
+                ]
+              },
+              {
+                command: 'remove',
+                description: 'Remove selected tester from selected testing group.',
+                longDescription: 'Remove selected tester from selected testing group.',
+                params: [
+                  {
+                    name: 'testingGroupId',
+                    description: 'Testing group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                  },
+                  {
+                    name: 'testerEmail',
+                    description: 'Email of tester',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'string',
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     ]
   },
@@ -566,6 +1018,32 @@ export const Commands: CommandType[] = [
         command: 'start',
         description: 'Start a publish',
         longDescription: 'Starts a publish',
+        params: [
+          platformParam,
+          {
+            name: 'publishProfileId',
+            description: 'Publish Profile ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          },
+          {
+            name: 'appVersionId',
+            description: 'App version',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+            required: true
+          }
+        ],
+      },
+      {
+        command: 'active-list',
+        description: 'Get a list of active publishing processes currently in the queue.',
+        params: [],
+      },
+      {
+        command: 'view',
+        description: 'View details of the publishing process by app version.',
         params: [
           platformParam,
           {
@@ -654,6 +1132,41 @@ export const Commands: CommandType[] = [
             params: [],
             subCommands: [
               {
+                command: 'list',
+                description: 'App version list',
+                longDescription: 'Get list of app versions by given publish profile.',
+                params: [platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  }
+                ],
+              },
+              {
+                command: 'view',
+                description: 'View detais of app version.',
+                longDescription: 'View detais of app version.',
+                params: [platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'appVersionId',
+                    description: 'App version',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                ],
+              },
+              {
                 command: 'upload',
                 description: 'Upload a new app version',
                 longDescription: 'Upload a new version to given publish profile',
@@ -672,6 +1185,23 @@ export const Commands: CommandType[] = [
                     type: CommandParameterTypes.STRING,
                     valueType: 'path',
                     required: true
+                  },
+                  {
+                    name: 'markAsRc',
+                    description: 'Mark binary as release candidate automatically. [OPTIONAL]',
+                    longDescription: 'Mark binary as release candidate automatically. [OPTIONAL]',
+                    type: CommandParameterTypes.BOOLEAN,
+                    valueType: 'boolean',
+                    defaultValue: false,
+                    required: false
+                  },
+                  {
+                    name: 'summary',
+                    description: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.) [OPTIONAL]',
+                    longDescription: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.) [OPTIONAL]',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false
                   }
                 ],
               },
@@ -767,6 +1297,36 @@ export const Commands: CommandType[] = [
                     description: 'App version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
+                    required: true
+                  }
+                ],
+              },
+              {
+                command: 'update-release-note',
+                description: 'Update the release notes for the app version.',
+                longDescription: 'Update the release notes for the app version.',
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'appVersionId',
+                    description: 'App version',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'summary',
+                    description: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.)',
+                    longDescription: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
                     required: true
                   }
                 ],

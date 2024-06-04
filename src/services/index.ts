@@ -4,7 +4,7 @@ import path from 'path';
 import FormData from 'form-data';
 import axios from 'axios';
 import moment from 'moment';
-import { EnvironmentVariableTypes } from '../constant';
+import { CountriesList, EnvironmentVariableTypes } from '../constant';
 import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
 import { ProgramError } from '../core/ProgramError';
 
@@ -15,44 +15,6 @@ export async function getToken(options: OptionsType<{ pat: string }>) {
       'content-type': 'application/x-www-form-urlencoded',
     },
   });
-  return response.data;
-}
-
-export async function getDistributionProfiles(options: OptionsType = {}) {
-  const distributionProfiles = await appcircleApi.get(`distribution/v2/profiles`, {
-    headers: getHeaders(),
-  });
-  return distributionProfiles.data;
-}
-
-export async function createDistributionProfile(options: OptionsType<{ name: string }>) {
-  const response = await appcircleApi.post(
-    `distribution/v1/profiles`,
-    { name: options.name },
-    {
-      headers: getHeaders(),
-    }
-  );
-  return response.data;
-}
-
-export async function getTestingGroups(options: OptionsType) {
-  const response = await appcircleApi.get(`distribution/v2/testing-groups`, {
-    headers: getHeaders(),
-  });
-  if (options.output === 'json') {
-    console.log(JSON.stringify(response.data));
-  } else {
-    console.table(
-      response.data.map((testingGroup: any) => ({
-        ID: testingGroup.id,
-        Name: testingGroup.name,
-        'Organization ID': testingGroup.organizationId,
-        Created: testingGroup.createDate ? moment(testingGroup.createDate).calendar() : 'No created data',
-        'Last Updated': testingGroup.createDate ? moment(testingGroup.createDate).fromNow() : 'No update data',
-      }))
-    );
-  }
   return response.data;
 }
 
@@ -270,14 +232,12 @@ export async function getConfigurations(options: OptionsType<{ profileId: string
   return configurationsResponse.data;
 }
 
-/*
-export async function getBuildTaskStatus(options: OptionsType<{ latestCommitId: string; taskId: string }>) {
-  const taskStatus = await appcircleApi.get(`build/v2/commits/${options.latestCommitId}/builds/${options.taskId}/status`, {
+export async function getTaskStatus(options: OptionsType<{ taskId: string }>) {
+  const task = await appcircleApi.get(`task/v1/tasks/${options.taskId}`, {
     headers: getHeaders(),
   });
-  return taskStatus.data;
+  return task.data;
 }
-*/
 
 export async function getEnterpriseProfiles(options: OptionsType = {}) {
   const buildProfiles = await appcircleApi.get(`store/v2/profiles`, {
@@ -401,5 +361,15 @@ export const getUserInfo = async () => {
   return userInfo.data;
 };
 
+
+export function getCountries() : {alpha2:string, name: string}[]{
+  return CountriesList.map((country: any) => ({
+      alpha2: country[1],
+      name: country[0]
+  }));
+}
+
 export * from './organization';
 export * from './publish';
+export * from './signing-identity';
+export * from './testing-distribution';
