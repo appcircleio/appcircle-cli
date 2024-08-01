@@ -73,14 +73,14 @@ export const getOrganizationInvitations = async (options: OptionsType<{ organiza
   });
 };
 
-export type RoleType = { groupId: string, multi?: boolean, title: string; name: string; description: string; key: string, index: number };
+export type RoleType = { groupId: string, multi?: boolean, title: string; name: string; description: string; key: string, index: number, isDefaultRole:boolean };
 
 export const getRoleList = async () => {
   const rolesRes = await appcircleApi.get(`roles.json?v=5`, {
     headers: getHeaders(),
   });
   const rolesList = [
-    {  groupId:'owner', title: 'Full access to all modules and settings', name: 'Owner', key: 'owner', description: 'owner (Full access to all modules and settings)' },
+    {  groupId:'owner', title: 'Full access to all modules and settings', name: 'Owner', key: 'owner', description: 'owner (Full access to all modules and settings)', isDefaultRole: false },
   ] as RoleType[];
   rolesRes.data
     .filter((r: any) => r.enabled !== false)
@@ -96,10 +96,10 @@ export const getRoleList = async () => {
           name: r.name,
           description: `${r.key} (${title} - ${r.name})`,
           key: r.key,
+          isDefaultRole: (role.defaultRoles && role.defaultRoles.includes(r.key)) || false,
         });
       });
     });
-
   return rolesList;
 };
 
