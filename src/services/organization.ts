@@ -105,7 +105,7 @@ export const getRoleList = async () => {
 
 export const inviteUserToOrganization = async (options: OptionsType<{ organizationId: string; email: string; role: string[] | string }>) => {
   let roles = Array.isArray(options.role) ? options.role : [options.role];
-  roles = roles.includes('owner') ? ['owner'] : roles;
+  //roles = roles.includes('owner') ? ['owner'] : roles;
 
   let willAssingRoles =  await prepareRoles(roles);
 
@@ -175,9 +175,11 @@ export const getOrganizationUserRoles = async (options: OptionsType<{ organizati
 
 export const assignRolesToUserInOrganitaion = async (options: OptionsType<{ organizationId: string; userId: string; role: string[] | string }>) => {
   let roles = Array.isArray(options.role) ? options.role : [options.role];
+  /*
   if (roles.includes('owner')) {
     roles = ['owner'];
   }
+    */
   //Detect multi roles & filter roles
   let willAssingRoles =  await prepareRoles(roles);
   //console.log('willAssingRoles:', willAssingRoles);
