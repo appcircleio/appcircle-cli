@@ -57,6 +57,7 @@ export const getOrganizationUsersWithRoles = async (options: OptionsType<{ organ
     users.map(async (user: any) => {
       const userRoles = await getOrganizationUserRoles({ organizationId: options.organizationId, userId: user.id });
       user.roles = userRoles.isSubOrganizationMember ? [] : userRoles.roles;
+      user.inheritedRoles = userRoles.inheritedRoles || [];
       user.isSubOrganizationMember = userRoles.isSubOrganizationMember;
     })
   );
@@ -167,7 +168,7 @@ export const getOrganizationUserRoles = async (options: OptionsType<{ organizati
     return userRoles.data;
   } catch (err: any) {
     if (err.response?.status === 400 && err.response?.data?.error) {
-      return { isSubOrganizationMember: true, roles: [] };
+      return { isSubOrganizationMember: true, roles: [], inheritedRoles: [] };
     }
     throw err;
   }

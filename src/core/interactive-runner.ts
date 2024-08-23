@@ -328,6 +328,11 @@ const handleInteractiveParamsOrArguments = async (
       }
       param.params = userList.map((user: any) => ({ name: user.id, message: user._message || ` ${user.id} (${user.email})` }));
       spinner.text = 'Users fetched';
+      if(!param.params?.length){
+        spinner.text = "No users in this organization";
+        spinner.fail();
+        return { isError: true };
+      }
       spinner.succeed();
     }else if(param.name === 'publishProfileId' && param.type === CommandParameterTypes.SELECT){
       const spinner = ora('Publish Profiles Fetching').start();
