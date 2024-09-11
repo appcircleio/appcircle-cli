@@ -346,7 +346,14 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
       console.log(`User "${data.data.email}" has been removed.`);
     } else if (data.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
       console.log('\n- Roles ↴ ');
-      data.data.length ? console.table(data.data) : console.log('  No roles found.');
+      if(data.data?.roles?.length || data.data?.inheritedRoles?.length ){
+          const inheritedRoles = data.data?.inheritedRoles || [];
+          const roles = Array.from(new Set<string>((data.data?.roles || []).concat(inheritedRoles))).sort( (a: string, b: string) => inheritedRoles.includes(a) ? 1 : inheritedRoles.includes(b) ? -1 : 0 );
+          const mappedRoles = roles.map( (r: any) => ({ Role: r, Inheritance: inheritedRoles.includes(r) ? 'Inherit' : '-'})  );
+          console.table(mappedRoles)
+      }else{
+        console.log('  No roles found.');
+      }
     } else {
       console.log(data.data);
     }

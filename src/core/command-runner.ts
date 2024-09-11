@@ -220,7 +220,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
     spinner.succeed();
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
-      data: userInfo.roles,
+      data: { roles: userInfo.roles, inheritedRoles: userInfo.inheritedRoles },
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-add`) {
     let userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
