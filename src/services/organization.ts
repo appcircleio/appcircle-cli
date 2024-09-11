@@ -57,6 +57,7 @@ export const getOrganizationUsersWithRoles = async (options: OptionsType<{ organ
     users.map(async (user: any) => {
       const userRoles = await getOrganizationUserRoles({ organizationId: options.organizationId, userId: user.id });
       user.roles = userRoles.isSubOrganizationMember ? [] : userRoles.roles;
+      user.inheritedRoles = userRoles.inheritedRoles || [];
       user.isSubOrganizationMember = userRoles.isSubOrganizationMember;
     })
   );
@@ -73,14 +74,14 @@ export const getOrganizationInvitations = async (options: OptionsType<{ organiza
   });
 };
 
-export type RoleType = { groupId: string, multi?: boolean, title: string; name: string; description: string; key: string, index: number };
+export type RoleType = { groupId: string, multi?: boolean, title: string; name: string; description: string; key: string, index: number, isDefaultRole:boolean };
 
 export const getRoleList = async () => {
   const rolesRes = await appcircleApi.get(`roles.json?v=5`, {
     headers: getHeaders(),
   });
   const rolesList = [
-    {  groupId:'owner', title: 'Full access to all modules and settings', name: 'Owner', key: 'owner', description: 'owner (Full access to all modules and settings)' },
+    {  groupId:'owner', title: 'Full access to all modules and settings', name: 'Owner', key: 'owner', description: 'owner (Full access to all modules and settings)', isDefaultRole: false },
   ] as RoleType[];
   rolesRes.data
     .filter((r: any) => r.enabled !== false)
@@ -96,16 +97,16 @@ export const getRoleList = async () => {
           name: r.name,
           description: `${r.key} (${title} - ${r.name})`,
           key: r.key,
+          isDefaultRole: (role.defaultRoles && role.defaultRoles.includes(r.key)) || false,
         });
       });
     });
-
   return rolesList;
 };
 
 export const inviteUserToOrganization = async (options: OptionsType<{ organizationId: string; email: string; role: string[] | string }>) => {
   let roles = Array.isArray(options.role) ? options.role : [options.role];
-  roles = roles.includes('owner') ? ['owner'] : roles;
+  //roles = roles.includes('owner') ? ['owner'] : roles;
 
   let willAssingRoles =  await prepareRoles(roles);
 
@@ -167,7 +168,7 @@ export const getOrganizationUserRoles = async (options: OptionsType<{ organizati
     return userRoles.data;
   } catch (err: any) {
     if (err.response?.status === 400 && err.response?.data?.error) {
-      return { isSubOrganizationMember: true, roles: [] };
+      return { isSubOrganizationMember: true, roles: [], inheritedRoles: [] };
     }
     throw err;
   }
@@ -175,9 +176,11 @@ export const getOrganizationUserRoles = async (options: OptionsType<{ organizati
 
 export const assignRolesToUserInOrganitaion = async (options: OptionsType<{ organizationId: string; userId: string; role: string[] | string }>) => {
   let roles = Array.isArray(options.role) ? options.role : [options.role];
+  /*
   if (roles.includes('owner')) {
     roles = ['owner'];
   }
+    */
   //Detect multi roles & filter roles
   let willAssingRoles =  await prepareRoles(roles);
   //console.log('willAssingRoles:', willAssingRoles);

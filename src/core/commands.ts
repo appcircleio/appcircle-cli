@@ -31,6 +31,7 @@ export type ParamType = {
   requriedForInteractiveMode?: boolean;
   skipForInteractiveMode?: boolean;
   paramType?: string;
+  autoFillForInteractiveMode?: boolean;
   defaultValue?: any;
   from?: 'user' | 'default';
 };
@@ -1700,6 +1701,7 @@ export const Commands: CommandType[] = [
               type: CommandParameterTypes.MULTIPLE_SELECT,
               valueType: 'string',
               required: false,
+              autoFillForInteractiveMode: true,
             }],
           },
           {

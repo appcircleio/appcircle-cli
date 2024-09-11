@@ -36,6 +36,7 @@ import {
   getTestingGroups,
   getDistributionProfileById,
   getTestingGroupById,
+  RoleType,
 } from '../services';
 import { DefaultEnvironmentVariables, getConfigStore } from '../config';
 import { ProgramCommand, createCommandActionCallback } from '../program';
@@ -291,6 +292,16 @@ const handleInteractiveParamsOrArguments = async (
           return { isError: true };
       }
       param.params = roleList.map((role: any) => ({ name: role.key, message: role.description }));
+
+      if(param.autoFillForInteractiveMode){
+        param.defaultValue = [];
+        roleList.map((role: RoleType, index: number) => {
+          if(role.isDefaultRole){
+            param.defaultValue.push(index);
+          }
+        });
+      }
+
       if(param.from === 'user' && userinfo?.roles) {
         param.params = param.params.filter((role: any) => userinfo.roles.includes(role.name));
         if(param.params.length === 0) {
@@ -298,7 +309,7 @@ const handleInteractiveParamsOrArguments = async (
           spinner.fail();
           return { isError: true };
         }
-      }else if (param.required !== false && userinfo?.roles) {
+      } else if (param.required !== false && userinfo?.roles) {
         param.params = param.params.filter((role: any) => !userinfo.roles.includes(role.name));
         if (userinfo?.roles.includes('owner')) {
           param.params = [{ name: 'owner', message: 'Owner' }];
@@ -317,6 +328,11 @@ const handleInteractiveParamsOrArguments = async (
       }
       param.params = userList.map((user: any) => ({ name: user.id, message: user._message || ` ${user.id} (${user.email})` }));
       spinner.text = 'Users fetched';
+      if(!param.params?.length){
+        spinner.text = "No users in this organization";
+        spinner.fail();
+        return { isError: true };
+      }
       spinner.succeed();
     }else if(param.name === 'publishProfileId' && param.type === CommandParameterTypes.SELECT){
       const spinner = ora('Publish Profiles Fetching').start();
