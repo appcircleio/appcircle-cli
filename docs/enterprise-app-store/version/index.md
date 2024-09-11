@@ -18,7 +18,7 @@ appcircle enterprise-app-store version [command] [options]
 - [`publish`](publish.md)
 - [`unpublish`](unpublish.md)
 - [`remove`](remove.md)
-- [`notify`](notify.md)
+- [~~`notify`~~](notify.md)
 - [`upload-for-profile`](upload-for-profile.md)
 - [`upload-without-profile`](upload-without-profile.md)
 - [`download-link`](download-link.md)
