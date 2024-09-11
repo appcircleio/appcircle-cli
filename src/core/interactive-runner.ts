@@ -562,7 +562,7 @@ const handleSelectedCommand = async (command: CommandType, __parentCommand?: any
       name: 'action',
       limit: 10,
       message: `Which sub-command of "${command.command}" do you want to run?${` (${command.subCommands.length} Options)`}`,
-      choices: command.subCommands.map((cmd, index) => {
+      choices: command.subCommands.filter((cmd) => !cmd.ignore).map((cmd, index) => {
         return { name: cmd.command, message: `${index + 1}. ${cmd.description}` };
       }),
     });

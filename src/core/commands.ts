@@ -1563,6 +1563,7 @@ export const Commands: CommandType[] = [
           {
             command: 'notify',
             description: 'Notify enterprise app version',
+            ignore: true,
             params: [
               {
                 name: 'entProfileId',
