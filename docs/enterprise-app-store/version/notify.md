@@ -1,4 +1,6 @@
-# `appcircle enterprise-app-store version notify`
+**Deprecated:** This command is deprecated and should not be used anymore.
+
+# ~~`appcircle enterprise-app-store version notify`~~
 
 Notify enterprise app version to users.
 
