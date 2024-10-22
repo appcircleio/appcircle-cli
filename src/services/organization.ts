@@ -136,8 +136,10 @@ export const inviteUserToOrganization = async (options: OptionsType<{ organizati
  */
 export const reInviteUserToOrganization = async (options: OptionsType<{ organizationId: string; email: string }>) => {
   const invitationRes = await appcircleApi.patch(
-    `identity/v1/users?action=re-invite&userEmail=${options.email}&organizationId=${options.organizationId}`,
-    undefined,
+    `identity/v1/organizations/${options.organizationId}/invitations?action=re-invite`,
+    {
+      "userEmail": options.email
+    },
     {
       headers: getHeaders(),
     }
@@ -146,8 +148,10 @@ export const reInviteUserToOrganization = async (options: OptionsType<{ organiza
 };
 
 export const removeInvitationFromOrganization = async (options: OptionsType<{ organizationId: string; email: string }>) => {
-  const invitationRes = await appcircleApi.delete(`identity/v1/organizations/${options.organizationId}/invitations?userEmail=${options.email}`, {
+  const invitationRes = await appcircleApi.delete(`identity/v1/organizations/${options.organizationId}/invitations`, 
+  {
     headers: getHeaders(),
+    data:{ userEmail: options.email }
   });
   return invitationRes.data;
 };
