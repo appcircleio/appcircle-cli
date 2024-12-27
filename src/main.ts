@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import minimist from 'minimist';
 import { createProgram } from './program';
 import axios from 'axios';

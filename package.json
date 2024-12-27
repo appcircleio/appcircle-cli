@@ -1,10 +1,10 @@
 {
   "name": "@appcircle/cli",
-  "version": "2.3.1",
+  "version": "2.3.2-beta.2",
   "description": "CLI tool for running Appcircle services from the command line",
   "main": "bin/appcircle",
   "bin": {
-    "appcircle": "bin/appcircle"
+    "appcircle": "dist/main.js"
   },
   "scripts": {
     "watch": "rm -rf dist && tsc -w",
