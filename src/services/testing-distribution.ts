@@ -83,3 +83,23 @@ export async function removeTesterFromTestingGroup(options: OptionsType<{ tester
       );
       return response.data;
 }
+
+export async function getTestingDistributionUploadInformation(options: OptionsType<{ fileSize: number; fileName: string; distProfileId: string }>) {
+
+  const uploadInformationResponse = await appcircleApi.get(`distribution/v1/profiles/${options.distProfileId}/app-versions?action=uploadInformation&fileSize=${options.fileSize}&fileName=${options.fileName}`,{
+    headers: {
+      ...getHeaders(),
+    },
+  });
+  return uploadInformationResponse.data;
+}
+
+export async function commitTestingDistributionFileUpload(options: OptionsType<{ fileId: number; fileName: string; distProfileId: string }>) {
+
+  const commitFileResponse = await appcircleApi.post(`distribution/v1/profiles/${options.distProfileId}/app-versions?action=commitFileUpload`,{fileId: options.fileId, fileName: options.fileName},{
+    headers: {
+      ...getHeaders(),
+    },
+  });
+  return commitFileResponse.data;
+}
