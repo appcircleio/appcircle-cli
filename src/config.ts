@@ -1,7 +1,7 @@
 /**
  * Implements CRUD options from a file. Replaces the usage of a database, acts like environment variables.
  */
-import Conf from "conf";
+import Conf from 'conf';
 
 /**
  * This variable exists only to specify which environment variables are being used.
@@ -18,7 +18,12 @@ export const DefaultEnvironmentVariables = {
   AC_ACCESS_TOKEN: "",
 };
 
-const config = new Conf<{ current: string; envs: { [key: string]: typeof DefaultEnvironmentVariables } }>({
+interface ConfigData extends Record<string, any> {
+  current: string;
+  envs: { [key: string]: typeof DefaultEnvironmentVariables };
+}
+
+const config = new Conf<ConfigData>({
   defaults: { current: "default", envs: { default: DefaultEnvironmentVariables } },
 });
 
@@ -43,7 +48,7 @@ export function getConfigFilePath(): any {
 
 
 export function getCurrentConfigVariable(): string {
-  return config.get('current') || 'default';
+  return config.get('current') || 'default';
 }
 
 export function setCurrentConfigVariable(val: string = 'default'): void {

@@ -6,7 +6,8 @@
     "outDir": "./dist",
     "strict": true,
     "downlevelIteration": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "lib": ["ESNext"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "**/__tests__/*"]
