@@ -1,6 +1,6 @@
 {
   "name": "@appcircle/cli",
-  "version": "2.3.3-beta.2",
+  "version": "2.3.3-beta.3",
   "description": "CLI tool for running Appcircle services from the command line",
   "main": "bin/appcircle",
   "bin": {
