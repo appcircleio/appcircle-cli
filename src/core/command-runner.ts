@@ -1,5 +1,6 @@
 import path from 'path';
 import os from 'os';
+import fs from 'fs';
 import { CommandTypes } from './commands';
 import {
   EnvironmentVariables,
@@ -101,6 +102,13 @@ import {
   getAppVersionDetail,
   getActivePublishes,
   getPublisDetailById,
+  uploadArtifactWithSignedUrl,
+  getTestingDistributionUploadInformation,
+  commitTestingDistributionFileUpload,
+  getPublishUploadInformation,
+  commitPublishFileUpload,
+  getEnterpriseUploadInformation,
+  commitEnterpriseFileUpload,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -289,12 +297,16 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
   else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-upload`) {
     const spinner = createOra('Try to upload the app version').start();
     try {
-      const responseData = await uploadAppVersion(params);
-      let taskStatus = await getTaskStatus({taskId: responseData.taskId});
+      let fileName = path.basename(params.app);
+      let stats = fs.statSync(params.app);
+      const uploadResponse = await getPublishUploadInformation({fileName, fileSize: stats.size, publishProfileId: params.publishProfileId, platform: params.platform});
+      await uploadArtifactWithSignedUrl({app: params.app, signedUrl: uploadResponse.uploadUrl});
+      const commitFileResponse = await commitPublishFileUpload({fileId: uploadResponse.fileId, fileName, publishProfileId: params.publishProfileId, platform: params.platform});
+      let taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
       const shouldMarkAsReleaseCandidate = params.markAsRc || false;
       // Wait for the task to complete
       while(taskStatus.stateValue === TaskStatus.BEGIN){
-        taskStatus = await getTaskStatus({taskId: responseData.taskId});
+        taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
         if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
           spinner.fail('Upload failed: Please make sure that the app version number is unique in selected publish profile.');
           process.exit(1);
@@ -308,7 +320,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
           await setAppVersionReleaseNote({ ...params, appVersionId: appVersion.id });
         }
       }
-      spinner.text = `App version uploaded and ${shouldMarkAsReleaseCandidate ? 'marked as release candidate' : ''} successfully.\n\nTaskId: ${responseData.taskId}`;
+      spinner.text = `App version uploaded ${shouldMarkAsReleaseCandidate ? 'and marked as release candidate' : ''} successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
       spinner.succeed();
     } catch (e: any) {
       spinner.fail('Upload failed');
@@ -595,12 +607,16 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
   }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-upload`){
     const spinner = createOra('Try to upload the app').start();
     try {
-      const responseData = await uploadArtifact(params);
+      let fileName = path.basename(params.app);
+      let stats = fs.statSync(params.app);
+      const uploadResponse = await getTestingDistributionUploadInformation({fileName, fileSize: stats.size, distProfileId: params.distProfileId});
+      await uploadArtifactWithSignedUrl({app: params.app, signedUrl: uploadResponse.uploadUrl});
+      const commitFileResponse = await commitTestingDistributionFileUpload({fileId: uploadResponse.fileId, fileName, distProfileId: params.distProfileId});
       commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
         fullCommandName: command.fullCommandName,
-        data: responseData,
+        data: commitFileResponse,
       });
-      spinner.text = `App uploaded successfully.\n\nTaskId: ${responseData.taskId}`;
+      spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
       spinner.succeed();
     } catch (e) {
       spinner.fail('Upload failed');
@@ -891,12 +907,17 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-upload-for-profile`){
     const spinner = createOra('Try to upload the app').start();
     try {
-      const responseData = await uploadEnterpriseAppVersion(params);
+      let fileName = path.basename(params.app);
+      let stats = fs.statSync(params.app);
+      const uploadResponse = await getEnterpriseUploadInformation({fileName, fileSize: stats.size});
+      await uploadArtifactWithSignedUrl({app: params.app, signedUrl: uploadResponse.uploadUrl});
+      const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName, entProfileId: params.entProfileId});
+
       commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
         fullCommandName: command.fullCommandName,
-        data: responseData,
+        data: commitFileResponse,
       });
-      spinner.text = `App version uploaded successfully.\n\nTaskId: ${responseData.taskId}`;
+      spinner.text = `App version uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
       spinner.succeed();
     } catch (e) {
       spinner.fail('Upload failed');
@@ -905,12 +926,16 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-upload-without-profile`){
     const spinner = createOra('Try to upload the app').start();
     try {
-      const responseData = await uploadEnterpriseApp(params);
+      let fileName = path.basename(params.app);
+      let stats = fs.statSync(params.app);
+      const uploadResponse = await getEnterpriseUploadInformation({fileName, fileSize: stats.size});
+      await uploadArtifactWithSignedUrl({app: params.app, signedUrl: uploadResponse.uploadUrl});
+      const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName});
       commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
         fullCommandName: command.fullCommandName,
-        data: responseData,
+        data: commitFileResponse,
       });
-      spinner.text = `New profile created and app uploaded successfully.\n\nTaskId: ${responseData.taskId}`;
+      spinner.text = `New profile created and app uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
       spinner.succeed();
     } catch (e) {
       spinner.fail('Upload failed');
