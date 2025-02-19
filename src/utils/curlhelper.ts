@@ -1,6 +1,15 @@
 import type { AxiosRequestConfig } from "axios";
-import FormData from 'form-data';
-const commonHeaders = ["common", "delete", "get", "head", "patch", "post", "put"]
+import FormData from "form-data";
+const commonHeaders = [
+  "common",
+  "delete",
+  "get",
+  "head",
+  "patch",
+  "post",
+  "put",
+];
+
 export default class CurlHelper {
   private request: AxiosRequestConfig;
   constructor(config: AxiosRequestConfig) {
@@ -26,8 +35,10 @@ export default class CurlHelper {
 
     for (let property in headers) {
       if ({}.hasOwnProperty.call(headers, property)) {
-
-        if (this.request.data instanceof FormData && (/^content-type$/i).test(property)) {
+        if (
+          this.request.data instanceof FormData &&
+          /^content-type$/i.test(property)
+        ) {
           continue;
         }
 
@@ -43,26 +54,29 @@ export default class CurlHelper {
     return `-X ${(this.request.method ?? "UNKNOWN").toUpperCase()}`;
   }
 
-  parseFormData = (form: any) => form._streams.reduce((result: any, line: any) => {
-
-    if (typeof line === 'string') {
-      const key = line?.match(/\sname="(.*?)"/)?.[1];
-      const filename = line?.match(/filename="(.*?)"/)?.[1];
-      if (key) {
-        result._currentKey = key;
-        if (key === 'File') {
-          result[result._currentKey] = filename;
-          result['postData'] += ` -F "${key}=@${filename}"`;;
-          delete result._currentKey;
+  parseFormData = (form: any) =>
+    form._streams.reduce(
+      (result: any, line: any) => {
+        if (typeof line === "string") {
+          const key = line?.match(/\sname="(.*?)"/)?.[1];
+          const filename = line?.match(/filename="(.*?)"/)?.[1];
+          if (key) {
+            result._currentKey = key;
+            if (key === "File") {
+              result[result._currentKey] = filename;
+              result["postData"] += ` -F "${key}=@${filename}"`;
+              delete result._currentKey;
+            }
+          } else if (line !== "\\r\\n") {
+            result[result._currentKey] = line;
+            result["postData"] += ` -F "${result._currentKey}=${line}"`;
+            delete result._currentKey;
+          }
         }
-      } else if (line !== '\\r\\n') {
-        result[result._currentKey] = line;
-        result['postData'] += ` -F "${result._currentKey}=${line}"`;
-        delete result._currentKey;
-      }
-    }
-    return result;
-  }, { postData: '' });
+        return result;
+      },
+      { postData: "" }
+    );
 
   getBody() {
     if (
@@ -78,7 +92,7 @@ export default class CurlHelper {
       }
       let data =
         typeof this.request.data === "object" ||
-          Object.prototype.toString.call(this.request.data) === "[object Array]"
+        Object.prototype.toString.call(this.request.data) === "[object Array]"
           ? JSON.stringify(this.request.data)
           : this.request.data;
       return `--data '${data}'`.trim();
@@ -89,38 +103,25 @@ export default class CurlHelper {
 
   getUrl(): string | undefined {
     if (this.request.baseURL) {
-      let baseUrl = this.request.baseURL
-      let url = this.request.url
-      let finalUrl = baseUrl + "/" + url
+      let baseUrl = this.request.baseURL;
+      let url = this.request.url;
+      let finalUrl = baseUrl + "/" + url;
       return finalUrl
-        .replace(/\/{2,}/g, '/')
+        .replace(/\/{2,}/g, "/")
         .replace("http:/", "http://")
-        .replace("https:/", "https://")
+        .replace("https:/", "https://");
     }
     return this.request.url;
   }
 
   getQueryString() {
-    if (this.request.paramsSerializer) {
-      const params = this.request.paramsSerializer(this.request.params)
-      if (!params || params.length === 0) return ''
-      if (params.startsWith('?')) return params
-      return `?${params}`
-    }
-    let params = ""
-    let i = 0
-
-    for (let param in this.request.params) {
-      if ({}.hasOwnProperty.call(this.request.params, param)) {
-        params +=
-          i !== 0
-            ? `&${param}=${this.request.params[param]}`
-            : `?${param}=${this.request.params[param]}`;
-        i++;
-      }
-    }
-
-    return params;
+    const params =
+      typeof this.request.paramsSerializer === "function"
+        ? this.request.paramsSerializer(this.request.params)
+        : this.request.params;
+    if (!params || params.length === 0) return "";
+    if (params.startsWith("?")) return params;
+    return `?${params}`;
   }
 
   getBuiltURL() {
