@@ -40,7 +40,8 @@ import {
 } from '../services';
 import { DefaultEnvironmentVariables, getConfigStore } from '../config';
 import { ProgramCommand, createCommandActionCallback } from '../program';
-import { Command } from 'commander';
+import path from 'path';
+import os from 'os';
 
 const prepareConfigCommand = async () => {
   const commandSelect = new Select({
@@ -121,6 +122,12 @@ const prepareConfigCommand = async () => {
   return configActionCommand;
 };
 
+const expandTilde = (filePath: string): string => {
+  if (!filePath) return filePath;
+  const expandedPath = filePath.replace(/^~/, os.homedir());
+  return path.resolve(expandedPath);
+};
+
 const handleInteractiveParamsOrArguments = async (
   commandParams: CommandType['params'] | CommandType['arguments'] = []
 ): Promise<Record<string, any> | undefined> => {
@@ -196,7 +203,7 @@ const handleInteractiveParamsOrArguments = async (
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No distribution profile available';
         spinner.fail();
-        return;
+        process.exit(1);
       }
       //@ts-ignore
       param.params = profiles.map((profile: any) => ({ name: profile.id, message: `${profile.id} (${profile.name})` }));
@@ -338,6 +345,11 @@ const handleInteractiveParamsOrArguments = async (
       const spinner = ora('Publish Profiles Fetching').start();
       const selectedPlatform = params["platform"];
       const publishProfiles = await getPublishProfiles({ platform: selectedPlatform });
+      if (!publishProfiles || publishProfiles.length === 0) {
+        spinner.text = 'No publish profiles available';
+        spinner.fail();
+        return { isError: true };
+      }
       param.params = publishProfiles.map((profile:any) => ({name:profile.id, message: ` ${profile.id} (${profile.name}) - ${(OperatingSystems as any)[profile.platformType]}`}));
       spinner.text = 'Publish Profiles Fetched';
       spinner.succeed();
@@ -493,18 +505,28 @@ const handleInteractiveParamsOrArguments = async (
             type: param.type,
             name: param.name,
             message: param.description,
-            validate(value) {
-              //@ts-ignore
+            validate(value: string) {
               if (value.length === 0 && param.required !== false) {
-                return 'This field is required';
-              } else if (['app'].includes(param.name)) {
-                return fs.existsSync(value) ? true : 'File not exists';
+                return "This field is required";
+              } else if (['app', 'filePath'].includes(param.name)) {
+                try {
+                  const expandedPath = expandTilde(value);
+                  if (!fs.existsSync(expandedPath)) {
+                    return "File not exists. Please enter a valid file path";
+                  }
+                } catch (error) {
+                  return "Invalid file path. Please enter a valid file path";
+                }
               }
               return true;
             },
           },
         ]);
-        (params as any)[param.name] = (stringPrompt as any)[Object.keys(stringPrompt)[0]];
+        let value = (stringPrompt as any)[Object.keys(stringPrompt)[0]];
+        if (param.name === 'filePath') {
+          value = expandTilde(value);
+        }
+        (params as any)[param.name] = value;
       } else if (param.type === CommandParameterTypes.BOOLEAN) {
         const booleanPrompt = new BooleanPrompt({
           name: param.name,

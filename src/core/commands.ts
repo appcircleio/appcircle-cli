@@ -480,7 +480,7 @@ export const Commands: CommandType[] = [
                 description: `File Path`,
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
-                required: false,
+                required: true,
                 paramType: 'file',
               },
             ],
@@ -1092,7 +1092,7 @@ export const Commands: CommandType[] = [
           },
           {
             command: 'rename',
-            description: 'Raname publish profile',
+            description: 'Rename publish profile',
             longDescription: 'Rename publish profile',
             params: [platformParam,
               {
@@ -1728,7 +1728,7 @@ export const Commands: CommandType[] = [
           },
           {
             command: 'remove',
-            description: 'Remove user or inivation from organization',
+            description: 'Remove user or invitation from organization',
             params: [{
               name: 'organizationId',
               description: 'Organization ID [Optional]',

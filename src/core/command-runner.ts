@@ -180,7 +180,6 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
     const users = await getOrganizationUsersWithRoles(params);
     const invitations = await getOrganizationInvitations(params);
     spinner.succeed();
-    //console.log('users', invitations[0].organizationsAndRoles);
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
       data: {
@@ -263,7 +262,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
 };
 
 const handlePublishCommand = async (command: ProgramCommand, params: any) => {
-  if(params.platform && !['ios','android'].includes(params.platform)){
+  if (params.platform && !['ios', 'android'].includes(params.platform)) {
     throw new ProgramError(`Invalid platform(${params.platform}). Supported platforms: ios, android`);
   }
   if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-create`) {
@@ -293,7 +292,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       fullCommandName: command.fullCommandName,
       data: response,
     });
-  }
+  } 
   else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-upload`) {
     const spinner = createOra('Try to upload the app version').start();
     try {
@@ -339,140 +338,143 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-start`) {
     const spinner = createOra('Publish flow starting').start();
-    const publish = await getPublishByAppVersion(params);
-    const firstStep = publish.steps[0];
-    const startResponse = await startExistingPublishFlow({ ...params, publishId: firstStep.publishId });
-    commandWriter(CommandTypes.PUBLISH, startResponse);
-    spinner.text = `Publish started successfully.`;
-    spinner.succeed();
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-download`) {
-    let spinner = createOra('Fetching app version download link').start();
     try {
-      let downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
-      const responseData = await getAppVersionDownloadLink(params);
-      const appVersions = await getAppVersions(params);
-      const appVersion = appVersions.find((appVersion: any) => appVersion.id === params.appVersionId);
-      if (!appVersion) {
-        spinner.fail();
-        throw new Error('App version not found');
-      }
-      spinner.text = `App version download link fetched successfully.`;
-      spinner.text = `Try to download the app version.`;
-      downloadPath = path.join(downloadPath, appVersion.fileName);
-      await downloadAppVersion({ url: responseData, path:downloadPath });
-      spinner.text = `App version downloaded successfully.\n\nDownload Path: ${downloadPath}`; 
+      const publish = await getPublishByAppVersion(params);
+      const firstStep = publish.steps[0];
+      const startResponse = await startExistingPublishFlow({ ...params, publishId: firstStep.publishId });
+      commandWriter(CommandTypes.PUBLISH, startResponse);
+      spinner.text = `Publish started successfully.`;
       spinner.succeed();
-    } catch (e: any) {
-      spinner.fail('Process failed');
-      throw e;
+    } catch (error) {
+      spinner.fail('Publish failed');
+    } 
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-download`) {
+      let spinner = createOra('Fetching app version download link').start();
+      try {
+        let downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+        const responseData = await getAppVersionDownloadLink(params);
+        const appVersions = await getAppVersions(params);
+        const appVersion = appVersions.find((appVersion: any) => appVersion.id === params.appVersionId);
+        if (!appVersion) {
+          spinner.fail();
+          throw new Error('App version not found');
+        }
+        spinner.text = `App version download link fetched successfully.`;
+        spinner.text = `Try to download the app version.`;
+        downloadPath = path.join(downloadPath, appVersion.fileName);
+        await downloadAppVersion({ url: responseData, path:downloadPath });
+        spinner.text = `App version downloaded successfully.\n\nDownload Path: ${downloadPath}`; 
+        spinner.succeed();
+      } catch (e: any) {
+        spinner.fail('Process failed');
+        throw e;
+      }
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-mark-as-rc`) {
+      const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: true });
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: response,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`) {
+      const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: false });
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: response,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-settings-autopublish`) {
+      const publishProfileDetails = await getPublishProfileDetailById(params);
+      const response = await switchPublishProfileAutoPublishSettings({ ...params, currentProfileSettings: publishProfileDetails.profileSettings });
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: response,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`) {
+      const spinner = createOra('Fetching...').start();
+      const variableGroups = await getPublishVariableGroups();
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: variableGroups,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`) {
+      const spinner = createOra('Fetching...').start();
+      const variables = await getPublishVariableListByGroupId(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: variables.variables,
+      });
+    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
+      const spinner = createOra('Fetching...').start();
+      const appVersions = await getAppVersions(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: appVersions,
+      });
+    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
+      const spinner = createOra('Fetching...').start();
+      const appVersion = await getAppVersionDetail(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: appVersion,
+      });
+    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-update-release-note`){
+      const spinner = createOra('Try to update relase note of the app version').start();
+      try{
+        await setAppVersionReleaseNote(params);
+        spinner.succeed("Release note updated successfully.");
+      }catch(e: any){
+        spinner.fail('Update failed');
+        throw e;
+      }
+    }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
+      const spinner = createOra('Fetching...').start();
+      const responseData = await getActivePublishes();
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+    }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
+      const spinner = createOra('Fetching...').start();
+      const responseData = await getPublisDetailById(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+    } 
+    else {
+      const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
+      console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
     }
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-mark-as-rc`) {
-    const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: true });
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: response,
-    });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`) {
-    const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: false });
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: response,
-    });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-settings-autopublish`) {
-    const publishProfileDetails = await getPublishProfileDetailById(params);
-    const response = await switchPublishProfileAutoPublishSettings({ ...params, currentProfileSettings: publishProfileDetails.profileSettings });
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: response,
-    });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`) {
-    const spinner = createOra('Fetching...').start();
-    const variableGroups = await getPublishVariableGroups();
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: variableGroups,
-    });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`) {
-    const spinner = createOra('Fetching...').start();
-    const variables = await getPublishVariableListByGroupId(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: variables.variables,
-    });
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
-    const spinner = createOra('Fetching...').start();
-    const appVersions = await getAppVersions(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: appVersions,
-    });
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
-    const spinner = createOra('Fetching...').start();
-    const appVersion = await getAppVersionDetail(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: appVersion,
-    });
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-update-release-note`){
-    const spinner = createOra('Try to update relase note of the app version').start();
-    try{
-      await setAppVersionReleaseNote(params);
-      spinner.succeed("Release note updated successfully.");
-    }catch(e: any){
-      spinner.fail('Update failed');
-      throw e;
-    }
-  }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
-    const spinner = createOra('Fetching...').start();
-    const responseData = await getActivePublishes();
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: responseData,
-    });
-  }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
-    const spinner = createOra('Fetching...').start();
-    const responseData = await getPublisDetailById(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: responseData,
-    });
-  } 
-  else {
-    const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
-    console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
-  }
 };
 
 const handleBuildCommand = async (command: ProgramCommand, params:any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-build-start`) {
-      //Check optional params if need one of them
-      if (!params.branchId && !params.branch) {
-        console.error('error: You must provide either branchId or branch parameter');
-        process.exit(1);
-      }
-      if (!params.workflowId && !params.workflow) {
-        console.error('error: You must provide either workflowId or workflow parameter');
-        process.exit(1);
-      }
-      const spinner = createOra(`Try to start a new build`).start();
-      try {
-        const responseData = await startBuild(params);
-        commandWriter(CommandTypes.BUILD, {
-          fullCommandName: command.fullCommandName,
-          data: responseData,
-        });
-        spinner.text = `Build added to queue successfully.\n\nTaskId: ${responseData.taskId}\nQueueItemId: ${responseData.queueItemId}`;
-        spinner.succeed();
-      } catch (e) {
-        spinner.fail('Build failed');
-        throw e;
-      }
+    if (!params.branchId && !params.branch) {
+      console.error('error: You must provide either branchId or branch parameter');
+      process.exit(1);
+    }
+    if (!params.workflowId && !params.workflow) {
+      console.error('error: You must provide either workflowId or workflow parameter');
+      process.exit(1);
+    }
+    const spinner = createOra(`Try to start a new build`).start();
+    try {
+      const responseData = await startBuild(params);
+      commandWriter(CommandTypes.BUILD, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+      spinner.text = `Build added to queue successfully.\n\nTaskId: ${responseData.taskId}\nQueueItemId: ${responseData.queueItemId}`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.fail('Build failed');
+      throw e;
+    }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`){
     const spinner = createOra('Fetching...').start();
     const responseData = await getBuildProfiles(params);
@@ -559,11 +561,30 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-create`){
-    const responseData = await createEnvironmentVariable(params as any);
-    commandWriter(CommandTypes.BUILD, {
-      fullCommandName: command.fullCommandName,
-      data: { ...responseData, key: params.key },
-    });
+    const spinner = createOra('Creating environment variable').start();
+    try {
+      if (params.type === 'file') {
+        if (!params.filePath) {
+          spinner.fail('File path is required for file type variables');
+          process.exit(1);
+        }
+        const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+        if (!fs.existsSync(expandedPath)) {
+          spinner.fail('File not exists');
+          process.exit(1);
+        }
+        params.filePath = expandedPath;
+      }
+      const responseData = await createEnvironmentVariable(params as any);
+      spinner.succeed('Environment variable created successfully');
+      commandWriter(CommandTypes.BUILD, {
+        fullCommandName: command.fullCommandName,
+        data: { ...responseData, key: params.key },
+      });
+    } catch (e) {
+      spinner.fail('Failed to create environment variable');
+      throw e;
+    }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-active-list`){
     const spinner = createOra('Fetching...').start();
     const responseData = await getActiveBuilds();
@@ -593,6 +614,11 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
   if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`) {
     const spinner = createOra('Fetching...').start();
     const responseData = await getDistributionProfiles(params);
+    if (!responseData || responseData.length === 0) {
+      spinner.text = 'No distribution profile available';
+      spinner.fail();
+      process.exit(1);
+    }
     spinner.succeed();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
       fullCommandName: command.fullCommandName,
@@ -607,6 +633,13 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
   }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-upload`){
     const spinner = createOra('Try to upload the app').start();
     try {
+      const profiles = await getDistributionProfiles(params);
+      if (!profiles || profiles.length === 0) {
+        spinner.text = 'No distribution profile available';
+        spinner.fail();
+        process.exit(1);
+      }
+
       let fileName = path.basename(params.app);
       let stats = fs.statSync(params.app);
       const uploadResponse = await getTestingDistributionUploadInformation({fileName, fileSize: stats.size, distProfileId: params.distProfileId});
@@ -715,12 +748,23 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
     });
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-download`){
     const p12Certs = await getiOSP12Certificates();
-    const p12Cert = p12Certs?.find((certificate:any) => certificate.id === params.certificateId);
-    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const p12Cert = p12Certs?.find(
+      (certificate: any) => certificate.id === params.certificateId
+    );
+    const downloadPath = path.resolve(
+      (params.path || '').replace('~', `${os.homedir}`)
+    );
     const fileName = p12Cert ? p12Cert.filename : 'download.cer';
-    const spinner = createOra(`Downloading ${p12Cert ? `certificate bundle: ${p12Cert.filename}` : '.cer file'} `).start();
+    const spinner = createOra(
+      `Downloading ${p12Cert ? `certificate bundle: ${p12Cert.filename}` : '.cer file'} `
+    ).start();
     try {
-      await downloadCertificateById(params, downloadPath,fileName, p12Cert ? 'p12': 'csr');
+      await downloadCertificateById(
+        params,
+        downloadPath,
+        fileName,
+        p12Cert ? 'p12' : 'csr'
+      );
       spinner.text = `The file ${fileName} is downloaded successfully under path:\n${downloadPath}`;
       spinner.succeed();
     } catch (e) {
@@ -771,9 +815,10 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
     const spinner = createOra(`Searching file...`).start();
     try {
       const keystoreDetail = await getKeystoreDetailById(params);
-      spinner.text = `Downloading file ${keystoreDetail.fileName}`;
-      await downloadKeystoreById(params, downloadPath, keystoreDetail.fileName);
-      spinner.text = `The file ${keystoreDetail.fileName} is downloaded successfully under path:\n${downloadPath}`;
+      const fileName = keystoreDetail.fileName || `${keystoreDetail.id}.keystore`;
+      spinner.text = `Downloading file ${fileName}`;
+      await downloadKeystoreById(params, downloadPath, fileName);
+      spinner.text = `The file ${fileName} is downloaded successfully under path:\nfile://${downloadPath}`;
       spinner.succeed();
     } catch (e) {
       spinner.text = 'The file could not be downloaded.';
@@ -940,7 +985,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
     } catch (e) {
       spinner.fail('Upload failed');
       throw e;
-    }
+    }  
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-download-link`) {
     const responseData = await getEnterpriseDownloadLink(params);
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
