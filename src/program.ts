@@ -1,8 +1,6 @@
-import { Command } from "commander";
-import { PROGRAM_NAME } from "./constant";
-import { CommandTypes, Commands } from "./core/commands";
-
-const { createCommand } = require("commander");
+import { Command, createCommand } from "commander";
+import { PROGRAM_NAME } from "./constant.js";
+import { CommandTypes, Commands } from "./core/commands.js";
 
 export type ProgramCommand = { fullCommandName: string, isGroupCommand: (commandName: CommandTypes) => boolean,  parent:  Command | null; name: () => string; args: any; opts: () => { [key: string]: any } };
 
@@ -58,8 +56,6 @@ export const createProgram = () => {
   program.option("-i, --interactive", "interactive mode (AppCircle GUI)");
   program.option("-o, --output <type>", "output type (json, plain)", "plain");
   
-  program.executeSubCommand = () => false;
-
   createCommands(program, Commands, actionCb);
 
   program.hook("preAction", (thisCommand: any, actionCommand: any) => {

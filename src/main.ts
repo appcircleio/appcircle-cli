@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 
 import minimist from 'minimist';
-import { createProgram } from './program';
+import { createProgram } from './program.js';
 import axios from 'axios';
-import { runCommand } from './core/command-runner';
-import { runCommandsInteractively } from './core/interactive-runner';
-import { getConsoleOutputType, setConsoleOutputType } from './config';
-import { error } from 'console';
-import { ProgramError } from './core/ProgramError';
-import { PROGRAM_NAME } from './constant';
+import { runCommand } from './core/command-runner.js';
+import { runCommandsInteractively } from './core/interactive-runner.js';
+import { getConsoleOutputType, setConsoleOutputType } from './config.js';
+import { ProgramError } from './core/ProgramError.js';
+import { PROGRAM_NAME } from './constant.js';
 import chalk from 'chalk';
 
 const collectErrorMessageFromData = (data: any) => {
