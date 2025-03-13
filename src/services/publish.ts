@@ -204,3 +204,24 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
       });
     });
   }
+
+  export async function getPublishUploadInformation(options: OptionsType<{ platform: string, fileSize: number; fileName: string; publishProfileId: string }>) {
+
+    const uploadInformationResponse = await appcircleApi.get(`publish/v1/profiles/${options.platform}/${options.publishProfileId}/app-versions?action=uploadInformation&fileSize=${options.fileSize}&fileName=${options.fileName}`,{
+      headers: {
+        ...getHeaders(),
+      },
+    });
+    return uploadInformationResponse.data;
+  }
+
+  export async function commitPublishFileUpload(options: OptionsType<{ platform: string,  fileId: number; fileName: string; publishProfileId: string }>) {
+
+    const commitFileResponse = await appcircleApi.post(`publish/v1/profiles/${options.platform}/${options.publishProfileId}/app-versions?action=commitFileUpload`,{fileId: options.fileId, fileName: options.fileName},{
+      headers: {
+        ...getHeaders(),
+      },
+    });
+    return commitFileResponse.data;
+  }
+  

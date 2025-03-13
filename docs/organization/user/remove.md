@@ -1,6 +1,6 @@
 # `appcircle organization user remove`
 
-Remove user or inivation from organization.
+Remove user or invitation from organization.
 
 ```plaintext
 appcircle organization user remove [options]
