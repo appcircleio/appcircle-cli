@@ -3,10 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import FormData from 'form-data';
 import axios from 'axios';
-import moment from 'moment';
 import { CountriesList, EnvironmentVariableTypes } from '../constant';
 import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
 import { ProgramError } from '../core/ProgramError';
+import os from 'os';
 
 export async function getToken(options: OptionsType<{ pat: string }>) {
   const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, qs.stringify({ pat: options.pat }), {
@@ -136,13 +136,10 @@ export async function uploadArtifact(options: OptionsType<{ message: string; app
 }
 
 export async function uploadArtifactWithSignedUrl(options: OptionsType<{ app: string; signedUrl:string}>) {
-  let stats;
-  try {
-    stats = fs.statSync(options.app);
-  } catch (err) {
-    throw new ProgramError(`File not found: ${options.app}`);
-  }
-  const file = fs.createReadStream(options.app);
+  const expandedPath = path.resolve(options.app.replace('~', os.homedir()));
+  const stats = fs.statSync(expandedPath);
+  const file = fs.createReadStream(expandedPath);
+  
   const uploadResponse = await axios.put(options.signedUrl, file, {
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
