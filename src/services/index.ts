@@ -136,8 +136,20 @@ export async function uploadArtifact(options: OptionsType<{ message: string; app
 }
 
 export async function uploadArtifactWithSignedUrl(options: OptionsType<{ app: string; signedUrl:string}>) {
-  var file = fs.createReadStream(options.app);
-  const uploadResponse = await axios.put(options.signedUrl, file);
+  const stats = await fs.promises.stat(options.app);
+  const file = fs.createReadStream(options.app);
+  
+  const uploadResponse = await axios.put(options.signedUrl, file, {
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity,
+    headers: {
+      'Content-Length': stats.size,
+      'Content-Type': 'application/octet-stream'
+    },
+    transformRequest: [(data) => data],
+    responseType: 'arraybuffer'
+  });
+  
   return uploadResponse;
 }
 
