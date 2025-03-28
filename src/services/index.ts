@@ -136,7 +136,7 @@ export async function uploadArtifact(options: OptionsType<{ message: string; app
 }
 
 export async function uploadArtifactWithSignedUrl(options: OptionsType<{ app: string; signedUrl:string}>) {
-  const stats = fs.statSync(options.app);
+  const stats = await fs.promises.stat(options.app);
   const file = fs.createReadStream(options.app);
   
   const uploadResponse = await axios.put(options.signedUrl, file, {
