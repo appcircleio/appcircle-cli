@@ -641,9 +641,14 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       }
 
       let fileName = path.basename(params.app);
-      let stats = fs.statSync(params.app);
-      const uploadResponse = await getTestingDistributionUploadInformation({fileName, fileSize: stats.size, distProfileId: params.distProfileId});
-      await uploadArtifactWithSignedUrl({app: params.app, signedUrl: uploadResponse.uploadUrl});
+      const expandedPath = path.resolve(params.app.replace('~', os.homedir()));
+      let stats = fs.statSync(expandedPath);
+      const uploadResponse = await getTestingDistributionUploadInformation({
+        fileName,
+        fileSize: stats.size,
+        distProfileId: params.distProfileId,
+      });
+      await uploadArtifactWithSignedUrl({app: expandedPath, signedUrl: uploadResponse.uploadUrl});
       const commitFileResponse = await commitTestingDistributionFileUpload({fileId: uploadResponse.fileId, fileName, distProfileId: params.distProfileId});
       commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
         fullCommandName: command.fullCommandName,
