@@ -640,11 +640,13 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
         process.exit(1);
       }
 
-      const normalizedPath = params.app.startsWith('~') 
-        ? params.app.replace(/^~/, os.homedir())
-        : params.app;
+      let expandedPath = params.app;
       
-      const expandedPath = path.resolve(normalizedPath);
+      if (expandedPath.includes('~')) {
+        expandedPath = expandedPath.replace(/~/g, os.homedir());
+      }
+      
+      expandedPath = path.resolve(expandedPath);
       
       if (!fs.existsSync(expandedPath)) {
         spinner.fail(`File not found: ${params.app}`);
