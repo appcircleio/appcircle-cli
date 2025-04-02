@@ -640,8 +640,18 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
         process.exit(1);
       }
 
-      let fileName = path.basename(params.app);
-      const expandedPath = path.resolve(params.app.replace('~', os.homedir()));
+      const normalizedPath = params.app.startsWith('~') 
+        ? params.app.replace(/^~/, os.homedir())
+        : params.app;
+      
+      const expandedPath = path.resolve(normalizedPath);
+      
+      if (!fs.existsSync(expandedPath)) {
+        spinner.fail(`File not found: ${params.app}`);
+        process.exit(1);
+      }
+
+      let fileName = path.basename(expandedPath);
       let stats = fs.statSync(expandedPath);
       const uploadResponse = await getTestingDistributionUploadInformation({
         fileName,

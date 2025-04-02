@@ -136,9 +136,8 @@ export async function uploadArtifact(options: OptionsType<{ message: string; app
 }
 
 export async function uploadArtifactWithSignedUrl(options: OptionsType<{ app: string; signedUrl:string}>) {
-  const expandedPath = path.resolve(options.app.replace('~', os.homedir()));
-  const stats = fs.statSync(expandedPath);
-  const file = fs.createReadStream(expandedPath);
+  const stats = fs.statSync(options.app);
+  const file = fs.createReadStream(options.app);
   
   const uploadResponse = await axios.put(options.signedUrl, file, {
     maxContentLength: Infinity,
