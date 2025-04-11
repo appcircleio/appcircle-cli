@@ -32,7 +32,7 @@ pipeline {
                 ## Publish the application.
                 publishStatus=0
                 # shellcheck disable=SC2086
-                if ! docker run --rm --env NPM_AUTH_TOKEN=${NPM_AUTH_TOKEN} ac-cli ${npmPublishCommand}; then
+                if ! docker run --rm --env NPM_AUTH_TOKEN=${NPM_AUTH_TOKEN} ac-cli sh -c "npm config set //registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN} && ${npmPublishCommand}"; then
                     echo "Publishing failed"
                     publishStatus=1
                 fi
