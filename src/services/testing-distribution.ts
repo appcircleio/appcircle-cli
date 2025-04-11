@@ -22,6 +22,17 @@ export async function getDistributionProfileById(options: OptionsType<{ distProf
     return distributionProfile.data;
 }
 
+export async function getLatestAppVersionId(options: OptionsType<{ distProfileId: string }>) {
+    const profile = await getDistributionProfileById(options);
+    if (profile && profile.appVersions && profile.appVersions.length > 0) {
+        const sortedVersions = [...profile.appVersions].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        return sortedVersions[0].id;
+    }
+    return null;
+}
+
 export async function updateDistributionProfileSettings(options: OptionsType<{ testingGroupIds: string[]; distProfileId: string }>) {
     const { testingGroupIds, distProfileId } = options;
     const distributionProfile = await appcircleApi.patch(`distribution/v2/profiles/${distProfileId}`, {testingGroupIds}, {
@@ -102,4 +113,17 @@ export async function commitTestingDistributionFileUpload(options: OptionsType<{
     },
   });
   return commitFileResponse.data;
+}
+
+export async function updateTestingDistributionReleaseNotes(options: OptionsType<{ distProfileId: string; versionId: string; message: string }>) {
+  const response = await appcircleApi.patch(
+    `distribution/v1/profiles/${options.distProfileId}/app-versions/${options.versionId}?action=updateMessage`,
+    { message: options.message },
+    {
+      headers: {
+        ...getHeaders(),
+      },
+    }
+  );
+  return response.data;
 }
