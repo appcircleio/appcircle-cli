@@ -109,6 +109,8 @@ import {
   commitPublishFileUpload,
   getEnterpriseUploadInformation,
   commitEnterpriseFileUpload,
+  updateTestingDistributionReleaseNotes,
+  getLatestAppVersionId,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -630,7 +632,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       fullCommandName: command.fullCommandName,
       data: { ...responseData, name: params.name },
     });
-  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-upload`){
+  }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-upload`) {
     const spinner = createOra('Try to upload the app').start();
     try {
       const profiles = await getDistributionProfiles(params);
@@ -661,12 +663,60 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
         distProfileId: params.distProfileId,
       });
       await uploadArtifactWithSignedUrl({app: expandedPath, signedUrl: uploadResponse.uploadUrl});
-      const commitFileResponse = await commitTestingDistributionFileUpload({fileId: uploadResponse.fileId, fileName, distProfileId: params.distProfileId});
+      const commitFileResponse = await commitTestingDistributionFileUpload({
+        fileId: uploadResponse.fileId, 
+        fileName, 
+        distProfileId: params.distProfileId
+      });
+      
       commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
         fullCommandName: command.fullCommandName,
         data: commitFileResponse,
       });
-      spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+      
+      if (params.message) {
+        try {
+          spinner.text = 'Waiting for upload to complete...';
+          
+          let taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
+          while(taskStatus.stateValue === TaskStatus.BEGIN){
+            taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
+            if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
+              spinner.fail('Warning: Upload task failed or was cancelled');
+              break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+          
+          if (taskStatus.stateValue === TaskStatus.COMPLETED) {
+            spinner.text = 'Upload completed. Updating release notes...';
+            
+            const latestVersionId = await getLatestAppVersionId({
+              distProfileId: params.distProfileId
+            });
+            
+            if (latestVersionId) {
+              const cleanMessage = params.message.replace(/^["']|["']$/g, '');
+              
+              await updateTestingDistributionReleaseNotes({
+                distProfileId: params.distProfileId,
+                versionId: latestVersionId,
+                message: cleanMessage
+              });
+              spinner.text = `App uploaded and release notes updated successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+            } else {
+              spinner.text = `App uploaded successfully, but couldn't update release notes (version ID not found).\n\nTaskId: ${commitFileResponse.taskId}`;
+            }
+          } else {
+            spinner.text = `App uploaded successfully, but couldn't update release notes (upload task not completed).\n\nTaskId: ${commitFileResponse.taskId}`;
+          }
+        } catch (error: any) {
+          spinner.fail('Warning: Failed to update release notes');
+          spinner.text = `App uploaded successfully, but couldn't update release notes.\n\nTaskId: ${commitFileResponse.taskId}`;
+        }
+      } else {
+        spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+      }      
       spinner.succeed();
     } catch (e) {
       spinner.fail('Upload failed');
