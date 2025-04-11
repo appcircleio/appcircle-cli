@@ -682,7 +682,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
           while(taskStatus.stateValue === TaskStatus.BEGIN){
             taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
             if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
-              console.warn('Warning: Upload task failed or was cancelled');
+              spinner.fail('Warning: Upload task failed or was cancelled');
               break;
             }
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -711,7 +711,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
             spinner.text = `App uploaded successfully, but couldn't update release notes (upload task not completed).\n\nTaskId: ${commitFileResponse.taskId}`;
           }
         } catch (error: any) {
-          console.warn('Warning: Failed to update release notes:', error.message);
+          spinner.fail('Warning: Failed to update release notes');
           spinner.text = `App uploaded successfully, but couldn't update release notes.\n\nTaskId: ${commitFileResponse.taskId}`;
         }
       } else {
