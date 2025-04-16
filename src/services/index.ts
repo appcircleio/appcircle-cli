@@ -47,7 +47,7 @@ export async function getActiveBuilds() {
 }
 
 export async function startBuild(
-  options: OptionsType<{ profileId: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string }>
+  options: OptionsType<{ profileId: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string, commitHash?: string}>
 ) {
   let branchId = options.branchId || '';
   let workflowId = options.workflowId || '';
@@ -64,10 +64,24 @@ export async function startBuild(
     const workflowIndex = workflowsRes.findIndex((element: { [key: string]: any }) => element.workflowName === options.workflow);
     workflowId = workflowsRes[workflowIndex].id;
   }
+
   if (!commitId) {
     const allCommitsByBranchId = await getCommits({ branchId });
-    commitId = allCommitsByBranchId[0].id;
+    if(options.commitHash)
+    {
+      commitId = allCommitsByBranchId?.find((commit:any) => commit?.hash == options.commitHash)?.id;
+    }
+    else 
+    {
+      commitId = allCommitsByBranchId[0].id;
+    }
+
+    if(!commitId)
+    {
+      throw new ProgramError("Git commit not found.");
+    }
   }
+
   if (!configurationId) {
     const allConfigurations = await getConfigurations({ profileId: options.profileId || '' });
     configurationId = allConfigurations[0].item1.id;

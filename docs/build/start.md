@@ -16,6 +16,7 @@ appcircle build start [options]
   --workflowId <uuid>       Workflow ID
   --branch <string>         Branch Name instead of 'branch ID'
   --workflow <string>       Workflow Name instead of 'workflow ID'
+  --commitHash <string>     Commit Hash instead of 'Commit ID' [Optional]
 ```
 ## Options inherited from parent commands
 
