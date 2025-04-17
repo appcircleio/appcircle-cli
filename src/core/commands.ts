@@ -181,6 +181,16 @@ export const Commands: CommandType[] = [
             params: [],
           },
           {
+            name: 'commitHash',
+            description: "Commit Hash instead of 'Commit ID' [Optional]",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode:true,
+            params: [],
+          },
+          {
             name: 'configurationId',
             description: 'Configuration ID [Optional]',
             type: CommandParameterTypes.SELECT,
