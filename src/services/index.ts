@@ -132,6 +132,38 @@ export async function downloadArtifact(options: OptionsType<{ buildId: string; c
   });
 }
 
+export async function downloadBuildLog(options: OptionsType<{ buildId: string; commitId: string }>, downloadPath: string) {
+  const data = new FormData();
+  data.append('Path', downloadPath);
+  data.append('Build Id', options.buildId);
+  data.append('Commit Id', options.commitId);
+
+  const downloadResponse = await appcircleApi.get(`build/v2/commits/${options.commitId}/builds/${options.buildId}/logs`, {
+    responseType: 'stream',
+    headers: {
+      ...getHeaders(),
+      ...data.getHeaders(),
+    },
+  });
+  return new Promise((resolve, reject) => {
+    const writer = fs.createWriteStream(`${downloadPath}/${options.buildId}-log.txt`);
+    downloadResponse.data.pipe(writer);
+    let error: any = null;
+    writer.on('error', (err) => {
+      error = err;
+      writer.close();
+      reject(err);
+    });
+    writer.on('close', () => {
+      if (!error) {
+        resolve(true);
+      }
+      //no need to call the reject here, as it will have been called in the
+      //'error' stream;
+    });
+  });
+}
+
 export async function uploadArtifact(options: OptionsType<{ message: string; app: string; distProfileId: string }>) {
   const data = new FormData();
   data.append('Message', options.message);

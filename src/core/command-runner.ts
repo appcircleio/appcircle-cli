@@ -27,6 +27,7 @@ import {
   getDistributionProfiles,
   startBuild,
   downloadArtifact,
+  downloadBuildLog,
   uploadArtifact,
   createDistributionProfile,
   getEnvironmentVariableGroups,
@@ -538,6 +539,21 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       spinner.succeed();
     } catch (e) {
       spinner.text = 'The file could not be downloaded.';
+      spinner.fail();
+    }
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`){
+    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const spinner = createOra(`Downloading build log`).start();
+    try {
+      const responseData = await downloadBuildLog(params, downloadPath);
+      commandWriter(CommandTypes.BUILD, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+      spinner.text = `The build log is downloaded successfully under path:\n${downloadPath}/build-log.txt`;
+      spinner.succeed();
+    } catch (e) {
+      spinner.text = 'The build log could not be downloaded.';
       spinner.fail();
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-list`){
