@@ -287,7 +287,7 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'buildId',
-            description: 'Build ID',
+            description: 'Build ID of your profile',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
@@ -328,7 +328,48 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'buildId',
-            description: 'Build ID',
+            description: 'Build ID of your profile',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+          },
+        ],
+      },
+      {
+        command: 'download-log',
+        description: 'Download build log to the given directory on your machine.',
+        params: [
+          {
+            name: 'path',
+            description: '[OPTIONAL] The path for log to be downloaded:',
+            longDescription:'[OPTIONAL] The path for log to be downloaded: (Defaults to the current directory)',
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+          },
+          {
+            name: 'profileId',
+            description: 'Build profile ID',
+            type: CommandParameterTypes.SELECT,
+            requriedForInteractiveMode: true,
+            valueType: 'uuid',
+          },
+          {
+            name: 'branchId',
+            description: 'Branch ID',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'string',
+            requriedForInteractiveMode: true,
+            params: [],
+          },
+          {
+            name: 'commitId',
+            description: 'Commit ID of your build',
+            type: CommandParameterTypes.SELECT,
+            valueType: 'uuid',
+          },
+          {
+            name: 'buildId',
+            description: 'Build ID of your profile',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },

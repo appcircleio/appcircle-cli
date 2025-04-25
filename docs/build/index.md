@@ -19,6 +19,7 @@ appcircle build [command] [options]
 - [`list`](list.md)
 - [`view`](view.md)
 - [`download`](download.md)
+- [`download-log`](download-log.md)
 - [`profile`](profile/index.md)
 - [`variable`](variable/index.md)
 
