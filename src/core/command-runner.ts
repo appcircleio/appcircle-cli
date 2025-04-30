@@ -117,6 +117,7 @@ import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
 import { CURRENT_PARAM_VALUE, PROGRAM_NAME, TaskStatus, UNKNOWN_PARAM_VALUE } from '../constant';
 import { ProgramError } from './ProgramError';
+import { getMaxUploadBytes, GB } from '../utils/size-limit';
 
 const handleConfigCommand = (command: ProgramCommand) => {
   const action = command.name();
@@ -158,7 +159,7 @@ const handleConfigCommand = (command: ProgramCommand) => {
     clearConfigs();
     configWriter({ current: getCurrentConfigVariable() });
     configWriter(getEnviromentsConfigToWriting());
-  } else if (action == 'trust') {
+  } else if (action === 'trust') {
     trustAppcircleCertificate();
   } else {
     throw new ProgramError(`Config command action not found \nRun "${PROGRAM_NAME} config --help" for more information`);
@@ -299,31 +300,65 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
   else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-upload`) {
     const spinner = createOra('Try to upload the app version').start();
     try {
-      let fileName = path.basename(params.app);
-      let stats = fs.statSync(params.app);
+      let expandedPath = params.app;
+      
+      if (expandedPath.includes('~')) {
+        expandedPath = expandedPath.replace(/~/g, os.homedir());
+      }
+      
+      expandedPath = path.resolve(expandedPath);
+      
+      if (!fs.existsSync(expandedPath)) {
+        spinner.fail(`File not found: ${params.app}`);
+        process.exit(1);
+      }
+      
+      let fileName = path.basename(expandedPath);
+      let stats = fs.statSync(expandedPath);
+      const maxBytes = getMaxUploadBytes();
+      if (maxBytes !== null && stats.size > maxBytes) {
+        spinner.fail(`File size ${(stats.size / GB).toFixed(2)} GB exceeds the allowed limit of ${(maxBytes / GB).toFixed(2)} GB.`);
+        process.exit(1);
+      }
       const uploadResponse = await getPublishUploadInformation({fileName, fileSize: stats.size, publishProfileId: params.publishProfileId, platform: params.platform});
-      await uploadArtifactWithSignedUrl({app: params.app, signedUrl: uploadResponse.uploadUrl});
-      const commitFileResponse = await commitPublishFileUpload({fileId: uploadResponse.fileId, fileName, publishProfileId: params.publishProfileId, platform: params.platform});
-      let taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
-      const shouldMarkAsReleaseCandidate = params.markAsRc || false;
-      // Wait for the task to complete
-      while(taskStatus.stateValue === TaskStatus.BEGIN){
-        taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
-        if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
-          spinner.fail('Upload failed: Please make sure that the app version number is unique in selected publish profile.');
+      try {
+        await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
+        const commitFileResponse = await commitPublishFileUpload({fileId: uploadResponse.fileId, fileName, publishProfileId: params.publishProfileId, platform: params.platform});
+        let taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
+        const shouldMarkAsReleaseCandidate = params.markAsRc || false;
+        // Wait for the task to complete
+        while(taskStatus.stateValue === TaskStatus.BEGIN){
+          taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
+          if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
+            spinner.fail('Upload failed: Please make sure that the app version number is unique in selected publish profile.');
+            process.exit(1);
+          }
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        if(shouldMarkAsReleaseCandidate){
+          let appVersionList = await getAppVersions(params);
+          const appVersion = appVersionList.shift();
+          await setAppVersionReleaseCandidateStatus({...params, appVersionId: appVersion.id, releaseCandidate: true});
+          if(params.summary !== undefined && params.summary !== null && params.summary.trim() !== ""){
+            await setAppVersionReleaseNote({ ...params, appVersionId: appVersion.id });
+          }
+        }
+        spinner.text = `App version uploaded ${shouldMarkAsReleaseCandidate ? 'and marked as release candidate' : ''} successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+        spinner.succeed();
+      } catch (uploadError: any) {
+        if (uploadError.response?.data?.message?.includes('The file is too large')) {
+          spinner.fail(`File size exceeds the maximum allowed limit of 3 GB.`);
+          process.exit(1);
+        } else if (uploadError instanceof ProgramError) {
+          spinner.fail(uploadError.message);
+          process.exit(1);
+        } else if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
+          spinner.fail(`API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).`);
           process.exit(1);
         }
+        spinner.fail(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+        throw uploadError; // Re-throw to be caught by the outer catch
       }
-      if(shouldMarkAsReleaseCandidate){
-        let appVersionList = await getAppVersions(params);
-        const appVersion = appVersionList.shift();
-        await setAppVersionReleaseCandidateStatus({...params, appVersionId: appVersion.id, releaseCandidate: true});
-        if(params.summary !== undefined && params.summary !== null && params.summary.trim() !== ""){
-          await setAppVersionReleaseNote({ ...params, appVersionId: appVersion.id });
-        }
-      }
-      spinner.text = `App version uploaded ${shouldMarkAsReleaseCandidate ? 'and marked as release candidate' : ''} successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
-      spinner.succeed();
     } catch (e: any) {
       spinner.fail('Upload failed');
       throw e;
@@ -673,67 +708,88 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
 
       let fileName = path.basename(expandedPath);
       let stats = fs.statSync(expandedPath);
+      const maxBytes = getMaxUploadBytes();
+      if (maxBytes !== null && stats.size > maxBytes) {
+        spinner.fail(`File size ${(stats.size / GB).toFixed(2)} GB exceeds the allowed limit of ${(maxBytes / GB).toFixed(2)} GB.`);
+        process.exit(1);
+      }
       const uploadResponse = await getTestingDistributionUploadInformation({
         fileName,
         fileSize: stats.size,
         distProfileId: params.distProfileId,
       });
-      await uploadArtifactWithSignedUrl({app: expandedPath, signedUrl: uploadResponse.uploadUrl});
-      const commitFileResponse = await commitTestingDistributionFileUpload({
-        fileId: uploadResponse.fileId, 
-        fileName, 
-        distProfileId: params.distProfileId
-      });
       
-      commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
-        fullCommandName: command.fullCommandName,
-        data: commitFileResponse,
-      });
-      
-      if (params.message) {
-        try {
-          spinner.text = 'Waiting for upload to complete...';
-          
-          let taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
-          while(taskStatus.stateValue === TaskStatus.BEGIN){
-            taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
-            if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
-              spinner.fail('Warning: Upload task failed or was cancelled');
-              break;
+      try {
+        await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
+        const commitFileResponse = await commitTestingDistributionFileUpload({
+          fileId: uploadResponse.fileId, 
+          fileName, 
+          distProfileId: params.distProfileId
+        });
+        
+        commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
+          fullCommandName: command.fullCommandName,
+          data: commitFileResponse,
+        });
+        
+        if (params.message) {
+          try {
+            spinner.text = 'Waiting for upload to complete...';
+            
+            let taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
+            while(taskStatus.stateValue === TaskStatus.BEGIN){
+              taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
+              if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
+                spinner.fail('Warning: Upload task failed or was cancelled');
+                break;
+              }
+              await new Promise(resolve => setTimeout(resolve, 2000));
             }
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-          
-          if (taskStatus.stateValue === TaskStatus.COMPLETED) {
-            spinner.text = 'Upload completed. Updating release notes...';
             
-            const latestVersionId = await getLatestAppVersionId({
-              distProfileId: params.distProfileId
-            });
-            
-            if (latestVersionId) {
-              const cleanMessage = params.message.replace(/^["']|["']$/g, '');
+            if (taskStatus.stateValue === TaskStatus.COMPLETED) {
+              spinner.text = 'Upload completed. Updating release notes...';
               
-              await updateTestingDistributionReleaseNotes({
-                distProfileId: params.distProfileId,
-                versionId: latestVersionId,
-                message: cleanMessage
+              const latestVersionId = await getLatestAppVersionId({
+                distProfileId: params.distProfileId
               });
-              spinner.text = `App uploaded and release notes updated successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+              
+              if (latestVersionId) {
+                const cleanMessage = params.message.replace(/^["']|["']$/g, '');
+                
+                await updateTestingDistributionReleaseNotes({
+                  distProfileId: params.distProfileId,
+                  versionId: latestVersionId,
+                  message: cleanMessage
+                });
+                spinner.text = `App uploaded and release notes updated successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+              } else {
+                spinner.text = `App uploaded successfully, but couldn't update release notes (version ID not found).\n\nTaskId: ${commitFileResponse.taskId}`;
+              }
             } else {
-              spinner.text = `App uploaded successfully, but couldn't update release notes (version ID not found).\n\nTaskId: ${commitFileResponse.taskId}`;
+              spinner.text = `App uploaded successfully, but couldn't update release notes (upload task not completed).\n\nTaskId: ${commitFileResponse.taskId}`;
             }
-          } else {
-            spinner.text = `App uploaded successfully, but couldn't update release notes (upload task not completed).\n\nTaskId: ${commitFileResponse.taskId}`;
+          } catch (error: any) {
+            spinner.fail('Warning: Failed to update release notes');
+            spinner.text = `App uploaded successfully, but couldn't update release notes.\n\nTaskId: ${commitFileResponse.taskId}`;
           }
-        } catch (error: any) {
-          spinner.fail('Warning: Failed to update release notes');
-          spinner.text = `App uploaded successfully, but couldn't update release notes.\n\nTaskId: ${commitFileResponse.taskId}`;
+        } else {
+          spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+        }      
+        spinner.succeed();
+      } catch (uploadError: any) {
+        if (uploadError.response?.data?.message?.includes('The file is too large')) {
+          spinner.fail(`File size exceeds the maximum allowed limit of 3 GB.`);
+          process.exit(1);
+        } else if (uploadError instanceof ProgramError) {
+          spinner.fail(uploadError.message);
+          process.exit(1);
+        } else if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
+          spinner.fail(`API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).`);
+          process.exit(1);
         }
-      } else {
-        spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
-      }      
-      spinner.succeed();
+        spinner.fail(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+        throw uploadError;
+      }
     } catch (e) {
       spinner.fail('Upload failed');
       throw e;
@@ -1035,39 +1091,113 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-upload-for-profile`){
     const spinner = createOra('Try to upload the app').start();
     try {
-      let fileName = path.basename(params.app);
-      let stats = fs.statSync(params.app);
+      let expandedPath = params.app;
+      
+      if (expandedPath.includes('~')) {
+        expandedPath = expandedPath.replace(/~/g, os.homedir());
+      }
+      
+      expandedPath = path.resolve(expandedPath);
+      
+      if (!fs.existsSync(expandedPath)) {
+        spinner.fail(`File not found: ${params.app}`);
+        process.exit(1);
+      }
+      
+      let fileName = path.basename(expandedPath);
+      let stats = fs.statSync(expandedPath);
+      const maxBytes = getMaxUploadBytes();
+      if (maxBytes !== null && stats.size > maxBytes) {
+        spinner.fail(`File size ${(stats.size / GB).toFixed(2)} GB exceeds the allowed limit of ${(maxBytes / GB).toFixed(2)} GB.`);
+        process.exit(1);
+      }
       const uploadResponse = await getEnterpriseUploadInformation({fileName, fileSize: stats.size});
-      await uploadArtifactWithSignedUrl({app: params.app, signedUrl: uploadResponse.uploadUrl});
-      const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName, entProfileId: params.entProfileId});
+      try {
+        await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
+        const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName, entProfileId: params.entProfileId});
 
-      commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
-        fullCommandName: command.fullCommandName,
-        data: commitFileResponse,
-      });
-      spinner.text = `App version uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
-      spinner.succeed();
+        commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
+          fullCommandName: command.fullCommandName,
+          data: commitFileResponse,
+        });
+        spinner.text = `App version uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+        spinner.succeed();
+      } catch (uploadError: any) {
+        if (uploadError.response?.data?.message?.includes('The file is too large')) {
+          spinner.fail(`File size exceeds the maximum allowed limit of 3 GB.`);
+          process.exit(1);
+        } else if (uploadError instanceof ProgramError) {
+          spinner.fail(uploadError.message);
+          process.exit(1);
+        } else if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
+          spinner.fail(`API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).`);
+          process.exit(1);
+        }
+        spinner.fail(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+        throw uploadError;
+      }
     } catch (e) {
-      spinner.fail('Upload failed');
+      if (e instanceof ProgramError) {
+        spinner.fail(e.message);
+      } else {
+        spinner.fail('Upload failed');
+      }
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-upload-without-profile`){
     const spinner = createOra('Try to upload the app').start();
     try {
-      let fileName = path.basename(params.app);
-      let stats = fs.statSync(params.app);
+      let expandedPath = params.app;
+      
+      if (expandedPath.includes('~')) {
+        expandedPath = expandedPath.replace(/~/g, os.homedir());
+      }
+      
+      expandedPath = path.resolve(expandedPath);
+      
+      if (!fs.existsSync(expandedPath)) {
+        spinner.fail(`File not found: ${params.app}`);
+        process.exit(1);
+      }
+      
+      let fileName = path.basename(expandedPath);
+      let stats = fs.statSync(expandedPath);
+      const maxBytes = getMaxUploadBytes();
+      if (maxBytes !== null && stats.size > maxBytes) {
+        spinner.fail(`File size ${(stats.size / GB).toFixed(2)} GB exceeds the allowed limit of ${(maxBytes / GB).toFixed(2)} GB.`);
+        process.exit(1);
+      }
       const uploadResponse = await getEnterpriseUploadInformation({fileName, fileSize: stats.size});
-      await uploadArtifactWithSignedUrl({app: params.app, signedUrl: uploadResponse.uploadUrl});
-      const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName});
-      commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
-        fullCommandName: command.fullCommandName,
-        data: commitFileResponse,
-      });
-      spinner.text = `New profile created and app uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
-      spinner.succeed();
+      try {
+        await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
+        const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName});
+        commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
+          fullCommandName: command.fullCommandName,
+          data: commitFileResponse,
+        });
+        spinner.text = `New profile created and app uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+        spinner.succeed();
+      } catch (uploadError: any) {
+        if (uploadError.response?.data?.message?.includes('The file is too large')) {
+          spinner.fail(`File size exceeds the maximum allowed limit of 3 GB.`);
+          process.exit(1);
+        } else if (uploadError instanceof ProgramError) {
+          spinner.fail(uploadError.message);
+          process.exit(1);
+        } else if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
+          spinner.fail(`API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).`);
+          process.exit(1);
+        }
+        spinner.fail(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+        throw uploadError;
+      }
     } catch (e) {
-      spinner.fail('Upload failed');
-      throw e;
+      if (e instanceof ProgramError) {
+        spinner.fail(e.message);
+      } else {
+        spinner.fail('Upload failed');
+      }
+      process.exit(1);
     }  
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-download-link`) {
     const responseData = await getEnterpriseDownloadLink(params);

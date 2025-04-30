@@ -7,6 +7,7 @@ import moment from 'moment';
 import { CountriesList, EnvironmentVariableTypes } from '../constant';
 import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
 import { ProgramError } from '../core/ProgramError';
+import { FileUploadInformation } from '../types/file-upload';
 
 export async function getDistributionProfiles(options: OptionsType = {}) {
     const distributionProfiles = await appcircleApi.get(`distribution/v2/profiles`, {
@@ -95,17 +96,18 @@ export async function removeTesterFromTestingGroup(options: OptionsType<{ tester
       return response.data;
 }
 
-export async function getTestingDistributionUploadInformation(options: OptionsType<{ fileSize: number; fileName: string; distProfileId: string }>) {
-
-  const uploadInformationResponse = await appcircleApi.get(`distribution/v1/profiles/${options.distProfileId}/app-versions?action=uploadInformation&fileSize=${options.fileSize}&fileName=${options.fileName}`,{
-    headers: {
-      ...getHeaders(),
-    },
-  });
-  return uploadInformationResponse.data;
+export async function getTestingDistributionUploadInformation(
+  options: OptionsType<{ fileSize: number; fileName: string; distProfileId: string }>
+): Promise<FileUploadInformation> {
+  const res = await appcircleApi.get<FileUploadInformation>(
+    `distribution/v1/profiles/${options.distProfileId}/app-versions` +
+      `?action=uploadInformation&fileSize=${options.fileSize}&fileName=${options.fileName}`,
+    { headers: getHeaders() }
+  );
+  return res.data;
 }
 
-export async function commitTestingDistributionFileUpload(options: OptionsType<{ fileId: number; fileName: string; distProfileId: string }>) {
+export async function commitTestingDistributionFileUpload(options: OptionsType<{ fileId: string; fileName: string; distProfileId: string }>) {
 
   const commitFileResponse = await appcircleApi.post(`distribution/v1/profiles/${options.distProfileId}/app-versions?action=commitFileUpload`,{fileId: options.fileId, fileName: options.fileName},{
     headers: {
