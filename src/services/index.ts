@@ -7,6 +7,8 @@ import { CountriesList, EnvironmentVariableTypes } from '../constant';
 import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
 import { ProgramError } from '../core/ProgramError';
 import os from 'os';
+import { FileUploadInformation } from '../types/file-upload';
+import { getMaxUploadBytes, GB } from '../utils/size-limit';
 
 export async function getToken(options: OptionsType<{ pat: string }>) {
   const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, qs.stringify({ pat: options.pat }), {
@@ -181,22 +183,52 @@ export async function uploadArtifact(options: OptionsType<{ message: string; app
   return uploadResponse.data;
 }
 
-export async function uploadArtifactWithSignedUrl(options: OptionsType<{ app: string; signedUrl:string}>) {
-  const stats = fs.statSync(options.app);
-  const file = fs.createReadStream(options.app);
+export async function uploadArtifactWithSignedUrl(
+  options: OptionsType<{ app: string; uploadInfo: FileUploadInformation }>
+) {
+  const { app, uploadInfo } = options;
   
-  const uploadResponse = await axios.put(options.signedUrl, file, {
+  if (!uploadInfo || !uploadInfo.uploadUrl) {
+    throw new ProgramError('Invalid upload information received from server');
+  }
+  
+  const stats = fs.statSync(app);
+  const maxBytes = getMaxUploadBytes();
+  if (maxBytes !== null && stats.size > maxBytes) {
+    throw new ProgramError(
+      `File size ${(stats.size / GB).toFixed(2)} GB exceeds the allowed limit of ${(maxBytes / GB).toFixed(2)} GB.`
+    );
+  }
+
+  const { uploadUrl, configuration } = uploadInfo;
+  
+  if (!configuration || !configuration.httpMethod || configuration.httpMethod === 'PUT') {
+    const file = fs.createReadStream(app);
+    return axios.put(uploadUrl, file, {
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      headers: {
+        'Content-Length': stats.size,
+        'Content-Type': 'application/octet-stream',
+      },
+      transformRequest: [(d) => d],
+      responseType: 'arraybuffer',
+    });
+  }
+
+  const form = new FormData();
+  if (configuration.signParameters) {
+    for (const [k, v] of Object.entries(configuration.signParameters)) {
+      form.append(k, v);
+    }
+  }
+  form.append('file', fs.createReadStream(app));
+
+  return axios.post(uploadUrl, form, {
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
-    headers: {
-      'Content-Length': stats.size,
-      'Content-Type': 'application/octet-stream'
-    },
-    transformRequest: [(data) => data],
-    responseType: 'arraybuffer'
+    headers: form.getHeaders(),
   });
-  
-  return uploadResponse;
 }
 
 export async function getEnvironmentVariableGroups(options: OptionsType = {}) {
