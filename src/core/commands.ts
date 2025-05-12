@@ -1714,6 +1714,18 @@ export const Commands: CommandType[] = [
         }],
       },
       {
+        command: 'create-sub',
+        description: 'Create a sub-organization',
+        longDescription: 'Create a new sub-organization under the current organization.',
+        params: [{
+          name: 'name',
+          description: 'Name of the sub-organization',
+          type: CommandParameterTypes.STRING,
+          valueType: 'string',
+          required: true,
+        }],
+      },
+      {
         command: 'user',
         description: 'User management',
         longDescription: 'Organization users management (view, invite, re-invite, remove ).',
