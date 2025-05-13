@@ -547,6 +547,26 @@ export const Commands: CommandType[] = [
                 valueType: 'uuid',
               },
             ],
+          },
+          {
+            command: "download",
+            description: 'Download environment variables as JSON',
+            params: [
+              {
+                name: 'variableGroupId',
+                description: 'Variable Groups ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+              },
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for JSON file to be downloaded',
+                longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+              }
+            ],
           }
         ],
         params: []

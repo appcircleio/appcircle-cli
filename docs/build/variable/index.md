@@ -17,4 +17,5 @@ appcircle build variable [command] [options]
 - [`group`](group/index.md)
 - [`create`](create.md)
 - [`view`](view.md)
+- [`download`](download.md)
 
