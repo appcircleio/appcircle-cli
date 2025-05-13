@@ -69,6 +69,7 @@ import {
   getPublishProfileDetailById,
   getPublishVariableGroups,
   getPublishVariableListByGroupId,
+  uploadPublishEnvironmentVariablesFromFile,
   deletePublishProfile,
   renamePublishProfile,
   getAppVersions,
@@ -443,7 +444,40 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         fullCommandName: command.fullCommandName,
         data: variables.variables,
       });
-    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-upload`) {
+      const spinner = createOra('Loading environment variables from JSON file...').start();
+      try {
+        if (!params.filePath) {
+          spinner.fail('JSON file path is required');
+          process.exit(1);
+        }
+        
+        const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+        
+        if (!fs.existsSync(expandedPath)) {
+          spinner.fail('File not found');
+          process.exit(1);
+        }
+        
+        try {
+          const fileContent = fs.readFileSync(expandedPath, 'utf8');
+          JSON.parse(fileContent);
+        } catch (err) {
+          spinner.fail('Invalid file');
+          process.exit(1);
+        }
+        
+        params.filePath = expandedPath;
+        
+        const responseData = await uploadPublishEnvironmentVariablesFromFile(params as any);
+        if (responseData) {
+          spinner.succeed('Environment variables uploaded successfully');
+        }
+      } catch (e) {
+        spinner.fail('Failed to upload environment variables');
+        throw e;
+      }
+    } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
       const spinner = createOra('Fetching...').start();
       const appVersions = await getAppVersions(params);
       spinner.succeed();
@@ -451,7 +485,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         fullCommandName: command.fullCommandName,
         data: appVersions,
       });
-    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
+    } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
       const spinner = createOra('Fetching...').start();
       const appVersion = await getAppVersionDetail(params);
       spinner.succeed();
@@ -459,7 +493,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         fullCommandName: command.fullCommandName,
         data: appVersion,
       });
-    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-update-release-note`){
+    } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-update-release-note`){
       const spinner = createOra('Try to update relase note of the app version').start();
       try{
         await setAppVersionReleaseNote(params);
@@ -468,7 +502,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         spinner.fail('Update failed');
         throw e;
       }
-    }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
       const spinner = createOra('Fetching...').start();
       const responseData = await getActivePublishes();
       spinner.succeed();
@@ -476,7 +510,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         fullCommandName: command.fullCommandName,
         data: responseData,
       });
-    }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
       const spinner = createOra('Fetching...').start();
       const responseData = await getPublisDetailById(params);
       spinner.succeed();

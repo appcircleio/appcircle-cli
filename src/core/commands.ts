@@ -1482,6 +1482,27 @@ export const Commands: CommandType[] = [
                     required: true
                   }
                 ],
+              },
+              {
+                command: "upload",
+                description: 'Upload publish environment variables from JSON file',
+                longDescription: 'Upload publish environment variables from a JSON file to a variable group',
+                params: [
+                  {
+                    name: 'publishVariableGroupId',
+                    description: 'Variable Group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'JSON file path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true
+                  }
+                ],
               }
             ]
           }

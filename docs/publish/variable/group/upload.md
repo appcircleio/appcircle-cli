@@ -1,22 +1,22 @@
-# `appcircle build variable group upload`
+# `appcircle publish variable group upload`
 
-Upload environment variables from JSON file to a variable group.
+Upload publish environment variables from JSON file to a variable group.
 
 ```plaintext
-appcircle build variable group upload [options]
+appcircle publish variable group upload [options]
 ```
 
 ## Examples
 
 ```plaintext
-$ appcircle build variable group upload --variableGroupId "Variable Group ID" --filePath "/path/to/variables.json"
+$ appcircle publish variable group upload --publishVariableGroupId "Variable Group ID" --filePath "/path/to/variables.json"
 ```
          
 ## Options
 
 ```plaintext
-      --variableGroupId <uuid>  Variable Group ID
-      --filePath <string>       JSON file path
+      --publishVariableGroupId <uuid>  Variable Group ID
+      --filePath <string>             JSON file path
 ```                       
 
 ## Options inherited from parent commands
