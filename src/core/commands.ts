@@ -1481,6 +1481,28 @@ export const Commands: CommandType[] = [
                     required: true
                   }
                 ],
+              },
+              {
+                command: "download",
+                description: 'Download publish environment variables as JSON',
+                longDescription: 'Download publish environment variables as JSON file',
+                params: [
+                  {
+                    name: 'publishVariableGroupId',
+                    description: 'Variable Group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The path for JSON file to be downloaded',
+                    longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                  }
+                ],
               }
             ]
           }
