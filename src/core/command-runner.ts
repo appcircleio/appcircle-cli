@@ -34,6 +34,7 @@ import {
   createEnvironmentVariableGroup,
   getEnvironmentVariables,
   createEnvironmentVariable,
+  uploadEnvironmentVariablesFromFile,
   getEnterpriseProfiles,
   getEnterpriseAppVersions,
   publishEnterpriseAppVersion,
@@ -605,6 +606,41 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       fullCommandName: command.fullCommandName,
       data: { ...responseData, name: params.name },
     });
+  } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-upload`){
+    const spinner = createOra('Loading environment variables from JSON file...').start();
+    try {
+      if (!params.filePath) {
+        spinner.fail('JSON file path is required');
+        process.exit(1);
+      }
+      
+      const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+      
+      if (!fs.existsSync(expandedPath)) {
+        spinner.fail('File not found');
+        process.exit(1);
+      }
+      
+      try {
+        const fileContent = fs.readFileSync(expandedPath, 'utf8');
+        JSON.parse(fileContent);
+      } catch (err) {
+        spinner.fail('Invalid file');
+        process.exit(1);
+      }
+      
+      params.filePath = expandedPath;
+      
+      const responseData = await uploadEnvironmentVariablesFromFile(params as any);
+      spinner.succeed('Environment variables uploaded successfully');
+      commandWriter(CommandTypes.BUILD, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+    } catch (e) {
+      spinner.fail('Failed to upload environment variables');
+      throw e;
+    }
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-view`){
     const spinner = createOra('Fetching...').start();
     const responseData = await getEnvironmentVariables(params);
