@@ -112,12 +112,14 @@ import {
   commitEnterpriseFileUpload,
   updateTestingDistributionReleaseNotes,
   getLatestAppVersionId,
+  getBuildStatusFromQueue,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
 import { CURRENT_PARAM_VALUE, PROGRAM_NAME, TaskStatus, UNKNOWN_PARAM_VALUE } from '../constant';
 import { ProgramError } from './ProgramError';
 import { getMaxUploadBytes, GB } from '../utils/size-limit';
+import chalk from 'chalk';
 
 const handleConfigCommand = (command: ProgramCommand) => {
   const action = command.name();
@@ -500,17 +502,153 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       console.error('error: You must provide either workflowId or workflow parameter');
       process.exit(1);
     }
-    const spinner = createOra(`Try to start a new build`).start();
+    const spinner = createOra(`Starting build...`).start();
     try {
       const responseData = await startBuild(params);
       commandWriter(CommandTypes.BUILD, {
         fullCommandName: command.fullCommandName,
         data: responseData,
       });
-      spinner.text = `Build added to queue successfully.\n\nTaskId: ${responseData.taskId}\nQueueItemId: ${responseData.queueItemId}`;
-      spinner.succeed();
+      
+      spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}\nQueueItemId: ${responseData.queueItemId}`);
+      
+      const progressSpinner = createOra(`Checking build status...`).start();
+      let dots = "";
+      
+      const interval = setInterval(() => {
+        dots = dots.length >= 3 ? "" : dots + ".";
+        progressSpinner.text = chalk.yellow(`Build Running${dots}`);
+      }, 500);
+      
+      let buildCompleted = false;
+      let buildSuccess = false;
+      let retryCount = 0;
+      const maxRetries = 300;
+      
+      try {
+        const taskId = responseData.queueItemId;
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        while (!buildCompleted && retryCount < maxRetries) {
+          try {
+            const queueResponse = await getBuildStatusFromQueue({ taskId });
+            
+            const buildStatus = queueResponse && queueResponse.buildStatus !== undefined ? 
+              queueResponse.buildStatus : null;
+              
+            const buildId = queueResponse && queueResponse.buildId ? 
+              queueResponse.buildId : responseData.buildId;
+            const commitId = queueResponse && queueResponse.commitId ? 
+              queueResponse.commitId : (params.commitId || responseData.commitId);
+            
+            if (buildStatus === null || buildStatus === undefined) {
+              progressSpinner.text = chalk.gray(`Build status is pending...`);
+            } else {
+              switch (buildStatus) {
+                case 0: // SUCCESS
+                  const hasWarning = queueResponse && queueResponse.hasWarning === true;
+                  if (hasWarning) {
+                    progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️`);
+                  } else {
+                    progressSpinner.text = chalk.green(`Build completed successfully ✅`);
+                  }
+                  buildCompleted = true;
+                  buildSuccess = true;
+                  break;
+                case 1: // FAILED
+                  progressSpinner.text = chalk.red(`Build failed ❌`);
+                  buildCompleted = true;
+                  break;
+                case 2: // CANCELED
+                  progressSpinner.text = chalk.hex('#FF8C32')(`Build canceled 🚫`);
+                  buildCompleted = true;
+                  break;
+                case 3: // TIMEOUT
+                  progressSpinner.text = chalk.red(`Build timed out ⏱️`);
+                  buildCompleted = true;
+                  break;
+                case 90: // WAITING
+                  progressSpinner.text = chalk.cyan(`Build waiting in queue ⏳`);
+                  break;
+                case 91: // RUNNING
+                  // Build is running, animation continues
+                  break;
+                case 92: // COMPLETING
+                  progressSpinner.text = chalk.blue(`Build finishing... 🔜`);
+                  break;
+                default:
+                  progressSpinner.text = chalk.gray(`Build status: ${buildStatus}`);
+              }
+            }
+            
+            if (buildStatus !== 91 && retryCount > 5) {
+              buildCompleted = true;
+            }
+          } catch (e) { }
+          
+          if (!buildCompleted) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            retryCount++;
+          }
+        }
+        
+        clearInterval(interval);
+        
+        if (buildCompleted) {
+          if (buildSuccess) {
+            try {
+              const finalStatusResponse = await getBuildStatusFromQueue({ taskId });
+              const hasWarning = finalStatusResponse && finalStatusResponse.hasWarning === true;
+              if (hasWarning) {
+                progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️`);
+                progressSpinner.succeed();
+              } else {
+                progressSpinner.succeed(chalk.green(`Build completed successfully ✅`));
+              }
+            } catch (e) {
+              progressSpinner.succeed(chalk.green(`Build completed successfully ✅`));
+            }
+            
+            await downloadBuildLogs(taskId, params);
+          } else {
+            try {
+              const queueResponse = await getBuildStatusFromQueue({ taskId });
+              const buildStatus = queueResponse && queueResponse.buildStatus !== undefined ? 
+                queueResponse.buildStatus : null;
+              
+              if (buildStatus === null || buildStatus === undefined) {
+                progressSpinner.fail(chalk.red(`Build completed but status information is unavailable.`));
+              } else {
+                switch (buildStatus) {
+                  case 1: // FAILED
+                    progressSpinner.fail(chalk.red(`Build completed, but failed.`));
+                    break;
+                  case 2: // CANCELED
+                    progressSpinner.fail(chalk.hex('#FF8C32')(`Build was canceled.`));
+                    break;
+                  case 3: // TIMEOUT
+                    progressSpinner.fail(chalk.red(`Build timed out.`));
+                    break;
+                  default:
+                    progressSpinner.fail(chalk.red(`Build completed with status code: ${buildStatus}.`));
+                }
+              }
+            } catch (e) {
+              progressSpinner.fail(chalk.red(`Build completed unsuccessfully.`));
+            }
+            
+            await downloadBuildLogs(taskId, params);
+          }
+        } else {
+          progressSpinner.fail(chalk.red(`Build monitoring timed out after ${maxRetries * 3} seconds.`));
+        }
+      } catch (e) {
+        clearInterval(interval);
+        progressSpinner.fail(chalk.red(`Error while monitoring build.`));
+      }
     } catch (e) {
-      spinner.fail('Build failed');
+      spinner.fail('Failed to start build');
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`){
@@ -660,7 +798,6 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
     console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
   }
-
 }
 
 const handleDistributionCommand = async (command: ProgramCommand, params: any) => {
@@ -1211,6 +1348,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
     console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
   }
 }
+
 export const runCommand = async (command: ProgramCommand) => {
   const params = command.opts() as any;
   const commandName = command.name();
@@ -1263,3 +1401,114 @@ export const runCommand = async (command: ProgramCommand) => {
     }
   }
 };
+
+async function downloadBuildLogs(taskId: string, params: any) {
+  const downloadSpinner = createOra("Downloading build logs...").start();
+  
+  try {
+    let downloadPath = "";
+    const homeDir = os.homedir();
+    const downloadsPath = path.join(homeDir, "Downloads");
+    
+    if (fs.existsSync(downloadsPath) && fs.statSync(downloadsPath).isDirectory()) {
+      downloadPath = downloadsPath;
+    } else {
+      downloadPath = process.cwd();
+    }
+    
+    try {
+      const activeBuildsResponse = await getActiveBuilds();
+      
+      const activeBuilds = Array.isArray(activeBuildsResponse) 
+        ? activeBuildsResponse 
+        : (activeBuildsResponse.items || activeBuildsResponse.builds || []);
+      
+      if (!Array.isArray(activeBuilds)) {
+        downloadSpinner.fail(chalk.red("Failed to download build logs: Invalid data format from API"));
+        return;
+      }
+      
+      const activeBuild = activeBuilds.find((build: any) => 
+        build && (build.queueItemId === taskId || build.taskId === taskId));
+      
+      if (activeBuild) {
+        downloadSpinner.text = "Waiting for build logs to be prepared...";
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        let logDownloaded = false;
+        let retryLogCount = 0;
+        const maxLogRetries = 3;
+        
+        while (!logDownloaded && retryLogCount < maxLogRetries) {
+          try {
+            await downloadBuildLog({
+              commitId: activeBuild.commitId,
+              buildId: activeBuild.id
+            }, downloadPath);
+            
+            logDownloaded = true;
+            downloadSpinner.succeed(chalk.green(`Build logs downloaded successfully: ${downloadPath}/${activeBuild.id}-log.txt`));
+          } catch (logError) {
+            if (retryLogCount < maxLogRetries - 1) {
+              downloadSpinner.text = `Failed to download logs, retrying... (${retryLogCount + 1}/${maxLogRetries})`;
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              retryLogCount++;
+            } else {
+              downloadSpinner.fail(chalk.red("Failed to download build logs."));
+              return;
+            }
+          }
+        }
+        return;
+      }
+      
+      if (params.commitId) {
+        const commitBuildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
+        
+        const commitBuilds = commitBuildsResponse && commitBuildsResponse.builds 
+          ? commitBuildsResponse.builds 
+          : (Array.isArray(commitBuildsResponse) ? commitBuildsResponse : []);
+          
+        if (commitBuilds && commitBuilds.length > 0) {
+          const latestBuild = commitBuilds[0];
+          
+          downloadSpinner.text = "Waiting for build logs to be prepared...";
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          let logDownloaded = false;
+          let retryLogCount = 0;
+          const maxLogRetries = 3;
+          
+          while (!logDownloaded && retryLogCount < maxLogRetries) {
+            try {
+              await downloadBuildLog({
+                commitId: params.commitId,
+                buildId: latestBuild.id
+              }, downloadPath);
+              
+              logDownloaded = true;
+              downloadSpinner.succeed(chalk.green(`Build logs downloaded successfully: ${downloadPath}/${latestBuild.id}-log.txt`));
+            } catch (logError) {
+              if (retryLogCount < maxLogRetries - 1) {
+                downloadSpinner.text = `Failed to download logs, retrying... (${retryLogCount + 1}/${maxLogRetries})`;
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                retryLogCount++;
+              } else {
+                downloadSpinner.fail(chalk.red("Failed to download build logs."));
+                return;
+              }
+            }
+          }
+        } else {
+          downloadSpinner.fail(chalk.red("Build not found"));
+        }
+      } else {
+        downloadSpinner.fail(chalk.yellow("Build information not found - commitId not defined"));
+      }
+    } catch (error) {
+      downloadSpinner.fail(chalk.red("Failed to download build logs: Could not retrieve build information"));
+    }
+  } catch (error) {
+    downloadSpinner.fail(chalk.red("Error while downloading build logs"));
+  }
+}

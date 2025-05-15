@@ -355,3 +355,10 @@ export * from './publish';
 export * from './signing-identity';
 export * from './testing-distribution';
 export * from './enterprise-store';
+
+export async function getBuildStatusFromQueue(options: OptionsType<{ taskId: string }>) {
+  const queueResponse = await appcircleApi.get(`build/v1/queue/${options.taskId}`, {
+    headers: getHeaders(),
+  });
+  return queueResponse.data;
+}
