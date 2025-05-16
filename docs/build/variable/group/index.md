@@ -16,4 +16,5 @@ appcircle build variable group [command] [options]
 
 - [`list`](list.md)
 - [`create`](create.md)
+- [`upload`](upload.md)
 

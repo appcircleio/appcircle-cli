@@ -1,4 +1,3 @@
-
 import fs from 'fs';
 import FormData from 'form-data';
 import { ProgramError } from '../core/ProgramError';
@@ -223,5 +222,25 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
       },
     });
     return commitFileResponse.data;
+  }
+
+  export async function uploadPublishEnvironmentVariablesFromFile(options: OptionsType<{ publishVariableGroupId: string; filePath: string }>) {
+    const form = new FormData();
+    form.append('variableGroupId', options.publishVariableGroupId);
+    form.append('envVariablesFile', fs.createReadStream(options.filePath));
+
+    const response = await appcircleApi.post(
+      `publish/v1/variable-groups/${options.publishVariableGroupId}/upload-variables-file`,
+      form,
+      {
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        headers: {
+          ...getHeaders(),
+          ...form.getHeaders(),
+        },
+      }
+    );
+    return response.data;
   }
   

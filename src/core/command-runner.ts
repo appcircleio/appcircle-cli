@@ -34,6 +34,7 @@ import {
   createEnvironmentVariableGroup,
   getEnvironmentVariables,
   createEnvironmentVariable,
+  uploadEnvironmentVariablesFromFile,
   getEnterpriseProfiles,
   getEnterpriseAppVersions,
   publishEnterpriseAppVersion,
@@ -68,6 +69,7 @@ import {
   getPublishProfileDetailById,
   getPublishVariableGroups,
   getPublishVariableListByGroupId,
+  uploadPublishEnvironmentVariablesFromFile,
   deletePublishProfile,
   renamePublishProfile,
   getAppVersions,
@@ -112,6 +114,9 @@ import {
   commitEnterpriseFileUpload,
   updateTestingDistributionReleaseNotes,
   getLatestAppVersionId,
+  getBuildStatusFromQueue,
+  downloadTaskLog,
+  createSubOrganization
 } from '../services';
 import { appcircleApi, getHeaders, OptionsType } from '../services/api';
 import { commandWriter, configWriter } from './writer';
@@ -261,6 +266,16 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       fullCommandName: command.fullCommandName,
       data: userInfo.roles,
     });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-create-sub`) {
+    const spinner = createOra('Creating sub-organization...').start();
+    try {
+      const response = await createSubOrganization({ name: params.name });
+      const successMessage = `${params.name} sub organization created successfully!`;
+      spinner.succeed(successMessage);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create sub-organization';
+      spinner.fail(`Error: ${errorMessage}`);
+    }
   } else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
     console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
@@ -396,102 +411,188 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       throw error;
     }
   }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-download`) {
-    let spinner = createOra('Fetching app version download link').start();
-    try {
-      let downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
-      const responseData = await getAppVersionDownloadLink(params);
-      const appVersions = await getAppVersions(params);
-      const appVersion = appVersions.find((appVersion: any) => appVersion.id === params.appVersionId);
-      if (!appVersion) {
-        spinner.fail();
-        throw new Error('App version not found');
+      let spinner = createOra('Fetching app version download link').start();
+      try {
+        let downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+        const responseData = await getAppVersionDownloadLink(params);
+        const appVersions = await getAppVersions(params);
+        const appVersion = appVersions.find((appVersion: any) => appVersion.id === params.appVersionId);
+        if (!appVersion) {
+          spinner.fail();
+          throw new Error('App version not found');
+        }
+        spinner.text = `App version download link fetched successfully.`;
+        spinner.text = `Try to download the app version.`;
+        downloadPath = path.join(downloadPath, appVersion.fileName);
+        await downloadAppVersion({ url: responseData, path:downloadPath });
+        spinner.text = `App version downloaded successfully.\n\nDownload Path: ${downloadPath}`; 
+        spinner.succeed();
+      } catch (e: any) {
+        spinner.fail('Process failed');
+        throw e;
       }
-      spinner.text = `App version download link fetched successfully.`;
-      spinner.text = `Try to download the app version.`;
-      downloadPath = path.join(downloadPath, appVersion.fileName);
-      await downloadAppVersion({ url: responseData, path:downloadPath });
-      spinner.text = `App version downloaded successfully.\n\nDownload Path: ${downloadPath}`; 
-      spinner.succeed();
-    } catch (e: any) {
-      spinner.fail('Process failed');
-      throw e;
-    }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-mark-as-rc`) {
-    const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: true });
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: response,
-    });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`) {
-    const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: false });
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: response,
-    });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-settings-autopublish`) {
-    const publishProfileDetails = await getPublishProfileDetailById(params);
-    const response = await switchPublishProfileAutoPublishSettings({ ...params, currentProfileSettings: publishProfileDetails.profileSettings });
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: response,
-    });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`) {
-    const spinner = createOra('Fetching...').start();
-    const variableGroups = await getPublishVariableGroups();
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: variableGroups,
-    });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`) {
-    const spinner = createOra('Fetching...').start();
-    const variables = await getPublishVariableListByGroupId(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: variables.variables,
-    });
-    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
-    const spinner = createOra('Fetching...').start();
-    const appVersions = await getAppVersions(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: appVersions,
-    });
-    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
-    const spinner = createOra('Fetching...').start();
-    const appVersion = await getAppVersionDetail(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: appVersion,
-    });
-    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-update-release-note`){
-    const spinner = createOra('Try to update relase note of the app version').start();
+      const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: true });
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: response,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`) {
+      const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: false });
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: response,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-settings-autopublish`) {
+      const publishProfileDetails = await getPublishProfileDetailById(params);
+      const response = await switchPublishProfileAutoPublishSettings({ ...params, currentProfileSettings: publishProfileDetails.profileSettings });
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: response,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`) {
+      const spinner = createOra('Fetching...').start();
+      const variableGroups = await getPublishVariableGroups();
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: variableGroups,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`) {
+      const spinner = createOra('Fetching...').start();
+      const variables = await getPublishVariableListByGroupId(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: variables.variables,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-upload`) {
+      const spinner = createOra('Loading environment variables from JSON file...').start();
+      try {
+        if (!params.filePath) {
+          spinner.fail('JSON file path is required');
+          process.exit(1);
+        }
+        
+        const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+        
+        if (!fs.existsSync(expandedPath)) {
+          spinner.fail('File not found');
+          process.exit(1);
+        }
+        
+        try {
+          const fileContent = fs.readFileSync(expandedPath, 'utf8');
+          JSON.parse(fileContent);
+        } catch (err) {
+          spinner.fail('Invalid file');
+          process.exit(1);
+        }
+        
+        params.filePath = expandedPath;
+        
+        const responseData = await uploadPublishEnvironmentVariablesFromFile(params as any);
+        if (responseData) {
+          spinner.succeed('Environment variables uploaded successfully');
+        }
+      } catch (e) {
+        spinner.fail('Failed to upload environment variables');
+        throw e;
+      }
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-download`) {
+      const spinner = createOra('Downloading publish environment variables...').start();
+      try {
+        const variableGroups = await getPublishVariableGroups();
+        const variableGroup = variableGroups.find((group: any) => group.id === params.publishVariableGroupId);
+        
+        if (!variableGroup) {
+          spinner.fail(`Variable group with ID ${params.publishVariableGroupId} not found`);
+          throw new Error(`Variable group not found`);
+        }
+        
+        const variables = await getPublishVariableListByGroupId(params);
+        
+        let formattedVariables = variables.variables.map((variable: any) => ({
+          key: variable.key,
+          value: variable.value,
+          isSecret: variable.isSecret,
+          isFile: variable.isFile || false,
+          id: variable.key
+        }));
+        
+        formattedVariables.sort((a: any, b: any) => {
+          const aKey = a.key;
+          const bKey = b.key;
+          return bKey.localeCompare(aKey);
+        });
+        
+        const timestamp = Date.now();
+        const fileName = `${variableGroup.name}_${timestamp}.json`;
+        
+        let filePath = params.path || process.cwd();
+        
+        if (filePath.includes('~')) {
+          filePath = filePath.replace(/~/g, os.homedir());
+        }
+        
+        filePath = path.resolve(filePath);
+        
+        if (!fs.existsSync(filePath)) {
+          fs.mkdirSync(filePath, { recursive: true });
+        }
+        
+        if (fs.statSync(filePath).isDirectory()) {
+          filePath = path.join(filePath, fileName);
+        }
+        
+        fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
+        
+        spinner.succeed(`Publish environment variables downloaded successfully to ${filePath}`);
+      } catch (e) {
+        spinner.fail('Failed to download publish environment variables');
+        throw e;
+      }
+    } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
+      const spinner = createOra('Fetching...').start();
+      const appVersions = await getAppVersions(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: appVersions,
+      });
+    } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
+      const spinner = createOra('Fetching...').start();
+      const appVersion = await getAppVersionDetail(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: appVersion,
+      });
+    } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-update-release-note`){
+      const spinner = createOra('Try to update relase note of the app version').start();
       try{
-      await setAppVersionReleaseNote(params);
-      spinner.succeed("Release note updated successfully.");
+        await setAppVersionReleaseNote(params);
+        spinner.succeed("Release note updated successfully.");
       }catch(e: any){
-      spinner.fail('Update failed');
-      throw e;
-    }
-    }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
-    const spinner = createOra('Fetching...').start();
-    const responseData = await getActivePublishes();
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: responseData,
-    });
-    }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
-    const spinner = createOra('Fetching...').start();
-    const responseData = await getPublisDetailById(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: responseData,
-    });
+        spinner.fail('Update failed');
+        throw e;
+      }
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
+      const spinner = createOra('Fetching...').start();
+      const responseData = await getActivePublishes();
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
+      const spinner = createOra('Fetching...').start();
+      const responseData = await getPublisDetailById(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
     } 
     else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
@@ -509,17 +610,148 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       console.error('error: You must provide either workflowId or workflow parameter');
       process.exit(1);
     }
-    const spinner = createOra(`Try to start a new build`).start();
+    const spinner = createOra(`Starting build...`).start();
     try {
       const responseData = await startBuild(params);
       commandWriter(CommandTypes.BUILD, {
         fullCommandName: command.fullCommandName,
         data: responseData,
       });
-      spinner.text = `Build added to queue successfully.\n\nTaskId: ${responseData.taskId}\nQueueItemId: ${responseData.queueItemId}`;
-      spinner.succeed();
-          } catch (e) {
-      spinner.fail('Build failed');
+      
+      spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}\nQueueItemId: ${responseData.queueItemId}`);
+      
+      const progressSpinner = createOra(`Checking build status...`).start();
+      let dots = "";
+      
+      const interval = setInterval(() => {
+        dots = dots.length >= 3 ? "" : dots + ".";
+        progressSpinner.text = chalk.yellow(`Build Running${dots}`);
+      }, 500);
+      
+      let buildCompleted = false;
+      let buildSuccess = false;
+      let retryCount = 0;
+      const maxRetries = 300;
+      
+      try {
+        const taskId = responseData.queueItemId;
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        while (!buildCompleted && retryCount < maxRetries) {
+          try {
+            const queueResponse = await getBuildStatusFromQueue({ taskId });
+            
+            const buildStatus = queueResponse && queueResponse.buildStatus !== undefined ? 
+              queueResponse.buildStatus : null;
+            
+            if (buildStatus === null || buildStatus === undefined) {
+              progressSpinner.text = chalk.gray(`Build status is pending...`);
+            } else {
+              switch (buildStatus) {
+                case 0: // SUCCESS
+                  const hasWarning = queueResponse && queueResponse.hasWarning === true;
+                  if (hasWarning) {
+                    progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️`);
+                  } else {
+                    progressSpinner.text = `Build completed successfully ✅`;
+                  }
+                  buildCompleted = true;
+                  buildSuccess = true;
+                  break;
+                case 1: // FAILED
+                  progressSpinner.text = chalk.red(`Build failed ❌`);
+                  buildCompleted = true;
+                  break;
+                case 2: // CANCELED
+                  progressSpinner.text = chalk.hex('#FF8C32')(`Build canceled 🚫`);
+                  buildCompleted = true;
+                  break;
+                case 3: // TIMEOUT
+                  progressSpinner.text = chalk.red(`Build timed out ⏱️`);
+                  buildCompleted = true;
+                  break;
+                case 90: // WAITING
+                  progressSpinner.text = chalk.cyan(`Build waiting in queue ⏳`);
+                  break;
+                case 91: // RUNNING
+                  // Build is running, animation continues
+                  break;
+                case 92: // COMPLETING
+                  progressSpinner.text = chalk.blue(`Build finishing... 🔜`);
+                  break;
+                default:
+                  progressSpinner.text = chalk.gray(`Build status: ${buildStatus}`);
+              }
+            }
+            
+            if (buildStatus !== 91 && retryCount > 5) {
+              buildCompleted = true;
+            }
+          } catch (e) { }
+          
+          if (!buildCompleted) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            retryCount++;
+          }
+        }
+        
+        clearInterval(interval);
+        
+        if (buildCompleted) {
+          if (buildSuccess) {
+            try {
+              const finalStatusResponse = await getBuildStatusFromQueue({ taskId });
+              const hasWarning = finalStatusResponse && finalStatusResponse.hasWarning === true;
+              if (hasWarning) {
+                progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️`);
+                progressSpinner.succeed();
+              } else {
+                progressSpinner.succeed(`Build completed successfully ✅`);
+              }
+            } catch (e) {
+              progressSpinner.succeed(`Build completed successfully ✅`);
+            }
+            
+            await downloadBuildLogs(taskId, params);
+          } else {
+            try {
+              const queueResponse = await getBuildStatusFromQueue({ taskId });
+              const buildStatus = queueResponse && queueResponse.buildStatus !== undefined ? 
+                queueResponse.buildStatus : null;
+              
+              if (buildStatus === null || buildStatus === undefined) {
+                progressSpinner.fail(chalk.red(`Build completed but status information is unavailable.`));
+              } else {
+                switch (buildStatus) {
+                  case 1: // FAILED
+                    progressSpinner.fail(chalk.red(`Build completed, but failed.`));
+                    break;
+                  case 2: // CANCELED
+                    progressSpinner.fail(chalk.hex('#FF8C32')(`Build was canceled.`));
+                    break;
+                  case 3: // TIMEOUT
+                    progressSpinner.fail(chalk.red(`Build timed out.`));
+                    break;
+                  default:
+                    progressSpinner.fail(chalk.red(`Build completed with status code: ${buildStatus}.`));
+                }
+              }
+            } catch (e) {
+              progressSpinner.fail(chalk.red(`Build completed unsuccessfully.`));
+            }
+            
+            await downloadBuildLogs(taskId, params);
+          }
+        } else {
+          progressSpinner.fail(chalk.red(`Build monitoring timed out after ${maxRetries * 3} seconds.`));
+        }
+      } catch (e) {
+        clearInterval(interval);
+        progressSpinner.fail(chalk.red(`Error while monitoring build.`));
+      }
+    } catch (e) {
+      spinner.fail('Failed to start build');
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`){
@@ -530,7 +762,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`) {
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`){
     const spinner = createOra('Fetching...').start();
     const responseData = await getBranches(params);
     spinner.succeed();
@@ -587,16 +819,76 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`){
     const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
-    const spinner = createOra(`Downloading build log`).start();
+    let spinner = createOra(`Waiting for build logs to be prepared...`).start();
+    
     try {
-      const responseData = await downloadBuildLog(params, downloadPath);
-      commandWriter(CommandTypes.BUILD, {
-        fullCommandName: command.fullCommandName,
-        data: responseData,
-      });
-      spinner.text = `The build log is downloaded successfully under path:\n${downloadPath}/build-log.txt`;
-      spinner.succeed();
+      if (params.taskId) {
+        const MAX_WAIT_TIME = 120000;
+        const startTime = Date.now();
+        let logsAvailable = false;
+        let lastError = null;
+        
+        while (!logsAvailable && (Date.now() - startTime < MAX_WAIT_TIME)) {
+          try {
+            await downloadTaskLog({ taskId: params.taskId }, downloadPath);
+            logsAvailable = true;
+            spinner.text = `The build log is downloaded successfully under path:\n${downloadPath}/build-task-${params.taskId}-log.txt`;
+            spinner.succeed();
+            break;
+          } catch (error) {
+            lastError = error;
+            
+            if (error instanceof Error) {
+              if (error.message === 'No Logs Available') {
+                spinner.text = "Waiting for build logs to be prepared...";
+                
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              } else if (error.message.includes('HTTP error')) {
+                spinner.text = "Waiting for build logs to be prepared...";
+                
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              } else {
+                break;
+              }
+            } else {
+              break;
+            }
+          }
+        }
+        
+        if (!logsAvailable) {
+          if (lastError instanceof Error && lastError.message === 'No Logs Available') {
+            spinner.fail(`Logs are not available yet. The build may still be in progress. Please try again later.`);
+          } else if (lastError instanceof Error && lastError.message.includes('HTTP error')) {
+            spinner.fail(`Server error while retrieving logs: ${lastError.message}. Please try again later.`);
+          } else {
+            spinner.fail(`Build logs could not be retrieved after waiting for 2 minutes. Please try again later.`);
+          }
+        }
+      } else if (params.commitId && params.buildId) {
+        spinner.text = "Downloading build log using commit and build IDs...";
+        
+        try {
+          const responseData = await downloadBuildLog({
+            commitId: params.commitId,
+            buildId: params.buildId
+          }, downloadPath);
+          
+          commandWriter(CommandTypes.BUILD, {
+            fullCommandName: command.fullCommandName,
+            data: responseData,
+          });
+          
+          spinner.text = `The build log is downloaded successfully under path:\n${downloadPath}/${params.buildId}-log.txt`;
+          spinner.succeed();
+        } catch (error) {
+          spinner.fail(`Failed to download logs: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      } else {
+        spinner.fail('Required parameters missing. Please provide either taskId or both commitId and buildId.');
+      }
     } catch (e) {
+      console.error(e);
       spinner.text = 'The build log could not be downloaded.';
       spinner.fail();
     }
@@ -614,6 +906,41 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       fullCommandName: command.fullCommandName,
       data: { ...responseData, name: params.name },
     });
+  } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-upload`){
+    const spinner = createOra('Loading environment variables from JSON file...').start();
+    try {
+      if (!params.filePath) {
+        spinner.fail('JSON file path is required');
+        process.exit(1);
+      }
+      
+      const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+      
+      if (!fs.existsSync(expandedPath)) {
+        spinner.fail('File not found');
+        process.exit(1);
+      }
+      
+      try {
+        const fileContent = fs.readFileSync(expandedPath, 'utf8');
+        JSON.parse(fileContent);
+      } catch (err) {
+        spinner.fail('Invalid file');
+        process.exit(1);
+      }
+      
+      params.filePath = expandedPath;
+      
+      const responseData = await uploadEnvironmentVariablesFromFile(params as any);
+      spinner.succeed('Environment variables uploaded successfully');
+      commandWriter(CommandTypes.BUILD, {
+        fullCommandName: command.fullCommandName,
+        data: responseData,
+      });
+    } catch (e) {
+      spinner.fail('Failed to upload environment variables');
+      throw e;
+    }
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-view`){
     const spinner = createOra('Fetching...').start();
     const responseData = await getEnvironmentVariables(params);
@@ -622,6 +949,57 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
+  } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-download`){
+    const spinner = createOra('Downloading environment variables...').start();
+    try {
+      const variableGroups = await getEnvironmentVariableGroups();
+      const variableGroup = variableGroups.find((group: any) => group.id === params.variableGroupId);
+      
+      if (!variableGroup) {
+        spinner.fail(`Variable group with ID ${params.variableGroupId} not found`);
+        throw new Error(`Variable group not found`);
+      }
+      
+      const responseData = await getEnvironmentVariables(params);
+      
+      let formattedVariables = responseData.map((variable: any) => ({
+        key: variable.key,
+        value: variable.value,
+        isSecret: variable.isSecret,
+        isFile: variable.isFile || false,
+        id: variable.key
+      }));
+      
+      formattedVariables.sort((a: any, b: any) => {
+        const aKey = a.key;
+        const bKey = b.key;
+        return bKey.localeCompare(aKey);
+      });
+      
+      const timestamp = Date.now();
+      const fileName = `${variableGroup.name}_${timestamp}.json`;
+      let filePath = params.path || process.cwd();
+      
+      if (filePath.includes('~')) {
+        filePath = filePath.replace(/~/g, os.homedir());
+      }
+      
+      filePath = path.resolve(filePath);
+
+      if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(filePath, { recursive: true });
+      }
+
+      if (fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(filePath, fileName);
+      }
+      
+      fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
+      spinner.succeed(`Environment variables downloaded successfully to ${filePath}`);
+    } catch (e) {
+      spinner.fail('Failed to download environment variables');
+      throw e;
+    }
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-create`){
     const spinner = createOra('Creating environment variable').start();
     try {
@@ -669,7 +1047,6 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
     console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
   }
-
 }
 
 const handleDistributionCommand = async (command: ProgramCommand, params: any) => {
@@ -1571,3 +1948,92 @@ export const runCommand = async (command: ProgramCommand) => {
     }
   }
 };
+
+async function downloadBuildLogs(taskId: string, params: any) {
+  let downloadSpinner = createOra("Waiting for build logs to be prepared...").start();
+  
+  try {
+    let downloadPath = "";
+    const homeDir = os.homedir();
+    const downloadsPath = path.join(homeDir, "Downloads");
+    
+    if (fs.existsSync(downloadsPath) && fs.statSync(downloadsPath).isDirectory()) {
+      downloadPath = downloadsPath;
+    } else {
+      downloadPath = process.cwd();
+    }
+    
+    // Download logs directly using the task ID with the new endpoint
+    const MAX_WAIT_TIME = 120000; // 2 minutes in milliseconds
+    const startTime = Date.now();
+    let logsAvailable = false;
+    let lastError = null;
+    
+    while (!logsAvailable && (Date.now() - startTime < MAX_WAIT_TIME)) {
+      try {
+        await downloadTaskLog({ taskId }, downloadPath);
+        logsAvailable = true;
+        downloadSpinner.succeed(`Build logs downloaded successfully: ${downloadPath}/build-task-${taskId}-log.txt`);
+      } catch (error) {
+        lastError = error;
+        
+        if (error instanceof Error) {
+          if (error.message === 'No Logs Available') {
+            const elapsedTime = Math.round((Date.now() - startTime) / 1000);
+            const remainingTime = Math.round((MAX_WAIT_TIME - (Date.now() - startTime)) / 1000);
+            
+            // Keep the spinner running with the original message
+            downloadSpinner.text = "Waiting for build logs to be prepared...";
+            
+            // Wait 5 seconds before retrying
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          } else if (error.message.includes('HTTP error')) {
+            const elapsedTime = Math.round((Date.now() - startTime) / 1000);
+            const remainingTime = Math.round((MAX_WAIT_TIME - (Date.now() - startTime)) / 1000);
+            
+            // Keep the spinner running with the original message
+            downloadSpinner.text = "Waiting for build logs to be prepared...";
+            
+            // Wait 5 seconds before retrying
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          } else {
+            // For other errors, try alternative method
+            break;
+          }
+        } else {
+          // Unknown error type, try alternative method
+          break;
+        }
+      }
+    }
+    
+    // If we've waited the maximum time and still don't have logs
+    if (!logsAvailable) {
+      if (lastError instanceof Error && lastError.message === 'No Logs Available') {
+        downloadSpinner.fail(chalk.yellow(`Logs are not available yet. The build may still be in progress. Please try again later.`));
+      } else if (lastError instanceof Error && lastError.message.includes('HTTP error')) {
+        downloadSpinner.fail(chalk.red(`Server error while retrieving logs: ${lastError.message}. Please try again later.`));
+      } else {
+        downloadSpinner.fail(chalk.yellow(`Build logs could not be retrieved after waiting for 2 minutes. Please try again later.`));
+      }
+      
+      // Try the commit/build approach if we have that information
+      if (params.commitId && params.buildId) {
+        downloadSpinner = createOra("Trying alternative download method...").start();
+        
+        try {
+          await downloadBuildLog({
+            commitId: params.commitId,
+            buildId: params.buildId
+          }, downloadPath);
+          
+          downloadSpinner.succeed(`Build logs downloaded successfully using alternative method: ${downloadPath}/${params.buildId}-log.txt`);
+        } catch (error) {
+          downloadSpinner.fail(chalk.red(`Failed to download logs using all available methods. The logs may not be ready yet.`));
+        }
+      }
+    }
+  } catch (error) {
+    downloadSpinner.fail(chalk.red(`Error while downloading build logs: ${error instanceof Error ? error.message : String(error)}`));
+  }
+}
