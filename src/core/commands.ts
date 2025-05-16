@@ -547,6 +547,26 @@ export const Commands: CommandType[] = [
                 valueType: 'uuid',
               },
             ],
+          },
+          {
+            command: "download",
+            description: 'Download environment variables as JSON',
+            params: [
+              {
+                name: 'variableGroupId',
+                description: 'Variable Groups ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+              },
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for JSON file to be downloaded',
+                longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+              }
+            ],
           }
         ],
         params: []
@@ -1459,6 +1479,28 @@ export const Commands: CommandType[] = [
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
+                  }
+                ],
+              },
+              {
+                command: "download",
+                description: 'Download publish environment variables as JSON',
+                longDescription: 'Download publish environment variables as JSON file',
+                params: [
+                  {
+                    name: 'publishVariableGroupId',
+                    description: 'Variable Group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The path for JSON file to be downloaded',
+                    longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
                   }
                 ],
               }

@@ -453,7 +453,60 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         fullCommandName: command.fullCommandName,
         data: variables.variables,
       });
-    }else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
+    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-download`) {
+      const spinner = createOra('Downloading publish environment variables...').start();
+      try {
+        const variableGroups = await getPublishVariableGroups();
+        const variableGroup = variableGroups.find((group: any) => group.id === params.publishVariableGroupId);
+        
+        if (!variableGroup) {
+          spinner.fail(`Variable group with ID ${params.publishVariableGroupId} not found`);
+          throw new Error(`Variable group not found`);
+        }
+        
+        const variables = await getPublishVariableListByGroupId(params);
+        
+        let formattedVariables = variables.variables.map((variable: any) => ({
+          key: variable.key,
+          value: variable.value,
+          isSecret: variable.isSecret,
+          isFile: variable.isFile || false,
+          id: variable.key
+        }));
+        
+        formattedVariables.sort((a: any, b: any) => {
+          const aKey = a.key;
+          const bKey = b.key;
+          return bKey.localeCompare(aKey);
+        });
+        
+        const timestamp = Date.now();
+        const fileName = `${variableGroup.name}_${timestamp}.json`;
+        
+        let filePath = params.path || process.cwd();
+        
+        if (filePath.includes('~')) {
+          filePath = filePath.replace(/~/g, os.homedir());
+        }
+        
+        filePath = path.resolve(filePath);
+        
+        if (!fs.existsSync(filePath)) {
+          fs.mkdirSync(filePath, { recursive: true });
+        }
+        
+        if (fs.statSync(filePath).isDirectory()) {
+          filePath = path.join(filePath, fileName);
+        }
+        
+        fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
+        
+        spinner.succeed(`Publish environment variables downloaded successfully to ${filePath}`);
+      } catch (e) {
+        spinner.fail('Failed to download publish environment variables');
+        throw e;
+      }
+    } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
       const spinner = createOra('Fetching...').start();
       const appVersions = await getAppVersions(params);
       spinner.succeed();
@@ -532,7 +585,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
-  }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`) {
+  }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`){
     const spinner = createOra('Fetching...').start();
     const responseData = await getBranches(params);
     spinner.succeed();
@@ -624,6 +677,57 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
+  } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-download`){
+    const spinner = createOra('Downloading environment variables...').start();
+    try {
+      const variableGroups = await getEnvironmentVariableGroups();
+      const variableGroup = variableGroups.find((group: any) => group.id === params.variableGroupId);
+      
+      if (!variableGroup) {
+        spinner.fail(`Variable group with ID ${params.variableGroupId} not found`);
+        throw new Error(`Variable group not found`);
+      }
+      
+      const responseData = await getEnvironmentVariables(params);
+      
+      let formattedVariables = responseData.map((variable: any) => ({
+        key: variable.key,
+        value: variable.value,
+        isSecret: variable.isSecret,
+        isFile: variable.isFile || false,
+        id: variable.key
+      }));
+      
+      formattedVariables.sort((a: any, b: any) => {
+        const aKey = a.key;
+        const bKey = b.key;
+        return bKey.localeCompare(aKey);
+      });
+      
+      const timestamp = Date.now();
+      const fileName = `${variableGroup.name}_${timestamp}.json`;
+      let filePath = params.path || process.cwd();
+      
+      if (filePath.includes('~')) {
+        filePath = filePath.replace(/~/g, os.homedir());
+      }
+      
+      filePath = path.resolve(filePath);
+
+      if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(filePath, { recursive: true });
+      }
+
+      if (fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(filePath, fileName);
+      }
+      
+      fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
+      spinner.succeed(`Environment variables downloaded successfully to ${filePath}`);
+    } catch (e) {
+      spinner.fail('Failed to download environment variables');
+      throw e;
+    }
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-create`){
     const spinner = createOra('Creating environment variable').start();
     try {

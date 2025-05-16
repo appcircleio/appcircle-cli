@@ -16,4 +16,5 @@ appcircle publish profile variable group [command] [options]
 
 - [`list`](list.md)
 - [`view`](view.md)
+- [`download`](download.md)
 
