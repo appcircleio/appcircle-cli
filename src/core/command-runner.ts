@@ -113,6 +113,7 @@ import {
   updateTestingDistributionReleaseNotes,
   getLatestAppVersionId,
   getBuildStatusFromQueue,
+  downloadTaskLog,
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -551,7 +552,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                   if (hasWarning) {
                     progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️`);
                   } else {
-                    progressSpinner.text = chalk.green(`Build completed successfully ✅`);
+                    progressSpinner.text = `Build completed successfully ✅`;
                   }
                   buildCompleted = true;
                   buildSuccess = true;
@@ -604,10 +605,10 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                 progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️`);
                 progressSpinner.succeed();
               } else {
-                progressSpinner.succeed(chalk.green(`Build completed successfully ✅`));
+                progressSpinner.succeed(`Build completed successfully ✅`);
               }
             } catch (e) {
-              progressSpinner.succeed(chalk.green(`Build completed successfully ✅`));
+              progressSpinner.succeed(`Build completed successfully ✅`);
             }
             
             await downloadBuildLogs(taskId, params);
@@ -716,16 +717,76 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`){
     const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
-    const spinner = createOra(`Downloading build log`).start();
+    let spinner = createOra(`Waiting for build logs to be prepared...`).start();
+    
     try {
-      const responseData = await downloadBuildLog(params, downloadPath);
-      commandWriter(CommandTypes.BUILD, {
-        fullCommandName: command.fullCommandName,
-        data: responseData,
-      });
-      spinner.text = `The build log is downloaded successfully under path:\n${downloadPath}/build-log.txt`;
-      spinner.succeed();
+      if (params.taskId) {
+        const MAX_WAIT_TIME = 120000;
+        const startTime = Date.now();
+        let logsAvailable = false;
+        let lastError = null;
+        
+        while (!logsAvailable && (Date.now() - startTime < MAX_WAIT_TIME)) {
+          try {
+            await downloadTaskLog({ taskId: params.taskId }, downloadPath);
+            logsAvailable = true;
+            spinner.text = `The build log is downloaded successfully under path:\n${downloadPath}/build-task-${params.taskId}-log.txt`;
+            spinner.succeed();
+            break;
+          } catch (error) {
+            lastError = error;
+            
+            if (error instanceof Error) {
+              if (error.message === 'No Logs Available') {
+                spinner.text = "Waiting for build logs to be prepared...";
+                
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              } else if (error.message.includes('HTTP error')) {
+                spinner.text = "Waiting for build logs to be prepared...";
+                
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              } else {
+                break;
+              }
+            } else {
+              break;
+            }
+          }
+        }
+        
+        if (!logsAvailable) {
+          if (lastError instanceof Error && lastError.message === 'No Logs Available') {
+            spinner.fail(`Logs are not available yet. The build may still be in progress. Please try again later.`);
+          } else if (lastError instanceof Error && lastError.message.includes('HTTP error')) {
+            spinner.fail(`Server error while retrieving logs: ${lastError.message}. Please try again later.`);
+          } else {
+            spinner.fail(`Build logs could not be retrieved after waiting for 2 minutes. Please try again later.`);
+          }
+        }
+      } else if (params.commitId && params.buildId) {
+        spinner.text = "Downloading build log using commit and build IDs...";
+        
+        try {
+          const responseData = await downloadBuildLog({
+            commitId: params.commitId,
+            buildId: params.buildId
+          }, downloadPath);
+          
+          commandWriter(CommandTypes.BUILD, {
+            fullCommandName: command.fullCommandName,
+            data: responseData,
+          });
+          
+          spinner.text = `The build log is downloaded successfully under path:\n${downloadPath}/${params.buildId}-log.txt`;
+          spinner.succeed();
+        } catch (error) {
+          spinner.fail(`Failed to download logs: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      } else {
+        spinner.fail('Required parameters missing. Please provide either taskId or both commitId and buildId.');
+      }
     } catch (e) {
+      console.error(e);
       spinner.text = 'The build log could not be downloaded.';
       spinner.fail();
     }
@@ -1403,7 +1464,7 @@ export const runCommand = async (command: ProgramCommand) => {
 };
 
 async function downloadBuildLogs(taskId: string, params: any) {
-  const downloadSpinner = createOra("Downloading build logs...").start();
+  let downloadSpinner = createOra("Waiting for build logs to be prepared...").start();
   
   try {
     let downloadPath = "";
@@ -1416,99 +1477,77 @@ async function downloadBuildLogs(taskId: string, params: any) {
       downloadPath = process.cwd();
     }
     
-    try {
-      const activeBuildsResponse = await getActiveBuilds();
-      
-      const activeBuilds = Array.isArray(activeBuildsResponse) 
-        ? activeBuildsResponse 
-        : (activeBuildsResponse.items || activeBuildsResponse.builds || []);
-      
-      if (!Array.isArray(activeBuilds)) {
-        downloadSpinner.fail(chalk.red("Failed to download build logs: Invalid data format from API"));
-        return;
-      }
-      
-      const activeBuild = activeBuilds.find((build: any) => 
-        build && (build.queueItemId === taskId || build.taskId === taskId));
-      
-      if (activeBuild) {
-        downloadSpinner.text = "Waiting for build logs to be prepared...";
-        await new Promise(resolve => setTimeout(resolve, 5000));
+    // Download logs directly using the task ID with the new endpoint
+    const MAX_WAIT_TIME = 120000; // 2 minutes in milliseconds
+    const startTime = Date.now();
+    let logsAvailable = false;
+    let lastError = null;
+    
+    while (!logsAvailable && (Date.now() - startTime < MAX_WAIT_TIME)) {
+      try {
+        await downloadTaskLog({ taskId }, downloadPath);
+        logsAvailable = true;
+        downloadSpinner.succeed(`Build logs downloaded successfully: ${downloadPath}/build-task-${taskId}-log.txt`);
+      } catch (error) {
+        lastError = error;
         
-        let logDownloaded = false;
-        let retryLogCount = 0;
-        const maxLogRetries = 3;
-        
-        while (!logDownloaded && retryLogCount < maxLogRetries) {
-          try {
-            await downloadBuildLog({
-              commitId: activeBuild.commitId,
-              buildId: activeBuild.id
-            }, downloadPath);
+        if (error instanceof Error) {
+          if (error.message === 'No Logs Available') {
+            const elapsedTime = Math.round((Date.now() - startTime) / 1000);
+            const remainingTime = Math.round((MAX_WAIT_TIME - (Date.now() - startTime)) / 1000);
             
-            logDownloaded = true;
-            downloadSpinner.succeed(chalk.green(`Build logs downloaded successfully: ${downloadPath}/${activeBuild.id}-log.txt`));
-          } catch (logError) {
-            if (retryLogCount < maxLogRetries - 1) {
-              downloadSpinner.text = `Failed to download logs, retrying... (${retryLogCount + 1}/${maxLogRetries})`;
-              await new Promise(resolve => setTimeout(resolve, 3000));
-              retryLogCount++;
-            } else {
-              downloadSpinner.fail(chalk.red("Failed to download build logs."));
-              return;
-            }
-          }
-        }
-        return;
-      }
-      
-      if (params.commitId) {
-        const commitBuildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
-        
-        const commitBuilds = commitBuildsResponse && commitBuildsResponse.builds 
-          ? commitBuildsResponse.builds 
-          : (Array.isArray(commitBuildsResponse) ? commitBuildsResponse : []);
-          
-        if (commitBuilds && commitBuilds.length > 0) {
-          const latestBuild = commitBuilds[0];
-          
-          downloadSpinner.text = "Waiting for build logs to be prepared...";
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          
-          let logDownloaded = false;
-          let retryLogCount = 0;
-          const maxLogRetries = 3;
-          
-          while (!logDownloaded && retryLogCount < maxLogRetries) {
-            try {
-              await downloadBuildLog({
-                commitId: params.commitId,
-                buildId: latestBuild.id
-              }, downloadPath);
-              
-              logDownloaded = true;
-              downloadSpinner.succeed(chalk.green(`Build logs downloaded successfully: ${downloadPath}/${latestBuild.id}-log.txt`));
-            } catch (logError) {
-              if (retryLogCount < maxLogRetries - 1) {
-                downloadSpinner.text = `Failed to download logs, retrying... (${retryLogCount + 1}/${maxLogRetries})`;
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                retryLogCount++;
-              } else {
-                downloadSpinner.fail(chalk.red("Failed to download build logs."));
-                return;
-              }
-            }
+            // Keep the spinner running with the original message
+            downloadSpinner.text = "Waiting for build logs to be prepared...";
+            
+            // Wait 5 seconds before retrying
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          } else if (error.message.includes('HTTP error')) {
+            const elapsedTime = Math.round((Date.now() - startTime) / 1000);
+            const remainingTime = Math.round((MAX_WAIT_TIME - (Date.now() - startTime)) / 1000);
+            
+            // Keep the spinner running with the original message
+            downloadSpinner.text = "Waiting for build logs to be prepared...";
+            
+            // Wait 5 seconds before retrying
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          } else {
+            // For other errors, try alternative method
+            break;
           }
         } else {
-          downloadSpinner.fail(chalk.red("Build not found"));
+          // Unknown error type, try alternative method
+          break;
         }
-      } else {
-        downloadSpinner.fail(chalk.yellow("Build information not found - commitId not defined"));
       }
-    } catch (error) {
-      downloadSpinner.fail(chalk.red("Failed to download build logs: Could not retrieve build information"));
+    }
+    
+    // If we've waited the maximum time and still don't have logs
+    if (!logsAvailable) {
+      if (lastError instanceof Error && lastError.message === 'No Logs Available') {
+        downloadSpinner.fail(chalk.yellow(`Logs are not available yet. The build may still be in progress. Please try again later.`));
+      } else if (lastError instanceof Error && lastError.message.includes('HTTP error')) {
+        downloadSpinner.fail(chalk.red(`Server error while retrieving logs: ${lastError.message}. Please try again later.`));
+      } else {
+        downloadSpinner.fail(chalk.yellow(`Build logs could not be retrieved after waiting for 2 minutes. Please try again later.`));
+      }
+      
+      // Try the commit/build approach if we have that information
+      if (params.commitId && params.buildId) {
+        downloadSpinner = createOra("Trying alternative download method...").start();
+        
+        try {
+          await downloadBuildLog({
+            commitId: params.commitId,
+            buildId: params.buildId
+          }, downloadPath);
+          
+          downloadSpinner.succeed(`Build logs downloaded successfully using alternative method: ${downloadPath}/${params.buildId}-log.txt`);
+        } catch (error) {
+          downloadSpinner.fail(chalk.red(`Failed to download logs using all available methods. The logs may not be ready yet.`));
+        }
+      }
     }
   } catch (error) {
-    downloadSpinner.fail(chalk.red("Error while downloading build logs"));
+    downloadSpinner.fail(chalk.red(`Error while downloading build logs: ${error instanceof Error ? error.message : String(error)}`));
   }
 }
