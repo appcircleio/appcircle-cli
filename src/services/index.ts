@@ -139,8 +139,8 @@ export async function downloadBuildLog(options: OptionsType<{ buildId: string; c
   data.append('Path', downloadPath);
   data.append('Build Id', options.buildId);
   data.append('Commit Id', options.commitId);
-
-  const downloadResponse = await appcircleApi.get(`build/v2/commits/${options.commitId}/builds/${options.buildId}/logs`, {
+  
+  const downloadResponse = await appcircleApi.get(`build/v1/commits/${options.commitId}/builds/${options.buildId}/logs`, {
     responseType: 'stream',
     headers: {
       ...getHeaders(),
@@ -361,4 +361,71 @@ export async function getBuildStatusFromQueue(options: OptionsType<{ taskId: str
     headers: getHeaders(),
   });
   return queueResponse.data;
+}
+
+export async function getBuildStatus(options: OptionsType<{ commitId: string; buildId: string }>) {
+  const statusResponse = await appcircleApi.get(`build/v2/commits/${options.commitId}/builds/${options.buildId}/status`, {
+    headers: getHeaders(),
+  });
+  return statusResponse.data;
+}
+
+export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, downloadPath: string) {
+  try {
+    const downloadResponse = await appcircleApi.get(`build/v1/queue/logs/${options.taskId}`, {
+      responseType: 'stream',
+      headers: getHeaders()
+    });
+    
+    if (downloadResponse.status !== 200) {
+      throw new Error(`HTTP error: ${downloadResponse.status}`);
+    }
+    
+    return new Promise((resolve, reject) => {
+      if (downloadResponse.headers['content-type'] && downloadResponse.headers['content-type'].includes('text/plain')) {
+        let responseText = '';
+        downloadResponse.data.on('data', (chunk: Buffer) => {
+          responseText += chunk.toString('utf8');
+        });
+        
+        downloadResponse.data.on('end', () => {
+          if (responseText.includes('No Logs Available')) {
+            reject(new Error('No Logs Available'));
+          } else if (responseText.trim() === '') {
+            reject(new Error('Empty response'));
+          } else {
+            const writer = fs.createWriteStream(`${downloadPath}/build-task-${options.taskId}-log.txt`);
+            writer.write(responseText);
+            writer.end();
+            resolve(true);
+          }
+        });
+        
+        downloadResponse.data.on('error', (err: any) => {
+          reject(err);
+        });
+      } else {
+        const writer = fs.createWriteStream(`${downloadPath}/build-task-${options.taskId}-log.txt`);
+        downloadResponse.data.pipe(writer);
+        
+        let error: any = null;
+        writer.on('error', (err) => {
+          error = err;
+          writer.close();
+          reject(err);
+        });
+        
+        writer.on('close', () => {
+          if (!error) {
+            resolve(true);
+          }
+        });
+      }
+    });
+  } catch (error: any) {
+    if (error.response && error.response.status) {
+      throw new Error(`HTTP error: ${error.response.status}`);
+    }
+    throw error;
+  }
 }
