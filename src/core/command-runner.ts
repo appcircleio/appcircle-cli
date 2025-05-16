@@ -112,6 +112,7 @@ import {
   commitEnterpriseFileUpload,
   updateTestingDistributionReleaseNotes,
   getLatestAppVersionId,
+  createSubOrganization
 } from '../services';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
@@ -259,6 +260,16 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       fullCommandName: command.fullCommandName,
       data: userInfo.roles,
     });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-create-sub`) {
+    const spinner = createOra('Creating sub-organization...').start();
+    try {
+      const response = await createSubOrganization({ name: params.name });
+      const successMessage = `${params.name} sub organization created successfully!`;
+      spinner.succeed(successMessage);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create sub-organization';
+      spinner.fail(`Error: ${errorMessage}`);
+    }
   } else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
     console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);

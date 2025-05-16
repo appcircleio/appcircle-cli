@@ -209,3 +209,22 @@ export const getOrganizationUserinfo = async (options: OptionsType<{ organizatio
 
   return user;
 };
+
+/**
+ * Creates a sub-organization under the current organization.
+ * 
+ * @param {OptionsType<{ name: string }>} options - Object containing name of the sub-organization to be created.
+ * @return {Promise<any>} The data returned from the creation response.
+ */
+export const createSubOrganization = async (options: OptionsType<{ name: string }>) => {
+  const response = await appcircleApi.post(
+    `identity/v1/organizations/current/sub-organizations`,
+    {
+      name: options.name
+    },
+    {
+      headers: getHeaders(),
+    }
+  );
+  return response.data;
+};
