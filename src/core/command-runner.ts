@@ -118,6 +118,7 @@ import {
   downloadTaskLog,
   createSubOrganization
 } from '../services';
+import { appcircleApi, getHeaders, OptionsType } from '../services/api';
 import { commandWriter, configWriter } from './writer';
 import { trustAppcircleCertificate } from '../security/trust-url-certificate';
 import { CURRENT_PARAM_VALUE, PROGRAM_NAME, TaskStatus, UNKNOWN_PARAM_VALUE } from '../constant';
@@ -391,17 +392,24 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-start`) {
-    const spinner = createOra('Publish flow starting').start();
+    const spinner = createOra('Starting publish flow...').start();
     try {
       const publish = await getPublishByAppVersion(params);
       const firstStep = publish.steps[0];
       const startResponse = await startExistingPublishFlow({ ...params, publishId: firstStep.publishId });
-      commandWriter(CommandTypes.PUBLISH, startResponse);
-      spinner.text = `Publish started successfully.`;
-      spinner.succeed();
+      
+      const publishId = typeof startResponse === 'string' ? startResponse : firstStep.publishId;
+      spinner.succeed(`Publish flow started successfully.\n\nPublishId: ${publishId}`);
+      
+      if (params.platform && params.publishProfileId && params.appVersionId) {
+        await monitorPublishProcess(params);
+      } else {
+        console.log(chalk.yellow('\nInsufficient parameters to monitor publish status. Please provide platform, publishProfileId, and appVersionId for monitoring.'));
+      }
     } catch (error) {
-      spinner.fail('Publish failed');
-    } 
+      spinner.fail('Failed to start publish');
+      throw error;
+    }
   }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-download`) {
       let spinner = createOra('Fetching app version download link').start();
       try {
@@ -423,7 +431,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         spinner.fail('Process failed');
         throw e;
       }
-    } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-mark-as-rc`) {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-mark-as-rc`) {
       const response = await setAppVersionReleaseCandidateStatus({...params, releaseCandidate: true });
       commandWriter(CommandTypes.PUBLISH, {
         fullCommandName: command.fullCommandName,
@@ -587,9 +595,9 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       });
     } 
     else {
-      const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
-      console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
-    }
+    const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
+    console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
+  }
 };
 
 const handleBuildCommand = async (command: ProgramCommand, params:any) => {
@@ -636,11 +644,6 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             
             const buildStatus = queueResponse && queueResponse.buildStatus !== undefined ? 
               queueResponse.buildStatus : null;
-              
-            const buildId = queueResponse && queueResponse.buildId ? 
-              queueResponse.buildId : responseData.buildId;
-            const commitId = queueResponse && queueResponse.commitId ? 
-              queueResponse.commitId : (params.commitId || responseData.commitId);
             
             if (buildStatus === null || buildStatus === undefined) {
               progressSpinner.text = chalk.gray(`Build status is pending...`);
@@ -1593,6 +1596,304 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
     console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
   }
+};
+
+async function downloadPublishStepLog(options: OptionsType<{ 
+  platform: string, 
+  publishProfileId: string, 
+  publishId: string, 
+  stepId: string,
+  stepName?: string 
+}>, downloadPath: string) {
+  const fullUrl = `publish/v1/profiles/${options.platform}/${options.publishProfileId}/publish/${options.publishId}/step/${options.stepId}/logs`;
+  
+  const maxWaitTimeMs = 120000; // 2 minutes timeout
+  const pollingIntervalMs = 10000; // Check every 10 seconds
+  let totalElapsedTimeMs = 0;
+  let isLogReady = false;
+  
+  const stepIdentifier = options.stepName ? `${options.stepName.substring(0, 30)}_${options.stepId.substring(0, 8)}` : options.stepId;
+  const fileName = `publish_${stepIdentifier}_log.txt`;
+  const filePath = path.resolve(downloadPath, fileName);
+  
+  while (!isLogReady && totalElapsedTimeMs < maxWaitTimeMs) {
+    try {
+      const response = await appcircleApi.get(fullUrl, {
+        headers: getHeaders(),
+        responseType: 'text'
+      });
+      
+      if (response.status === 200) {
+        const logContent = response.data;
+        
+        if (!logContent || logContent.trim() === '' || logContent.includes('No Logs Available')) {
+          await new Promise(resolve => setTimeout(resolve, pollingIntervalMs));
+          totalElapsedTimeMs += pollingIntervalMs;
+        } else {
+          fs.writeFileSync(filePath, logContent);
+          isLogReady = true;
+          return filePath;
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, pollingIntervalMs));
+        totalElapsedTimeMs += pollingIntervalMs;
+      }
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        await new Promise(resolve => setTimeout(resolve, pollingIntervalMs));
+        totalElapsedTimeMs += pollingIntervalMs;
+      } else {
+        fs.writeFileSync(filePath, `No logs available for this step.`);
+        return filePath;
+      }
+    }
+  }
+  
+  if (!isLogReady) {
+    fs.writeFileSync(filePath, `No logs available for this step.`);
+  }
+  
+  return filePath;
+}
+
+async function downloadPublishLogs(publishDetail: any, platform: string, publishProfileId: string) {
+  if (!publishDetail || !publishDetail.steps || !publishDetail.steps.length) {
+    return;
+  }
+  
+  const publishId = publishDetail.id;
+  const downloadSpinner = createOra("Downloading publish logs...").start();
+  
+  try {
+    const homeDir = os.homedir();
+    const downloadsPath = path.join(homeDir, "Downloads");
+    const baseDownloadPath = fs.existsSync(downloadsPath) && fs.statSync(downloadsPath).isDirectory() 
+      ? downloadsPath 
+      : process.cwd();
+    
+    const date = new Date().toISOString().replace(/:/g, '-').slice(0, 19);
+    const folderName = `appcircle_publish_logs_${publishId.slice(0, 8)}_${date}`;
+    const publishLogDir = path.join(baseDownloadPath, folderName);
+    
+    if (!fs.existsSync(publishLogDir)) {
+      fs.mkdirSync(publishLogDir, { recursive: true });
+    }
+    
+    const totalSteps = publishDetail.steps.length;
+    
+    let successCount = 0;
+    let failCount = 0;
+    const downloadedFilePaths = [];
+    
+    for (const step of publishDetail.steps) {
+      const stepName = step.name ? step.name.replace(/[^a-zA-Z0-9_-]/g, '_') : 'step';
+      downloadSpinner.text = `Downloading logs for: ${step.name || 'Unnamed Step'}`;
+      
+      try {
+        const filePath = await downloadPublishStepLog(
+          {
+            platform,
+            publishProfileId,
+            publishId,
+            stepId: step.id,
+            stepName: stepName
+          },
+          publishLogDir
+        );
+        
+        if (filePath) {
+          downloadedFilePaths.push(filePath);
+          successCount++;
+        }
+      } catch (error) {
+        failCount++;
+      }
+    }
+    
+    if (successCount === totalSteps) {
+      downloadSpinner.succeed(`Logs downloaded successfully to: ${publishLogDir}`);
+    } else if (successCount > 0) {
+      downloadSpinner.succeed(`Downloaded ${successCount}/${totalSteps} log files to: ${publishLogDir}`);
+    } else {
+      downloadSpinner.fail(`Failed to download logs`);
+    }
+  } catch (error) {
+    downloadSpinner.fail(`Error downloading publish logs`);
+  }
+}
+
+async function checkPublishStatusDirectly(platform: string, publishProfileId: string, appVersionId: string): Promise<{status: number, detail?: any}> {
+  try {
+    const url = `publish/v1/profiles/${platform}/${publishProfileId}/app-versions/${appVersionId}/publish`;
+    
+    const response = await appcircleApi.get(url, {
+      headers: getHeaders(),
+      validateStatus: () => true
+    });
+    
+    if (response.status === 200 && response.data) {
+      return { 
+        status: typeof response.data.status === 'number' ? response.data.status : 99, 
+        detail: response.data
+      };
+    } else {
+      console.log(chalk.yellow(`Could not get publish status. Status code: ${response.status}`));
+      return { status: 99 }; // Unknown status
+    }
+  } catch (error: any) {
+    console.log(chalk.yellow(`Error checking publish status: ${error.message || 'Unknown error'}`));
+    return { status: 99 };
+  }
+}
+
+async function monitorPublishProcess(params: any) {
+  const { platform, publishProfileId, appVersionId } = params;
+  
+  const progressSpinner = createOra(`Checking publish status...`).start();
+  let dots = "";
+  
+  const interval = setInterval(() => {
+    dots = dots.length >= 3 ? "" : dots + ".";
+    progressSpinner.text = chalk.yellow(`Publish Running${dots}`);
+  }, 500);
+  
+  let publishCompleted = false;
+  let publishSuccess = false;
+  let publishStatusHandled = false;
+  let retryCount = 0;
+  const maxRetries = 60; // 10 minute timeout (checking every 10 seconds)
+  
+  try {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    while (!publishCompleted && retryCount < maxRetries) {
+      try {
+        const statusResult = await checkPublishStatusDirectly(platform, publishProfileId, appVersionId);
+        const status = statusResult.status;
+        
+        switch (status) {
+          case 0: // SUCCESS
+            clearInterval(interval);
+            progressSpinner.succeed(chalk.green(`Publish completed successfully ✅`));
+            await handleSuccessfulPublish(params, progressSpinner);
+            publishCompleted = true;
+            publishSuccess = true;
+            publishStatusHandled = true;
+            return;
+            
+          case 1: // FAILED
+            clearInterval(interval);
+            progressSpinner.fail(chalk.red(`Publish failed ❌`));
+            await handleFailedPublish(params, progressSpinner);
+            publishCompleted = true;
+            publishStatusHandled = true;
+            return;
+            
+          case 2: // CANCELLED
+            clearInterval(interval);
+            progressSpinner.fail(chalk.hex('#FF8C32')(`Publish was canceled 🚫`));
+            await handleFailedPublish(params, progressSpinner);
+            publishCompleted = true;
+            publishStatusHandled = true;
+            return;
+            
+          case 3: // TIMEOUT
+            clearInterval(interval);
+            progressSpinner.fail(chalk.red(`Publish timed out ⏱️`));
+            await handleFailedPublish(params, progressSpinner);
+            publishCompleted = true;
+            publishStatusHandled = true;
+            return;
+            
+          case 90: // WAITING
+            progressSpinner.text = chalk.cyan(`Publish waiting in queue ⏳`);
+            break;
+            
+          case 91: // RUNNING
+            // Already showing animation via interval
+            break;
+            
+          case 92: // COMPLETING
+            progressSpinner.text = chalk.blue(`Publish finishing... 🔜`);
+            break;
+            
+          case 99: // UNKNOWN
+            progressSpinner.text = chalk.gray(`Publish status unknown`);
+            break;
+            
+          case 100: // SKIPPED
+            progressSpinner.text = chalk.hex('#9370DB')(`Publish step skipped ⏭️`);
+            // May need special handling, but typically not a final state
+            break;
+            
+          case 200: // NOT STARTED
+            progressSpinner.text = chalk.gray(`Publish has not started yet`);
+            break;
+            
+          case 201: // STOPPED
+            clearInterval(interval);
+            progressSpinner.fail(chalk.hex('#FF8C32')(`Publish was stopped 🛑`));
+            await handleFailedPublish(params, progressSpinner);
+            publishCompleted = true;
+            publishStatusHandled = true;
+            return;
+            
+          case 202: // IN PROGRESS
+            progressSpinner.text = chalk.blue(`Publish in progress...`);
+            break;
+            
+          case 203: // AWAITING RESPONSE
+            progressSpinner.text = chalk.cyan(`Publish awaiting response... ⌛`);
+            break;
+            
+          default:
+            progressSpinner.text = chalk.gray(`Publish status: ${status}`);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 10000)); // Check every 10 seconds
+        retryCount++;
+        
+      } catch (e) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        retryCount++;
+      }
+    }
+    
+    clearInterval(interval);
+    
+    if (!publishCompleted) {
+      progressSpinner.fail(chalk.red(`Publish monitoring timed out after ${maxRetries * 10} seconds.`));
+      console.log(chalk.yellow(`\nThe publish process may still be running. Check status with:`));
+      console.log(`  ${PROGRAM_NAME} publish active-list`);
+    }
+  } catch (e) {
+    clearInterval(interval);
+    progressSpinner.fail(chalk.red(`Error while monitoring publish status.`));
+  }
+}
+
+async function handleSuccessfulPublish(params: any, progressSpinner: any) {
+  try {
+    const publishDetail = await getPublisDetailById(params);
+    await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId);
+  } catch (e) {
+    console.log(chalk.yellow(`\nCould not automatically download logs. You can check details with:`));
+  }
+  
+  console.log(chalk.green(`\nYou can check the publish details with:`));
+  console.log(`  ${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
+}
+
+async function handleFailedPublish(params: any, progressSpinner: any) {
+  try {
+    const publishDetail = await getPublisDetailById(params);
+    await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId);
+  } catch (e) {
+    console.log(chalk.yellow(`\nCould not automatically download logs. You can check details with:`));
+  }
+  
+  console.log(chalk.yellow(`\nView details with:`));
+  console.log(`  ${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
 }
 
 export const runCommand = async (command: ProgramCommand) => {

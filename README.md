@@ -157,6 +157,7 @@ CURL_LOGGING= appcircle
 - Get the workflows of that build profile `appcircle build profile workflows --profileId="YOUR PROFILE ID"`
 - Start a new build using `appcircle build start --profileId="YOUR PROFILE ID" --branch="YOUR BRANCH" --workflow="YOUR WORKFLOW ID"`
 
+> **Note:** When starting a build, logs are automatically downloaded upon completion. You can also manually download logs using `appcircle build download-log --taskId="YOUR_TASK_ID"` or with commit/build IDs.
 #### Build Log Download Improvements
 
 Appcircle CLI includes the following improvements for build log downloading functionality:

@@ -8,12 +8,16 @@ appcircle build download-log [options]
 
 ## Description
 
-This command downloads build logs to your computer. You can download logs using two different methods:
+This command downloads build logs using either a Task ID (preferred) or a Commit ID and Build ID combination. When using the Task ID method, the CLI automatically waits for logs to be ready, checking at 5-second intervals for up to 2 minutes.
 
-1. Using `taskId` (preferred method)
-2. Using `commitId` and `buildId` (alternative method)
+The downloaded log file will be saved as `build-task-{taskId}-log.txt` or `{buildId}-log.txt` depending on the method used.
 
-When downloading logs, the CLI automatically checks if logs are ready at 5-second intervals for up to 2 minutes.
+## Features
+
+- User-friendly animation is displayed while build logs are being prepared
+- Automatically switches to alternative download methods if the primary method fails
+- Logs are saved with descriptive filenames: `build-task-{taskId}-log.txt` or `{buildId}-log.txt`
+- Full file path is displayed to easily find log files
 
 ## Options
 
@@ -26,19 +30,6 @@ When downloading logs, the CLI automatically checks if logs are ready at 5-secon
 
   --buildId <uuid>    [METHOD 2] Build ID
 ```
-
-## Features
-
-- User-friendly animation is displayed while build logs are being prepared
-- Automatically switches to alternative download methods if the primary method fails
-- Logs are saved with descriptive filenames: `build-task-{taskId}-log.txt` or `{buildId}-log.txt`
-- Full file path is displayed to easily find log files
-
-## Options inherited from parent commands
-
-```plaintext
-      --help   Show help for command
-``` 
 
 ## Examples
 
