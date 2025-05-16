@@ -157,6 +157,26 @@ CURL_LOGGING= appcircle
 - Get the workflows of that build profile `appcircle build profile workflows --profileId="YOUR PROFILE ID"`
 - Start a new build using `appcircle build start --profileId="YOUR PROFILE ID" --branch="YOUR BRANCH" --workflow="YOUR WORKFLOW ID"`
 
+#### Build Log Download Improvements
+
+Appcircle CLI includes the following improvements for build log downloading functionality:
+
+- Build logs are automatically downloaded when a build is completed
+- A 2-minute waiting period with 5-second retry intervals is implemented for log files
+- User-friendly animation is displayed: "Waiting for build logs to be prepared..."
+- Support for manual log download with both task ID (`--taskId`) and commit/build ID (`--commitId`/`--buildId`) parameters
+- Automatic fallback to alternative download methods when the primary method fails
+- Log files are saved with descriptive filenames: `build-task-{taskId}-log.txt`
+
+To download build logs:
+```shell
+# Download using Task ID (preferred method)
+appcircle build download-log --taskId="YOUR_TASK_ID"
+
+# Download using Commit ID and Build ID (alternative method)
+appcircle build download-log --commitId="YOUR_COMMIT_ID" --buildId="YOUR_BUILD_ID"
+```
+
 ### Distributing an App via the Appcircle CLI
 
 - Create a distribution profile and [share with the testers](https://docs.appcircle.io/distribute/create-or-select-a-distribution-profile)
