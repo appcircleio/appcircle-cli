@@ -476,6 +476,27 @@ export const Commands: CommandType[] = [
                     valueType: 'string',
                   },
                 ],
+              },
+              {
+                command: "upload",
+                description: 'Upload environment variables from JSON file',
+                longDescription: 'Upload environment variables from a JSON file to a variable group',
+                params: [
+                  {
+                    name: 'variableGroupId',
+                    description: 'Variable Group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'JSON file path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true
+                  }
+                ],
               }
             ]
           },
@@ -1483,9 +1504,9 @@ export const Commands: CommandType[] = [
                 ],
               },
               {
-                command: "download",
-                description: 'Download publish environment variables as JSON',
-                longDescription: 'Download publish environment variables as JSON file',
+                command: "upload",
+                description: 'Upload publish environment variables from JSON file',
+                longDescription: 'Upload publish environment variables from a JSON file to a variable group',
                 params: [
                   {
                     name: 'publishVariableGroupId',
@@ -1495,15 +1516,34 @@ export const Commands: CommandType[] = [
                     required: true
                   },
                   {
-                    name: 'path',
-                    description: '[OPTIONAL] The path for JSON file to be downloaded',
-                    longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                    name: 'filePath',
+                    description: 'JSON file path',
                     type: CommandParameterTypes.STRING,
-                    valueType: 'string',
-                    required: false,
+                    valueType: 'path',
+                    required: true
                   }
                 ],
+              },
+              {
+            command: "download",
+            description: 'Download environment variables as JSON',
+            params: [
+              {
+                name: 'variableGroupId',
+                description: 'Variable Groups ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+              },
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for JSON file to be downloaded',
+                longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
               }
+            ],
+            },
             ]
           }
         ]
