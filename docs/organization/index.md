@@ -15,6 +15,7 @@ appcircle organization [command] [options]
 ## Subcommands
 
 - [`view`](view.md)
+- [`create-sub`](create-sub.md)
 - [`user`](user/index.md)
 - [`role`](role/index.md)
 

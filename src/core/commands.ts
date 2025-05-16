@@ -476,6 +476,27 @@ export const Commands: CommandType[] = [
                     valueType: 'string',
                   },
                 ],
+              },
+              {
+                command: "upload",
+                description: 'Upload environment variables from JSON file',
+                longDescription: 'Upload environment variables from a JSON file to a variable group',
+                params: [
+                  {
+                    name: 'variableGroupId',
+                    description: 'Variable Group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'JSON file path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true
+                  }
+                ],
               }
             ]
           },
@@ -546,6 +567,26 @@ export const Commands: CommandType[] = [
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
+            ],
+          },
+          {
+            command: "download",
+            description: 'Download environment variables as JSON',
+            params: [
+              {
+                name: 'variableGroupId',
+                description: 'Variable Groups ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+              },
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for JSON file to be downloaded',
+                longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+              }
             ],
           }
         ],
@@ -1461,7 +1502,48 @@ export const Commands: CommandType[] = [
                     required: true
                   }
                 ],
+              },
+              {
+                command: "upload",
+                description: 'Upload publish environment variables from JSON file',
+                longDescription: 'Upload publish environment variables from a JSON file to a variable group',
+                params: [
+                  {
+                    name: 'publishVariableGroupId',
+                    description: 'Variable Group ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'JSON file path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true
+                  }
+                ],
+              },
+              {
+            command: "download",
+            description: 'Download environment variables as JSON',
+            params: [
+              {
+                name: 'variableGroupId',
+                description: 'Variable Groups ID',
+                type: CommandParameterTypes.SELECT,
+                valueType: 'uuid',
+              },
+              {
+                name: 'path',
+                description: '[OPTIONAL] The path for JSON file to be downloaded',
+                longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
               }
+            ],
+            },
             ]
           }
         ]
@@ -1711,6 +1793,18 @@ export const Commands: CommandType[] = [
           defaultValue: 'all',
           valueType: 'uuid',
           required: false,
+        }],
+      },
+      {
+        command: 'create-sub',
+        description: 'Create a sub-organization',
+        longDescription: 'Create a new sub-organization under the current organization.',
+        params: [{
+          name: 'name',
+          description: 'Name of the sub-organization',
+          type: CommandParameterTypes.STRING,
+          valueType: 'string',
+          required: true,
         }],
       },
       {

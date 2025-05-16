@@ -256,6 +256,26 @@ export async function getEnvironmentVariables(options: OptionsType<{ variableGro
   return environmentVariables.data;
 }
 
+export async function uploadEnvironmentVariablesFromFile(options: OptionsType<{ variableGroupId: string; filePath: string }>) {
+  const form = new FormData();
+  form.append('variableGroupId', options.variableGroupId);
+  form.append('envVariablesFile', fs.createReadStream(options.filePath));
+
+  const response = await appcircleApi.post(
+    `build/v1/variable-groups/${options.variableGroupId}/upload-variables-file`,
+    form,
+    {
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      headers: {
+        ...getHeaders(),
+        ...form.getHeaders(),
+      },
+    }
+  );
+  return response.data;
+}
+
 async function createTextEnvironmentVariable(options: OptionsType<{ variableGroupId: string; value: string; isSecret: boolean; key: string }>) {
   const response = await appcircleApi.post(
     `build/v1/variable-groups/${options.variableGroupId}/variables`,
