@@ -1,5 +1,8 @@
 # `appcircle build download`
 
+## Description
+Download Artifacts
+
 Download your artifact to the given directory on your machine.
 
 ```plaintext
