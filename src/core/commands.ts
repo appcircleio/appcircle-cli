@@ -144,6 +144,7 @@ export const Commands: CommandType[] = [
       {
         name: 'pat',
         description: 'Personal Access Token',
+        longDescription: 'Your Personal Access Token from Appcircle dashboard',
         type: CommandParameterTypes.STRING,
         valueType: 'string',
       },
@@ -156,7 +157,8 @@ export const Commands: CommandType[] = [
     subCommands: [
       {
         command: 'start',
-        description: 'Start a new build.',
+        description: 'Start a new build',
+        longDescription: 'Trigger a new build using the selected profile, branch, and workflow',
         params: [
           {
             name: 'profileId',
@@ -295,7 +297,7 @@ export const Commands: CommandType[] = [
       },
       {
         command: 'download',
-        description: 'Download your artifact to the given directory on your machine.',
+        description: 'Download Artifacts',
         params: [
           {
             name: 'path',
@@ -336,7 +338,7 @@ export const Commands: CommandType[] = [
       },
       {
         command: 'download-log',
-        description: 'Download build log to the given directory on your machine.',
+        description: 'Download Build Log',
         params: [
           {
             name: 'path',
@@ -497,6 +499,28 @@ export const Commands: CommandType[] = [
                     required: true
                   }
                 ],
+              },
+              {
+                command: "download",
+                description: 'Download Build environment variables as a JSON file',
+                longDescription: 'Download Build environment variables as a JSON file from a variable group',
+                params: [
+                  {
+                    name: 'variableGroupId',
+                    description: 'Variable Groups ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The path for JSON file to be downloaded',
+                    longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                  }
+                ],
               }
             ]
           },
@@ -569,26 +593,6 @@ export const Commands: CommandType[] = [
               },
             ],
           },
-          {
-            command: "download",
-            description: 'Download environment variables as JSON',
-            params: [
-              {
-                name: 'variableGroupId',
-                description: 'Variable Groups ID',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
-              },
-              {
-                name: 'path',
-                description: '[OPTIONAL] The path for JSON file to be downloaded',
-                longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
-                type: CommandParameterTypes.STRING,
-                valueType: 'string',
-                required: false,
-              }
-            ],
-          }
         ],
         params: []
       }
@@ -1476,19 +1480,6 @@ export const Commands: CommandType[] = [
                 longDescription: 'Publish variable group actions',
                 params: [],
               },
-              // {
-              //   command: "create",
-              //   description: 'Create new group',
-              //   longDescription: 'Create a new publish variable group',
-              //   params: [{
-              //     name: 'name',
-              //     description: 'Group name',
-              //     type: CommandParameterTypes.STRING,
-              //     defaultValue: undefined,
-              //     valueType: 'string',
-              //     required: true,
-              //   }],
-              // },
               {
                 command: "view",
                 description: 'View items of group',
@@ -1525,25 +1516,25 @@ export const Commands: CommandType[] = [
                 ],
               },
               {
-            command: "download",
+                command: "download",
             description: 'Download environment variables as JSON',
-            params: [
-              {
-                name: 'variableGroupId',
-                description: 'Variable Groups ID',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
+                params: [
+                  {
+                    name: 'variableGroupId',
+                    description: 'Variable Groups ID',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The path for JSON file to be downloaded',
+                    longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                  }
+                ],
               },
-              {
-                name: 'path',
-                description: '[OPTIONAL] The path for JSON file to be downloaded',
-                longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
-                type: CommandParameterTypes.STRING,
-                valueType: 'string',
-                required: false,
-              }
-            ],
-            },
             ]
           }
         ]
@@ -1779,7 +1770,7 @@ export const Commands: CommandType[] = [
   },
   {
     command: CommandTypes.ORGANIZATION,
-    description: 'Organization management',
+    description: 'Organization Management',
     longDescription: 'Manage organization users, roles, and details.',
     subCommands: [
       {
@@ -1798,7 +1789,7 @@ export const Commands: CommandType[] = [
       {
         command: 'create-sub',
         description: 'Create a sub-organization',
-        longDescription: 'Create a new sub-organization under the current organization.',
+        longDescription: 'Create a new sub-organization under the current organization',
         params: [{
           name: 'name',
           description: 'Name of the sub-organization',
@@ -1810,7 +1801,7 @@ export const Commands: CommandType[] = [
       {
         command: 'user',
         description: 'User management',
-        longDescription: 'Organization users management (view, invite, re-invite, remove ).',
+        longDescription: 'Organization users management (view, invite, re-invite, remove)',
         subCommands: [
           {
             command: 'view',

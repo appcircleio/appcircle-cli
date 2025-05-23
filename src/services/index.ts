@@ -102,68 +102,128 @@ export async function startBuild(
   return buildResponse.data;
 }
 
-export async function downloadArtifact(options: OptionsType<{ buildId: string; commitId: string }>, downloadPath: string) {
-  const data = new FormData();
-  data.append('Path', downloadPath);
-  data.append('Build Id', options.buildId);
-  data.append('Commit Id', options.commitId);
-
-  const downloadResponse = await appcircleApi.get(`build/v2/commits/${options.commitId}/builds/${options.buildId}`, {
-    responseType: 'stream',
-    headers: {
-      ...getHeaders(),
-      ...data.getHeaders(),
-    },
-  });
-  return new Promise((resolve, reject) => {
-    const writer = fs.createWriteStream(`${downloadPath}/artifact.zip`);
-    downloadResponse.data.pipe(writer);
-    let error: any = null;
-    writer.on('error', (err) => {
-      error = err;
-      writer.close();
-      reject(err);
-    });
-    writer.on('close', () => {
-      if (!error) {
-        resolve(true);
+export async function downloadArtifact(options: OptionsType<{ buildId?: string; commitId: string; branchId?: string; profileId?: string }>, downloadPath: string) {
+  try {
+    let latestBuildId = null;
+    
+    if (options.branchId && options.profileId) {
+      latestBuildId = await getLatestBuildId({ 
+        branchId: options.branchId, 
+        profileId: options.profileId 
+      });
+      
+      if (latestBuildId) {
+        options.buildId = latestBuildId;
       }
-      //no need to call the reject here, as it will have been called in the
-      //'error' stream;
-    });
-  });
+    }
+    
+    const response = await appcircleApi.get(
+      `build/v1/builds/${options.commitId}/${options.buildId}/artifact`,
+      {
+        headers: getHeaders(),
+        responseType: 'arraybuffer',
+      }
+    );
+
+    if (response.status === 200) {
+      const artifactPath = path.join(downloadPath, 'artifact.zip');
+      fs.writeFileSync(artifactPath, response.data);
+    } else {
+      throw new Error('Build artifact not found');
+    }
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      throw new Error(`Build artifact not found. No artifact available for latest build ID (${options.buildId}).`);
+    }
+    throw error;
+  }
 }
 
-export async function downloadBuildLog(options: OptionsType<{ buildId: string; commitId: string }>, downloadPath: string) {
+export async function downloadBuildLog(options: OptionsType<{ buildId?: string; commitId: string; branchId?: string; profileId?: string }>, downloadPath: string, fileName?: string) {
+  let buildId = options.buildId;
+  
+  try {
+    // If branchId and profileId are provided, get the latest build ID from API
+    if (options.branchId && options.profileId) {
+      console.log(`Getting latest build ID with Branch and Profile ID...`);
+      const latestBuildId = await getLatestBuildId({ 
+        branchId: options.branchId, 
+        profileId: options.profileId 
+      });
+      
+      if (latestBuildId) {
+        console.log(`Got latest build ID from API: ${latestBuildId}`);
+        buildId = latestBuildId;
+      } else {
+        console.log(`Could not get build ID from API, trying alternative method.`);
+      }
+    }
+    // If buildId is still missing or invalid, try to find it from commit
+    else if (!buildId || buildId === '00000000-0000-0000-0000-000000000000') {
+      console.log(`Invalid build ID, searching for build ID from commit...`);
+      const buildsResponse = await getBuildsOfCommit({ commitId: options.commitId });
+      
+      if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
+        buildId = buildsResponse.builds[0].id;
+        console.log(`Found latest build ID from commit: ${buildId}`);
+      } else {
+        throw new Error(`No builds found for commit ID: ${options.commitId}`);
+      }
+    }
+  } catch (apiError: any) {
+    // If we can't get build ID from API and buildId is missing, throw error
+    if (!buildId) {
+      throw new Error(`Could not get build ID: ${apiError.message}`);
+    }
+    // Continue with existing buildId if available
+    console.log(`API error: ${apiError.message}. Continuing with existing build ID: ${buildId}`);
+  }
+  
   const data = new FormData();
   data.append('Path', downloadPath);
-  data.append('Build Id', options.buildId);
+  data.append('Build Id', buildId);
   data.append('Commit Id', options.commitId);
   
-  const downloadResponse = await appcircleApi.get(`build/v1/commits/${options.commitId}/builds/${options.buildId}/logs`, {
-    responseType: 'stream',
-    headers: {
-      ...getHeaders(),
-      ...data.getHeaders(),
-    },
-  });
-  return new Promise((resolve, reject) => {
-    const writer = fs.createWriteStream(`${downloadPath}/${options.buildId}-log.txt`);
-    downloadResponse.data.pipe(writer);
-    let error: any = null;
-    writer.on('error', (err) => {
-      error = err;
-      writer.close();
-      reject(err);
+  // Endpoint formatını kullan
+  const endpoint = `build/v1/commits/${options.commitId}/builds/${buildId}/logs`;
+  
+  try {
+    const downloadResponse = await appcircleApi.get(endpoint, {
+      responseType: 'text',
+      headers: {
+        ...getHeaders(),
+        ...data.getHeaders(),
+      },
     });
-    writer.on('close', () => {
-      if (!error) {
+
+    // "No Logs Available" içeriyorsa veya boşsa hata ver
+    if (downloadResponse.data && 
+        (downloadResponse.data.includes('No Logs Available') || 
+         downloadResponse.data.trim() === '')) {
+      throw new Error('No Logs Available');
+    }
+    
+    // Geçerli log içeriğimiz varsa dosyaya yazdır
+    const writer = fs.createWriteStream(`${downloadPath}/${fileName || `${buildId}-log.txt`}`);
+    writer.write(downloadResponse.data);
+    writer.end();
+    
+    return new Promise<boolean>((resolve, reject) => {
+      writer.on('finish', () => {
         resolve(true);
-      }
-      //no need to call the reject here, as it will have been called in the
-      //'error' stream;
+      });
+      writer.on('error', (err) => {
+        reject(err);
+      });
     });
-  });
+  } catch (error: any) {
+    if (error.response && error.response.status === 404) {
+      throw new Error('No Logs Available (404)');
+    } else if (error.response && error.response.status) {
+      throw new Error(`HTTP error: ${error.response.status}`);
+    }
+    throw error;
+  }
 }
 
 export async function uploadArtifact(options: OptionsType<{ message: string; app: string; distProfileId: string }>) {
@@ -331,7 +391,17 @@ export async function getBranches(options: OptionsType<{ profileId: string }>, s
   const branchResponse = await appcircleApi.get(`build/v2/profiles/${options.profileId}`, {
     headers: getHeaders(),
   });
-  return branchResponse.data;
+  
+  const profileName = branchResponse.data.name;
+  const branchName = options.branchId ? 
+    branchResponse.data.branches.find((branch: any) => branch.id === options.branchId)?.name : 
+    undefined;
+    
+  return {
+    ...branchResponse.data,
+    profileName,
+    branchName
+  };
 }
 
 export async function getWorkflows(options: OptionsType<{ profileId: string }>) {
@@ -390,9 +460,11 @@ export async function getBuildStatus(options: OptionsType<{ commitId: string; bu
   return statusResponse.data;
 }
 
-export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, downloadPath: string) {
+export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, downloadPath: string, fileName?: string) {
   try {
-    const downloadResponse = await appcircleApi.get(`build/v1/queue/logs/${options.taskId}`, {
+    const endpoint = `build/v1/queue/logs/${options.taskId}`;
+    
+    const downloadResponse = await appcircleApi.get(endpoint, {
       responseType: 'stream',
       headers: getHeaders()
     });
@@ -414,10 +486,16 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
           } else if (responseText.trim() === '') {
             reject(new Error('Empty response'));
           } else {
-            const writer = fs.createWriteStream(`${downloadPath}/build-task-${options.taskId}-log.txt`);
+            const targetFile = `${downloadPath}/${fileName || `build-task-${options.taskId}-log.txt`}`;
+            const writer = fs.createWriteStream(targetFile);
             writer.write(responseText);
             writer.end();
-            resolve(true);
+            writer.on('finish', () => {
+              resolve(true);
+            });
+            writer.on('error', (err) => {
+              reject(err);
+            });
           }
         });
         
@@ -425,7 +503,8 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
           reject(err);
         });
       } else {
-        const writer = fs.createWriteStream(`${downloadPath}/build-task-${options.taskId}-log.txt`);
+        const targetFile = `${downloadPath}/${fileName || `build-task-${options.taskId}-log.txt`}`;
+        const writer = fs.createWriteStream(targetFile);
         downloadResponse.data.pipe(writer);
         
         let error: any = null;
@@ -443,9 +522,49 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
       }
     });
   } catch (error: any) {
-    if (error.response && error.response.status) {
-      throw new Error(`HTTP error: ${error.response.status}`);
+    if (error.response && error.response.status === 404) {
+      throw new Error('HTTP error: 404');
     }
     throw error;
+  }
+}
+
+export async function getLatestBuildByBranch(options: OptionsType<{ branchId: string; profileId: string }>) {
+  try {
+    const response = await appcircleApi.get(`build/v1/builds?branchId=${options.branchId}&profileId=${options.profileId}`, {
+      headers: getHeaders(),
+    });
+    
+    if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+      return response.data[0];
+    }
+    return null;
+  } catch (error) {
+    console.log(`Builds fetching error: ${error}`);
+    return null;
+  }
+}
+
+export async function getLatestBuildId(options: OptionsType<{ branchId: string; profileId: string }>) {
+  try {
+    const response = await appcircleApi.get(
+      `build/v1/builds?branchId=${options.branchId}&profileId=${options.profileId}`,
+      {
+        headers: getHeaders(),
+      }
+    );
+
+    if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+      // Sort by date in descending order (most recent first)
+      const sortedBuilds = response.data.sort((a: any, b: any) => {
+        return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+      });
+      
+      return sortedBuilds[0].id;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting latest build ID:', error);
+    return null;
   }
 }

@@ -1,6 +1,6 @@
 # `appcircle publish variable group upload`
 
-Upload publish environment variables from JSON file to a variable group.
+Upload Publish environment variables from a JSON file to a variable group.
 
 ```plaintext
 appcircle publish variable group upload [options]
