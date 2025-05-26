@@ -540,7 +540,7 @@ export async function getLatestBuildByBranch(options: OptionsType<{ branchId: st
     }
     return null;
   } catch (error) {
-    console.log(`Builds fetching error: ${error}`);
+    console.log(`Builds listing error: ${error}`);
     return null;
   }
 }

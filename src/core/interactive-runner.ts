@@ -134,7 +134,7 @@ const handleInteractiveParamsOrArguments = async (
   let params: any = {};
   for (let param of commandParams) {
     if (param.name === 'branchId') {
-      const spinner = ora('Branches fetching').start();
+      const spinner = ora('Listing branches...').start();
 
       const branches = (await getBranches({ profileId: params.profileId || '' })).branches;
       if (!branches || branches.length === 0) {
@@ -144,10 +144,10 @@ const handleInteractiveParamsOrArguments = async (
       }
       //@ts-ignore
       param.params = branches.map((branch: any) => ({ name: branch.id, message: `${branch.id} (${branch.name})` }));
-      spinner.text = 'Branches fetched';
+      spinner.text = 'Branches listed';
       spinner.succeed();
     } else if (param.name === 'profileId') {
-      const spinner = ora('Build Profiles fetching').start();
+      const spinner = ora('Listing build profiles...').start();
       const profiles = await getBuildProfiles();
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No build profile available';
@@ -156,10 +156,10 @@ const handleInteractiveParamsOrArguments = async (
       }
       //@ts-ignore
       param.params = profiles.map((profile: any) => ({ name: profile.id, message: `${profile.id} (${profile.name})` }));
-      spinner.text = 'Build Profiles fetched';
+      spinner.text = 'Build profiles listed';
       spinner.succeed();
     } else if (param.name === 'commitId') {
-      const spinner = ora('Commits fetching').start();
+      const spinner = ora('Listing commits...').start();
       const commits = await getCommits({ profileId: params.profileId || '', branchId: params.branchId || '' });
       if (!commits || commits.length === 0) {
         spinner.text = 'No commits available';
@@ -171,10 +171,10 @@ const handleInteractiveParamsOrArguments = async (
         name: commit.id,
         message: `${commit.id} (${JSON.stringify(commit.message.substring(0, 20) + '...')})`,
       }));
-      spinner.text = 'Commits fetched';
+      spinner.text = 'Commits listed';
       spinner.succeed();
     } else if (param.name === 'buildId') {
-      const spinner = ora('Builds fetching').start();
+      const spinner = ora('Listing builds...').start();
       const builds = (await getBuildsOfCommit({ commitId: params.commitId })).builds;
       if (!builds || builds.length === 0) {
         spinner.text = 'No builds available';
@@ -183,10 +183,10 @@ const handleInteractiveParamsOrArguments = async (
       }
       //@ts-ignore
       param.params = builds.map((build: any) => ({ name: build.id, message: `${build.id} (${moment(build.startDate).calendar()})` }));
-      spinner.text = 'Builds fetched';
+      spinner.text = 'Builds listed';
       spinner.succeed();
     } else if (param.name === 'entProfileId') {
-      const spinner = ora('Enterprise Profiles fetching').start();
+      const spinner = ora('Listing enterprise profiles...').start();
       const profiles = await getEnterpriseProfiles();
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No enterprise profile available';
@@ -195,10 +195,10 @@ const handleInteractiveParamsOrArguments = async (
       }
       //@ts-ignore
       param.params = profiles.map((profile: any) => ({ name: profile.id, message: `${profile.id} (${profile.name})` }));
-      spinner.text = 'Enterprise Profiles fetched';
+      spinner.text = 'Enterprise profiles listed';
       spinner.succeed();
     } else if (param.name === 'distProfileId') {
-      const spinner = ora('Distribution Profiles fetching').start();
+      const spinner = ora('Listing distribution profiles...').start();
       const profiles = await getDistributionProfiles();
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No distribution profile available';
@@ -207,10 +207,10 @@ const handleInteractiveParamsOrArguments = async (
       }
       //@ts-ignore
       param.params = profiles.map((profile: any) => ({ name: profile.id, message: `${profile.id} (${profile.name})` }));
-      spinner.text = 'Distribution Profiles fetched';
+      spinner.text = 'Distribution profiles listed';
       spinner.succeed();
     } else if (param.name === 'variableGroupId') {
-      const spinner = ora('Environment Variable Groups fetching').start();
+      const spinner = ora('Listing environment variable groups...').start();
       const groups = await getEnvironmentVariableGroups();
       if (!groups || groups.length === 0) {
         spinner.text = 'No environment variable groups available';
@@ -219,10 +219,10 @@ const handleInteractiveParamsOrArguments = async (
       }
       //@ts-ignore
       param.params = groups.map((group: any) => ({ name: group.id, message: `${group.id} (${group.name})` }));
-      spinner.text = 'Environment Variable Groups fetched';
+      spinner.text = 'Environment variable groups listed';
       spinner.succeed();
     } else if (param.name === 'entVersionId') {
-      const spinner = ora('Enterprise Versions fetching').start();
+      const spinner = ora('Listing enterprise versions...').start();
       const profiles = await getEnterpriseAppVersions({ entProfileId: params.entProfileId, publishType: '' });
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No version available';
@@ -231,10 +231,10 @@ const handleInteractiveParamsOrArguments = async (
       }
       //@ts-ignore
       param.params = profiles.map((profile: any) => ({ name: profile.id, message: `${profile.version} (${profile.versionCode})` }));
-      spinner.text = 'Enterprise Versions fetched';
+      spinner.text = 'Enterprise versions listed';
       spinner.succeed();
     } else if (param.name === 'workflowId') {
-      const spinner = ora('Workflows fetching').start();
+      const spinner = ora('Listing workflows...').start();
       const workflows = await getWorkflows({ profileId: params.profileId || '' });
       if (!workflows || workflows.length === 0) {
         spinner.text = 'No workflows available';
@@ -243,10 +243,10 @@ const handleInteractiveParamsOrArguments = async (
       }
       //@ts-ignore
       param.params = workflows.map((workflow: any) => ({ name: workflow.id, message: `${workflow.id} (${workflow.workflowName})` }));
-      spinner.text = 'Workflows fetched';
+      spinner.text = 'Workflows listed';
       spinner.succeed();
     } else if (param.name === 'configurationId') {
-      const spinner = ora('Configurations fetching').start();
+      const spinner = ora('Listing configurations...').start();
       const configurations = await getConfigurations({ profileId: params.profileId || '' });
       if (!configurations || configurations.length === 0) {
         spinner.text = 'No configurations available';
@@ -258,10 +258,10 @@ const handleInteractiveParamsOrArguments = async (
         name: configurations.item1.id,
         message: `${configurations.item1.id} (${configurations.item1.configurationName})`,
       }));
-      spinner.text = 'Configurations fetched';
+      spinner.text = 'Configurations listed';
       spinner.succeed();
     } else if (param.name === 'organizationId') {
-      const spinner = ora('Organizations fetching').start();
+      const spinner = ora('Listing organizations...').start();
       const isAllOrganizations = param.defaultValue === 'all';
       const userInfo = await getUserInfo();
       const organizations = await getOrganizations();
@@ -287,10 +287,10 @@ const handleInteractiveParamsOrArguments = async (
       );
       param.params = (isAllOrganizations ? [{ name: 'all', message: `All Organizations` }] : []).concat(organizationParams);
       params['currentOrganizationId'] = userInfo.currentOrganizationId;
-      spinner.text = 'Organizations fetched';
+      spinner.text = 'Organizations listed';
       spinner.succeed();
     } else if (param.name === 'role') {
-      const spinner = ora('Roles fetching').start();
+      const spinner = ora('Listing roles...').start();
       const userinfo = params.userId ? await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId }): null;
       const roleList = await getRoleList();
       if (!roleList || roleList.length === 0) {
@@ -322,10 +322,10 @@ const handleInteractiveParamsOrArguments = async (
           param.params = [{ name: 'owner', message: 'Owner' }];
         }
       }
-      spinner.text = 'Roles fetched';
+      spinner.text = 'Roles listed';
       spinner.succeed();
     } else if (param.name === 'userId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Users fetching').start();
+      const spinner = ora('Listing users...').start();
       let userList = await getOrganizationUsers({ organizationId: params.organizationId || params.currentOrganizationId || '' });
       if (!userList || userList.length === 0) {
         spinner.text = 'No users available';
@@ -334,7 +334,7 @@ const handleInteractiveParamsOrArguments = async (
         userList.unshift({ id: UNKNOWN_PARAM_VALUE, _message: ' Skip - (No user)' });
       }
       param.params = userList.map((user: any) => ({ name: user.id, message: user._message || ` ${user.id} (${user.email})` }));
-      spinner.text = 'Users fetched';
+      spinner.text = 'Users listed';
       if(!param.params?.length){
         spinner.text = "No users in this organization";
         spinner.fail();
@@ -342,7 +342,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       spinner.succeed();
     }else if(param.name === 'publishProfileId' && param.type === CommandParameterTypes.SELECT){
-      const spinner = ora('Publish Profiles Fetching').start();
+      const spinner = ora('Listing publish profiles...').start();
       const selectedPlatform = params["platform"];
       const publishProfiles = await getPublishProfiles({ platform: selectedPlatform });
       if (!publishProfiles || publishProfiles.length === 0) {
@@ -351,10 +351,10 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }
       param.params = publishProfiles.map((profile:any) => ({name:profile.id, message: ` ${profile.id} (${profile.name}) - ${(OperatingSystems as any)[profile.platformType]}`}));
-      spinner.text = 'Publish Profiles Fetched';
+      spinner.text = 'Publish profiles listed';
       spinner.succeed();
     }else if(param.name === 'appVersionId' && param.type === CommandParameterTypes.SELECT){
-      const spinner = ora('App Versions Fetching').start();
+      const spinner = ora('Listing app versions...').start();
       const selectedPlatform = params["platform"];
       const selectedPublishProfileId = params["publishProfileId"];
       const appVersions = await getAppVersions({ platform: selectedPlatform, publishProfileId: selectedPublishProfileId });
@@ -364,11 +364,11 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = appVersions.map((appVersion:any) => ({name:appVersion.id, message: ` ${appVersion.id} - ${appVersion.name}(${appVersion.version}) ${appVersion.releaseCandidate ? '(Release Candidate)' : ''}`}));
-        spinner.text = 'App Versions Fetched';
+        spinner.text = 'App versions listed';
         spinner.succeed();
       }
     }else if(param.name === 'publishVariableGroupId' && param.type === CommandParameterTypes.SELECT){
-      const spinner = ora('Publish Variable Groups Fetching').start();
+      const spinner = ora('Listing publish variable groups...').start();
       const groups = await getPublishVariableGroups();
       if (!groups || groups.length === 0) {
         spinner.text = 'No groups available';
@@ -376,12 +376,12 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = groups.map((group:any) => ({name:group.id, message: ` ${group.id} (${group.name})`}));
-        spinner.text = 'Publish Variable Groups Fetched';
+        spinner.text = 'Publish variable groups listed';
         spinner.succeed();
       }
     }
     else if (param.name === 'email' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Invitations fetching').start();
+      const spinner = ora('Listing invitations...').start();
       const invitationsList = await getOrganizationInvitations({ organizationId: params.organizationId || params.currentOrganizationId || '' });
       if (param.required !== false && (!invitationsList || invitationsList.length === 0)) {
         spinner.text = 'No invitations available';
@@ -392,7 +392,7 @@ const handleInteractiveParamsOrArguments = async (
         invitationsList.unshift({ userEmail: UNKNOWN_PARAM_VALUE, _message: 'Skip - (No email)' });
       }
       param.params = invitationsList.map((invitation: any) => ({ name: invitation.userEmail, message: invitation._message || invitation.userEmail }));
-      spinner.text = 'Invitations fetched';
+      spinner.text = 'Invitations listed';
       spinner.succeed();
     }else if (param.name === 'value' && params.isSecret) {
       param.type = CommandParameterTypes.PASSWORD;
@@ -400,7 +400,7 @@ const handleInteractiveParamsOrArguments = async (
       const countries = await getCountries();
       param.params = countries.map((country) => ({ name: country.alpha2, message: `${country.name}` }));
     }else if (param.name === 'certificateBundleId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Certificate Bundles fetching').start();
+      const spinner = ora('Listing certificate bundles...').start();
       const p12Certs = await getiOSP12Certificates();
       const certificates = [...p12Certs];
       if (!certificates || certificates.length === 0) {
@@ -409,11 +409,11 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = certificates.map((certificate:any) => ({name:certificate.id, message: ` ${certificate.id} (${certificate.name})`}));
-        spinner.text = 'Certificate Bundles Fetched';
+        spinner.text = 'Certificate bundles listed';
         spinner.succeed();
       }
     }else if (param.name === 'certificateId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Certificates fetching').start();
+      const spinner = ora('Listing certificates...').start();
       const p12Certs = await getiOSP12Certificates();
       const csrCerts = await getiOSCSRCertificates();
       const certificates = [...p12Certs,...csrCerts];
@@ -423,11 +423,11 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = certificates.map((certificate:any) => ({name:certificate.id, message: ` ${certificate.id} (${certificate.name})`}));
-        spinner.text = 'Certificates Fetched';
+        spinner.text = 'Certificates listed';
         spinner.succeed();
       }
     }else if (param.name === 'keystoreId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Keystores fetching').start();
+      const spinner = ora('Listing keystores...').start();
       const keystores = await getAndroidKeystores();
       if (!keystores || keystores.length === 0) {
         spinner.text = 'No keystore available';
@@ -435,11 +435,11 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = keystores.map((keystore:any) => ({name:keystore.id, message: ` ${keystore.id} (${keystore.name})`}));
-        spinner.text = 'Keystores Fetched';
+        spinner.text = 'Keystores listed';
         spinner.succeed();
       }
     }else if (param.name === 'provisioningProfileId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Provisioning profiles fetching').start();
+      const spinner = ora('Listing provisioning profiles...').start();
       const profiles = await getProvisioningProfiles();
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No provisioning profile available';
@@ -447,11 +447,11 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = profiles.map((profile:any) => ({name:profile.id, message: ` ${profile.id} (${profile.name})`}));
-        spinner.text = 'Provisioning profiles Fetched';
+        spinner.text = 'Provisioning profiles listed';
         spinner.succeed();
       }
     }else if (param.name === 'testingGroupIds' && param.type === CommandParameterTypes.MULTIPLE_SELECT) {
-      const spinner = ora('Testing groups fetching').start();
+      const spinner = ora('Listing testing groups...').start();
       const groups = await getTestingGroups();
       const selectedProfile = await getDistributionProfileById(params);
       if (!groups || groups.length === 0) {
@@ -466,11 +466,11 @@ const handleInteractiveParamsOrArguments = async (
             return _index;
           }
         }) : [];
-        spinner.text = 'Testing groups fetched';
+        spinner.text = 'Testing groups listed';
         spinner.succeed();
       }
     }else if (param.name === 'testingGroupId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Testing groups fetching').start();
+      const spinner = ora('Listing testing groups...').start();
       const groups = await getTestingGroups();
       if (!groups || groups.length === 0) {
         spinner.text = 'No testing group available';
@@ -478,11 +478,11 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = groups.map((group:any) => ({name:group.id, message: ` ${group.id} (${group.name})`}));
-        spinner.text = 'Testing groups fetched';
+        spinner.text = 'Testing groups listed';
         spinner.succeed();
       }
     }else if (param.name === 'testerEmail' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Testers fetching').start();
+      const spinner = ora('Listing testers...').start();
       const group = await getTestingGroupById(params);
       const testers = group?.testers;
       if (!testers || testers.length === 0) {
@@ -491,7 +491,7 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = testers.map((tester:any) => ({name:tester, message: tester}));
-        spinner.text = 'Testers fetched';
+        spinner.text = 'Testers listed';
         spinner.succeed();
       }
     }

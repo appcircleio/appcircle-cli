@@ -206,7 +206,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
   }
   params.role = Array.isArray(params.role) ? params.role : [params.role];
   if (command.fullCommandName === `${PROGRAM_NAME}-organization-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing organizations...').start();
     const response = params.organizationId === 'all' || !params.organizationId ? await getOrganizations() : await getOrganizationDetail(params);
     spinner.succeed();
     commandWriter(CommandTypes.ORGANIZATION, {
@@ -214,7 +214,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       data: response,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing organization users...').start();
     const users = await getOrganizationUsersWithRoles(params);
     const invitations = await getOrganizationInvitations(params);
     spinner.succeed();
@@ -260,7 +260,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       });
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing roles...').start();
     const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
     spinner.succeed();
     commandWriter(CommandTypes.ORGANIZATION, {
@@ -320,7 +320,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       data: profileRes,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing publish profiles...').start();
     const profiles = await getPublishProfiles({ platform: params.platform });
     spinner.succeed();
     commandWriter(CommandTypes.PUBLISH, {
@@ -438,7 +438,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       throw error;
     }
   }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-download`) {
-      let spinner = createOra('Fetching app version download link').start();
+      let spinner = createOra('Getting app version download link...').start();
       try {
         let downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
         const responseData = await getAppVersionDownloadLink(params);
@@ -448,7 +448,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
           spinner.fail();
           throw new Error('App version not found');
         }
-        spinner.text = `App version download link fetched successfully.`;
+        spinner.text = `App version download link retrieved successfully.`;
         spinner.text = `Try to download the app version.`;
         downloadPath = path.join(downloadPath, appVersion.fileName);
         await downloadAppVersion({ url: responseData, path:downloadPath });
@@ -478,7 +478,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: response,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`) {
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Listing variable groups...').start();
       const variableGroups = await getPublishVariableGroups();
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -486,7 +486,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: variableGroups,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`) {
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Listing variables...').start();
       const variables = await getPublishVariableListByGroupId(params);
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -582,7 +582,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         throw e;
       }
     } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Listing app versions...').start();
       const appVersions = await getAppVersions(params);
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -590,7 +590,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: appVersions,
       });
     } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Getting app version details...').start();
       const appVersion = await getAppVersionDetail(params);
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -607,7 +607,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         throw e;
       }
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Listing active publishes...').start();
       const responseData = await getActivePublishes();
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -615,7 +615,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: responseData,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Listing publish details...').start();
       const responseData = await getPublisDetailById(params);
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -922,7 +922,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getBuildProfiles(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -930,7 +930,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getBranches(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -938,7 +938,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflows`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getWorkflows(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -946,7 +946,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-configurations`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getConfigurations(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -954,7 +954,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-commits`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getCommits(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -962,7 +962,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getBuildsOfCommit(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -1191,7 +1191,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       spinner.fail(`Error downloading build logs: ${e.message || String(e)}`);
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing variable groups...').start();
     const responseData = await getEnvironmentVariableGroups(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -1294,7 +1294,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       throw e;
     }
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-view`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing variables...').start();
     const responseData = await getEnvironmentVariables(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -1381,7 +1381,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-active-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getActiveBuilds();
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -1389,7 +1389,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-view`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getBuildsOfCommit(params);
     spinner.succeed();
     const build = responseData?.builds?.find((build: any) => build.id === params.buildId);
@@ -1406,7 +1406,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
 
 const handleDistributionCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing distribution profiles...').start();
     const responseData = await getDistributionProfiles(params);
     if (!responseData || responseData.length === 0) {
       spinner.text = 'No distribution profile available';
@@ -1545,7 +1545,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       spinner.fail('Saving failed');
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing testing groups...').start();
     const responseData = await getTestingGroups();
     spinner.succeed();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
@@ -1553,7 +1553,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       data: responseData,
     });
   }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing testing group details...').start();
     const responseData = await getTestingGroupById(params);
     spinner.succeed();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
@@ -1582,7 +1582,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
 
 const handleSigningIdentityCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing certificates...').start();
     const p12Certs = await getiOSP12Certificates();
     const csrCerts = await getiOSCSRCertificates();
     spinner.succeed();
@@ -1619,7 +1619,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-view`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Getting certificate details...').start();
     const responseData = await getCertificateDetailById(params);
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1664,7 +1664,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing keystores...').start();
     const keystores = await getAndroidKeystores();
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1705,7 +1705,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail();
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-view`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Getting keystore details...').start();
     const keystore = await getKeystoreDetailById(params);
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1723,7 +1723,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing provisioning profiles...').start();
     const profiles = await getProvisioningProfiles();
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1753,7 +1753,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Getting provisioning profile details...').start();
     const profile = await getProvisioningProfileDetailById(params);
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1774,7 +1774,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
 }
 const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-profile-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing enterprise profiles...').start();
     const responseData = await getEnterpriseProfiles();
     spinner.succeed();
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
@@ -1782,7 +1782,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing enterprise app versions...').start();
     const responseData = await getEnterpriseAppVersions(params);
     spinner.succeed();
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
@@ -2048,7 +2048,7 @@ async function downloadPublishLogs(publishDetail: any, platform: string, publish
       const profileDetail = await getPublishProfileDetailById({ platform, publishProfileId });
       profileName = profileDetail.name || 'unknown';
     } catch (error) {
-      console.log(chalk.yellow('Could not fetch profile name, using default name'));
+      console.log(chalk.yellow('Could not retrieve profile name, using default name'));
     }
     
     const timestamp = Date.now();
