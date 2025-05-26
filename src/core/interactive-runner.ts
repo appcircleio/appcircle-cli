@@ -442,22 +442,71 @@ const handleInteractiveParamsOrArguments = async (
         spinner.fail();
         return { isError: true };
       }
-      param.params = publishProfiles.map((profile:any) => ({name:profile.id, message: ` ${profile.id} (${profile.name}) - ${(OperatingSystems as any)[profile.platformType]}`}));
+      const profileParams = publishProfiles.map((profile: any) => {
+        const display = `${profile.name} (${profile.id}) - ${(OperatingSystems as any)[profile.platformType]}`;
+        return { name: display, message: display, _id: profile.id };
+      });
+      param.params = profileParams;
+      params._publishProfileParams = profileParams;
       spinner.text = 'Publish profiles listed';
       spinner.succeed();
+      const selectPrompt = new AutoComplete({
+        name: param.name,
+        message: param.description || 'Publish Profile',
+        initial: param.defaultValue,
+        limit: 10,
+        choices: [...profileParams],
+      });
+      const selected = await selectPrompt.run();
+      const match = /\(([^)]+)\)/.exec(selected);
+      if (match && match[1]) {
+        params.publishProfileId = match[1].trim();
+      } else {
+        params.publishProfileId = selected;
+      }
+      continue;
     }else if(param.name === 'appVersionId' && param.type === CommandParameterTypes.SELECT){
       const spinner = ora('Listing app versions...').start();
       const selectedPlatform = params["platform"];
-      const selectedPublishProfileId = params["publishProfileId"];
+      let selectedPublishProfileId = params["publishProfileId"];
+      const match = /\(([^)]+)\)/.exec(selectedPublishProfileId);
+      if (match && match[1]) {
+        selectedPublishProfileId = match[1].trim();
+        params.publishProfileId = selectedPublishProfileId;
+      }
       const appVersions = await getAppVersions({ platform: selectedPlatform, publishProfileId: selectedPublishProfileId });
       if (!appVersions || appVersions.length === 0) {
         spinner.text = 'No app versions available';
         spinner.fail();
         return { isError: true };
-      }else {
-        param.params = appVersions.map((appVersion:any) => ({name:appVersion.id, message: ` ${appVersion.id} - ${appVersion.name}(${appVersion.version}) ${appVersion.releaseCandidate ? '(Release Candidate)' : ''}`}));
+      } else {
+        const appVersionChoices = appVersions.map((appVersion:any) => {
+          const display = ` ${appVersion.name}(${appVersion.version}) - ${appVersion.id} ${appVersion.releaseCandidate ? '(Release Candidate)' : ''}`;
+          return { name: display, message: display, _id: appVersion.id };
+        });
+        param.params = appVersionChoices;
         spinner.text = 'App versions listed';
         spinner.succeed();
+        const selectPrompt = new AutoComplete({
+          name: param.name,
+          message: param.description || 'App Version',
+          initial: param.defaultValue,
+          limit: 10,
+          choices: [...appVersionChoices],
+        });
+        const selected = await selectPrompt.run();
+        const matchAppVersion = /^\s*([0-9a-fA-F-]{36})\b/.exec(selected);
+        if (matchAppVersion && matchAppVersion[1]) {
+          params.appVersionId = matchAppVersion[1].trim();
+        } else {
+          const found = appVersionChoices.find((p:any) => p.name === selected || p.message === selected);
+          if (found && found._id) {
+            params.appVersionId = found._id;
+          } else {
+            params.appVersionId = selected;
+          }
+        }
+        continue;
       }
     }else if(param.name === 'publishVariableGroupId' && param.type === CommandParameterTypes.SELECT){
       const spinner = ora('Listing publish variable groups...').start();

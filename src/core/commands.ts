@@ -1119,7 +1119,7 @@ export const Commands: CommandType[] = [
           platformParam,
           {
             name: 'publishProfileId',
-            description: 'Publish Profile ID',
+            description: 'Publish Profile Name',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: true
