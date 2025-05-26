@@ -104,27 +104,32 @@ export async function startBuild(
 
 export async function downloadArtifact(options: OptionsType<{ buildId?: string; commitId: string; branchId?: string; profileId?: string }>, downloadPath: string) {
   try {
-    let latestBuildId = null;
-    
+    let buildId = options.buildId;
     if (options.branchId && options.profileId) {
-      latestBuildId = await getLatestBuildId({ 
+      const latestBuildId = await getLatestBuildId({ 
         branchId: options.branchId, 
         profileId: options.profileId 
       });
-      
       if (latestBuildId) {
-        options.buildId = latestBuildId;
+        buildId = latestBuildId;
       }
     }
-    
+    else if (!buildId || buildId === '00000000-0000-0000-0000-000000000000') {
+      const buildsResponse = await getBuildsOfCommit({ commitId: options.commitId });
+      if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
+        buildId = buildsResponse.builds[0].id;
+      } else {
+        throw new Error(`No builds found for commit ID: ${options.commitId}`);
+      }
+    }
+    const endpoint = `build/v1/commits/${options.commitId}/builds/${buildId}`;
     const response = await appcircleApi.get(
-      `build/v1/builds/${options.commitId}/${options.buildId}/artifact`,
+      endpoint,
       {
         headers: getHeaders(),
         responseType: 'arraybuffer',
       }
     );
-
     if (response.status === 200) {
       const artifactPath = path.join(downloadPath, 'artifact.zip');
       fs.writeFileSync(artifactPath, response.data);
