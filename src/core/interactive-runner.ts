@@ -132,18 +132,39 @@ const handleInteractiveParamsOrArguments = async (
   commandParams: CommandType['params'] | CommandType['arguments'] = []
 ): Promise<Record<string, any> | undefined> => {
   let params: any = {};
+  const buildProfilesList: any[] = [];
+  const branchesList: any[] = [];
+  const commitsList: any[] = [];
+  const configurationsList: any[] = [];
   for (let param of commandParams) {
     if (param.name === 'branchId') {
       const spinner = ora('Listing branches...').start();
-
+      if (params.profileId && buildProfilesList.length > 0) {
+        const match = /\(([^)]+)\)$/.exec(params.profileId);
+        const selectedProfileId = match ? match[1] : params.profileId;
+        const selectedProfile = buildProfilesList.find((p) => p.id === selectedProfileId);
+        if (selectedProfile) {
+          params.profileId = selectedProfile.id;
+        }
+      }
+      if (params.branchId && branchesList.length > 0) {
+        const match = /\(([^)]+)\)$/.exec(params.branchId);
+        const selectedBranchId = match ? match[1] : params.branchId;
+        const selectedBranch = branchesList.find((b) => b.id === selectedBranchId);
+        if (selectedBranch) {
+          params.branchId = selectedBranch.id;
+        }
+      }
       const branches = (await getBranches({ profileId: params.profileId || '' })).branches;
       if (!branches || branches.length === 0) {
         spinner.text = 'No branches available';
         spinner.fail();
         return;
       }
+      branchesList.length = 0;
+      branchesList.push(...branches);
       //@ts-ignore
-      param.params = branches.map((branch: any) => ({ name: branch.id, message: `${branch.id} (${branch.name})` }));
+      param.params = branches.map((branch: any) => ({ name: `${branch.name} (${branch.id})`, message: `${branch.name} (${branch.id})` }));
       spinner.text = 'Branches listed';
       spinner.succeed();
     } else if (param.name === 'profileId') {
@@ -154,37 +175,83 @@ const handleInteractiveParamsOrArguments = async (
         spinner.fail();
         return;
       }
+      buildProfilesList.length = 0;
+      buildProfilesList.push(...profiles);
       //@ts-ignore
-      param.params = profiles.map((profile: any) => ({ name: profile.id, message: `${profile.id} (${profile.name})` }));
+      param.params = profiles.map((profile: any) => ({ name: `${profile.name} (${profile.id})`, message: `${profile.name} (${profile.id})` }));
       spinner.text = 'Build profiles listed';
       spinner.succeed();
     } else if (param.name === 'commitId') {
       const spinner = ora('Listing commits...').start();
+      if (params.branchId && branchesList.length > 0) {
+        const match = /\(([^)]+)\)$/.exec(params.branchId);
+        const selectedBranchId = match ? match[1] : params.branchId;
+        const selectedBranch = branchesList.find((b) => b.id === selectedBranchId);
+        if (selectedBranch) {
+          params.branchId = selectedBranch.id;
+        }
+      }
+      if (params.commitId && commitsList.length > 0) {
+        const match = /\(([^)]+)\)$/.exec(params.commitId);
+        const selectedCommitId = match ? match[1] : params.commitId;
+        const selectedCommit = commitsList.find((c) => c.id === selectedCommitId);
+        if (selectedCommit) {
+          params.commitId = selectedCommit.id;
+        }
+      }
       const commits = await getCommits({ profileId: params.profileId || '', branchId: params.branchId || '' });
       if (!commits || commits.length === 0) {
         spinner.text = 'No commits available';
         spinner.fail();
         return;
       }
+      commitsList.length = 0;
+      commitsList.push(...commits);
       //@ts-ignore
-      param.params = commits.map((commit: any) => ({
-        name: commit.id,
-        message: `${commit.id} (${JSON.stringify(commit.message.substring(0, 20) + '...')})`,
-      }));
+      param.params = commits.map((commit: any) => {
+        let shortMsg = commit.message && commit.message.trim().length > 0
+          ? commit.message.substring(0, 20) + (commit.message.length > 20 ? '...' : '')
+          : '<no message>';
+        shortMsg = JSON.stringify(shortMsg);
+        return { name: `${shortMsg} (${commit.id})`, message: `${shortMsg} (${commit.id})` };
+      });
       spinner.text = 'Commits listed';
       spinner.succeed();
+      if (params.commitId) {
+        const match = /\(([^)]+)\)$/.exec(params.commitId);
+        if (match && match[1]) {
+          params.commitId = match[1];
+        }
+      }
     } else if (param.name === 'buildId') {
       const spinner = ora('Listing builds...').start();
-      const builds = (await getBuildsOfCommit({ commitId: params.commitId })).builds;
-      if (!builds || builds.length === 0) {
-        spinner.text = 'No builds available';
-        spinner.fail();
+      let commitId = params.commitId;
+      const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+      if (!uuidRegex.test(commitId)) {
+        const match = /\(([^)]+)\)$/.exec(commitId);
+        if (match && match[1]) {
+          commitId = match[1];
+        }
+      }
+      let buildsResponse, builds;
+      try {
+        buildsResponse = await getBuildsOfCommit({ commitId });
+        builds = buildsResponse.builds;
+      } catch (err) {
+        spinner.stop();
+        console.log('✖ No builds available');
+        // Suppress all further error output
         return;
       }
+      if (!builds || builds.length === 0) {
+        spinner.stop();
+        console.log('✖ No builds available');
+        // Suppress all further error output
+        return;
+      }
+      spinner.stop();
       //@ts-ignore
       param.params = builds.map((build: any) => ({ name: build.id, message: `${build.id} (${moment(build.startDate).calendar()})` }));
-      spinner.text = 'Builds listed';
-      spinner.succeed();
     } else if (param.name === 'entProfileId') {
       const spinner = ora('Listing enterprise profiles...').start();
       const profiles = await getEnterpriseProfiles();
@@ -235,31 +302,57 @@ const handleInteractiveParamsOrArguments = async (
       spinner.succeed();
     } else if (param.name === 'workflowId') {
       const spinner = ora('Listing workflows...').start();
+      if (params.workflowId) {
+        const match = /\(([^)]+)\)$/.exec(params.workflowId);
+        const selectedWorkflowId = match ? match[1] : params.workflowId;
+        params.workflowId = selectedWorkflowId;
+      }
       const workflows = await getWorkflows({ profileId: params.profileId || '' });
       if (!workflows || workflows.length === 0) {
         spinner.text = 'No workflows available';
         spinner.fail();
         return;
       }
-      //@ts-ignore
-      param.params = workflows.map((workflow: any) => ({ name: workflow.id, message: `${workflow.id} (${workflow.workflowName})` }));
+      const workflowsList: any[] = workflows;
+      param.params = workflows.map((workflow: any) => ({ name: `${workflow.workflowName} (${workflow.id})`, message: `${workflow.workflowName} (${workflow.id})` }));
       spinner.text = 'Workflows listed';
       spinner.succeed();
     } else if (param.name === 'configurationId') {
       const spinner = ora('Listing configurations...').start();
+      if (params.branchId && branchesList.length > 0) {
+        const match = /\(([^)]+)\)$/.exec(params.branchId);
+        const selectedBranchId = match ? match[1] : params.branchId;
+        const selectedBranch = branchesList.find((b) => b.id === selectedBranchId);
+        if (selectedBranch) {
+          params.branchId = selectedBranch.id;
+        }
+      }
+      if (params.configurationId && configurationsList.length > 0) {
+        const match = /\(([^)]+)\)$/.exec(params.configurationId);
+        const selectedConfigId = match ? match[1] : params.configurationId;
+        const selectedConfig = configurationsList.find((c) => c.item1.id === selectedConfigId);
+        if (selectedConfig) {
+          params.configurationId = selectedConfig.item1.id;
+        }
+      }
       const configurations = await getConfigurations({ profileId: params.profileId || '' });
       if (!configurations || configurations.length === 0) {
         spinner.text = 'No configurations available';
         spinner.fail();
         return;
       }
+      configurationsList.length = 0;
+      configurationsList.push(...configurations);
       //@ts-ignore
-      param.params = configurations.map((configurations: any) => ({
-        name: configurations.item1.id,
-        message: `${configurations.item1.id} (${configurations.item1.configurationName})`,
-      }));
+      param.params = configurations.map((config: any) => ({ name: `${config.item1.configurationName} (${config.item1.id})`, message: `${config.item1.configurationName} (${config.item1.id})` }));
       spinner.text = 'Configurations listed';
       spinner.succeed();
+      if (params.configurationId && configurationsList.length > 0) {
+        const selectedConfig = configurationsList.find((c) => c.item1.configurationName === params.configurationId || c.item1.id === params.configurationId);
+        if (selectedConfig) {
+          params.configurationId = selectedConfig.item1.id;
+        }
+      }
     } else if (param.name === 'organizationId') {
       const spinner = ora('Listing organizations...').start();
       const isAllOrganizations = param.defaultValue === 'all';
@@ -561,6 +654,30 @@ const handleInteractiveParamsOrArguments = async (
         });
         (params as any)[param.name] = await selectPrompt.run();
       }
+    }
+  }
+  if (params.commitId && commitsList.length > 0) {
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(params.commitId)) {
+      const match = /\(([^)]+)\)$/.exec(params.commitId);
+      const selectedCommitId = match ? match[1] : params.commitId;
+      const selectedCommit = commitsList.find((c) => c.id === selectedCommitId);
+      if (selectedCommit) {
+        params.commitId = selectedCommit.id;
+      }
+    }
+  }
+  if (params.configurationId && configurationsList.length > 0) {
+    const selectedConfig = configurationsList.find((c) => c.item1.configurationName === params.configurationId || c.item1.id === params.configurationId || `${c.item1.configurationName} (${c.item1.id})` === params.configurationId);
+    if (selectedConfig) {
+      params.configurationId = selectedConfig.item1.id;
+    }
+  }
+  if (params.workflowId && Array.isArray(params.workflowId) === false) {
+    const workflows = await getWorkflows({ profileId: params.profileId || '' });
+    const selectedWorkflow = workflows.find((w: any) => w.workflowName === params.workflowId || w.id === params.workflowId || `${w.workflowName} (${w.id})` === params.workflowId);
+    if (selectedWorkflow) {
+      params.workflowId = selectedWorkflow.id;
     }
   }
   return params;
