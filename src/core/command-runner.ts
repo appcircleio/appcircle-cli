@@ -862,13 +862,17 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             try {
               // @ts-ignore
               const response: any = await enquirer.prompt({
-                type: 'confirm',
+                type: 'select',
                 name: 'download',
-                message: 'Download logs?',
-                initial: true
+                message: 'Do you want to download the publish log? (Y/n)',
+                choices: [
+                  { name: 'yes', message: 'yes' },
+                  { name: 'no', message: 'no' }
+                ],
+                initial: 0
               });
               
-              if (response.download) {
+              if (response.download === 'yes') {
                 const homeDir = os.homedir();
                 // Use Downloads folder as default
                 const defaultDownloadDir = path.join(homeDir, 'Downloads');
@@ -1794,7 +1798,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
       fullCommandName: command.fullCommandName,
       data: responseData,
-    });
+       });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-unpublish`){
     const responseData = await unpublishEnterpriseAppVersion(params);
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
@@ -2119,7 +2123,7 @@ async function checkPublishStatusDirectly(platform: string, publishProfileId: st
       return { status: 99 }; // Unknown status
     }
   } catch (error: any) {
-    console.log(chalk.yellow(`Error checking publish status: ${error.message || 'Unknown error'}`));
+    console.log(chalk.yellow(`Error checking publish status: ${error.message}`));
     return { status: 99 };
   }
 }
@@ -2256,19 +2260,24 @@ async function handleSuccessfulPublish(params: any, progressSpinner: any) {
     
     // @ts-ignore
     const response: any = await enquirer.prompt({
-      type: 'confirm',
-      name: 'downloadLogs',
-      message: 'Download publish logs?',
-      initial: true
+      type: 'select',
+      name: 'download',
+      message: 'Do you want to download the publish log? (Y/n)',
+      choices: [
+        { name: 'yes', message: 'yes' },
+        { name: 'no', message: 'no' }
+      ],
+      initial: 0
     });
 
-    if (response.downloadLogs) {
+    if (response.download === 'yes') {
       const homeDir = os.homedir();
+      // Use Downloads folder as default
       const defaultDownloadDir = path.join(homeDir, 'Downloads');
       const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
       await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
     } else {
-      console.log(chalk.gray('Skipping Publish log download.'));
+      console.log(chalk.gray('Skipping log download.'));
     }
     console.log(chalk.cyan('\nYou can check the publish details with:'));
     console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
@@ -2288,13 +2297,17 @@ async function handleFailedPublish(params: any, progressSpinner: any) {
     
     // @ts-ignore
     const response: any = await enquirer.prompt({
-      type: 'confirm',
-      name: 'downloadLogs',
-      message: 'Download publish logs?',
-      initial: true
+      type: 'select',
+      name: 'download',
+      message: 'Do you want to download the publish log? (Y/n)',
+      choices: [
+        { name: 'yes', message: 'yes' },
+        { name: 'no', message: 'no' }
+      ],
+      initial: 0
     });
 
-    if (response.downloadLogs) {
+    if (response.download === 'yes') {
       const homeDir = os.homedir();
       const defaultDownloadDir = path.join(homeDir, 'Downloads');
       const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
