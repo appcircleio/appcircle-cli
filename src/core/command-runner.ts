@@ -782,14 +782,15 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                 if (commitIdForArtifact && buildIdForArtifact) {
                   const artifactSpinner = createOra('Downloading artifacts...').start();
                   try {
+                    const timestamp = Date.now();
+                    const artifactFileName = `artifact-${timestamp}.zip`;
                     await downloadArtifact({ 
                       commitId: commitIdForArtifact, 
                       buildId: buildIdForArtifact,
                       branchId: params.branchId,
                       profileId: params.profileId
-                    }, artifactDownloadPath);
-                    
-                    artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(artifactDownloadPath, 'artifact.zip')}`);
+                    }, artifactDownloadPath, artifactFileName);
+                    artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(artifactDownloadPath, artifactFileName)}`);
                   } catch (e: any) {
                     artifactSpinner.fail(`Failed to download artifacts: ${e.message}`);
                   }
@@ -986,7 +987,9 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       }
     }
     
-    const spinner = createOra(`Downloading artifact.zip`).start();
+    const timestamp = Date.now();
+    const artifactFileName = `artifact-${timestamp}.zip`;
+    const spinner = createOra(`Downloading`).start();
     
     try {
       if (!params.commitId && !params.branchId) {
@@ -1011,10 +1014,9 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             branchId: params.branchId,
             profileId: params.profileId,
             commitId: params.commitId || ""
-          }, downloadPath);
-          
-          const fullPath = path.join(downloadPath, 'artifact.zip');
-          spinner.succeed(`The file artifact.zip is downloaded successfully: file://${fullPath}`);
+          }, downloadPath, artifactFileName);
+          const fullPath = path.join(downloadPath, artifactFileName);
+          spinner.succeed(`The file is downloaded successfully: file://${fullPath}`);
           return;
         } catch (error: any) {
           // Silently continue with alternative method
@@ -1030,7 +1032,6 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
               params.buildId = buildsResponse.builds[0].id;
             } else {
               const requestedBuildExists = buildsResponse.builds.some((build: any) => build.id === params.buildId);
-              
               if (!requestedBuildExists || (buildsResponse.builds[0].id !== params.buildId)) {
                 params.buildId = buildsResponse.builds[0].id;
               }
@@ -1045,11 +1046,10 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             return;
           }
         }
-      
         try {
-          await downloadArtifact(params, downloadPath);
-          const fullPath = path.join(downloadPath, 'artifact.zip');
-          spinner.succeed(`The file artifact.zip is downloaded successfully: file://${fullPath}`);
+          await downloadArtifact(params, downloadPath, artifactFileName);
+          const fullPath = path.join(downloadPath, artifactFileName);
+          spinner.succeed(`The file ${artifactFileName} is downloaded successfully: file://${fullPath}`);
         } catch (e: any) {
           spinner.fail(`Failed to download artifact: ${e.message || 'Unknown error'}`);
           
@@ -1564,8 +1564,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
-  }
-  else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-create`) {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-create`) {
     const responseData = await createTestingGroup(params);
     console.info(`Testing group named ${responseData.name} created successfully!`);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-remove`) {

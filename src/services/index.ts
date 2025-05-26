@@ -102,7 +102,7 @@ export async function startBuild(
   return buildResponse.data;
 }
 
-export async function downloadArtifact(options: OptionsType<{ buildId?: string; commitId: string; branchId?: string; profileId?: string }>, downloadPath: string) {
+export async function downloadArtifact(options: OptionsType<{ buildId?: string; commitId: string; branchId?: string; profileId?: string }>, downloadPath: string, artifactFileName?: string) {
   try {
     let buildId = options.buildId;
     if (options.branchId && options.profileId) {
@@ -131,7 +131,8 @@ export async function downloadArtifact(options: OptionsType<{ buildId?: string; 
       }
     );
     if (response.status === 200) {
-      const artifactPath = path.join(downloadPath, 'artifact.zip');
+      const fileName = artifactFileName || `artifact-${Date.now()}.zip`;
+      const artifactPath = path.join(downloadPath, fileName);
       fs.writeFileSync(artifactPath, response.data);
     } else {
       throw new Error('Build artifact not found');
