@@ -486,7 +486,7 @@ export const Commands: CommandType[] = [
                 params: [
                   {
                     name: 'variableGroupId',
-                    description: 'Variable Group ID',
+                    description: 'Which variable group do you want to upload the JSON to?',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true

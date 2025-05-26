@@ -500,14 +500,17 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
           spinner.fail('JSON file path is required');
           process.exit(1);
         }
-        
+        if (params.variableGroupId) {
+          const match = /\(([^)]+)\)$/.exec(params.variableGroupId);
+          if (match && match[1]) {
+            params.variableGroupId = match[1];
+          }
+        }
         const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
-        
         if (!fs.existsSync(expandedPath)) {
           spinner.fail('File not found');
           process.exit(1);
         }
-        
         try {
           const fileContent = fs.readFileSync(expandedPath, 'utf8');
           JSON.parse(fileContent);
@@ -515,13 +518,9 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
           spinner.fail('Invalid file');
           process.exit(1);
         }
-        
         params.filePath = expandedPath;
-        
         const responseData = await uploadPublishEnvironmentVariablesFromFile(params as any);
-        if (responseData) {
-          spinner.succeed('Environment variables uploaded successfully');
-        }
+        spinner.succeed('Environment variables uploaded successfully');
       } catch (e) {
         spinner.fail('Failed to upload environment variables');
         throw e;
@@ -1211,14 +1210,17 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         spinner.fail('JSON file path is required');
         process.exit(1);
       }
-      
+      if (params.variableGroupId) {
+        const match = /\(([^)]+)\)$/.exec(params.variableGroupId);
+        if (match && match[1]) {
+          params.variableGroupId = match[1];
+        }
+      }
       const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
-      
       if (!fs.existsSync(expandedPath)) {
         spinner.fail('File not found');
         process.exit(1);
       }
-      
       try {
         const fileContent = fs.readFileSync(expandedPath, 'utf8');
         JSON.parse(fileContent);
@@ -1226,9 +1228,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         spinner.fail('Invalid file');
         process.exit(1);
       }
-      
       params.filePath = expandedPath;
-      
       const responseData = await uploadEnvironmentVariablesFromFile(params as any);
       spinner.succeed('Environment variables uploaded successfully');
       commandWriter(CommandTypes.BUILD, {
@@ -1481,8 +1481,8 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
             while(taskStatus.stateValue === TaskStatus.BEGIN){
               taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
               if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
-                spinner.fail('Warning: Upload task failed or was cancelled');
-                break;
+                spinner.fail('Upload failed: Please make sure that the app version number is unique in selected publish profile.');
+                process.exit(1);
               }
               await new Promise(resolve => setTimeout(resolve, 2000));
             }
@@ -1878,11 +1878,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
         throw uploadError;
       }
     } catch (e) {
-      if (e instanceof ProgramError) {
-        spinner.fail(e.message);
-      } else {
-        spinner.fail('Upload failed');
-      }
+      spinner.fail('Upload failed');
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-upload-without-profile`){

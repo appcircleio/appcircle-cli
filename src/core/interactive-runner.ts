@@ -285,7 +285,7 @@ const handleInteractiveParamsOrArguments = async (
         return;
       }
       //@ts-ignore
-      param.params = groups.map((group: any) => ({ name: group.id, message: `${group.id} (${group.name})` }));
+      param.params = groups.map((group: any) => ({ name: `${group.name} (${group.id})`, message: `${group.name} (${group.id})` }));
       spinner.text = 'Environment variable groups listed';
       spinner.succeed();
     } else if (param.name === 'entVersionId') {
