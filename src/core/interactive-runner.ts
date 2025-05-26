@@ -286,7 +286,6 @@ const handleInteractiveParamsOrArguments = async (
       }
       //@ts-ignore
       param.params = groups.map((group: any) => ({ name: `${group.name} (${group.id})`, message: `${group.name} (${group.id})` }));
-      spinner.text = 'Environment variable groups listed';
       spinner.succeed();
     } else if (param.name === 'entVersionId') {
       const spinner = ora('Listing enterprise versions...').start();
