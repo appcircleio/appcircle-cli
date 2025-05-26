@@ -162,13 +162,13 @@ export const Commands: CommandType[] = [
         params: [
           {
             name: 'profileId',
-            description: 'Build profile ID',
+            description: 'Build profile Name',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
           {
             name: 'branchId',
-            description: 'Branch ID',
+            description: 'Branch Name',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: false,
@@ -176,7 +176,7 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'commitId',
-            description: 'Commit ID [Optional]',
+            description: 'Commit Name [Optional]',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: false,
@@ -194,7 +194,7 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'configurationId',
-            description: 'Configuration ID [Optional]',
+            description: 'Configuration Name [Optional]',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: false,
@@ -202,7 +202,7 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'workflowId',
-            description: 'Workflow ID',
+            description: 'Workflow Name',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: false,
@@ -338,7 +338,7 @@ export const Commands: CommandType[] = [
       },
       {
         command: 'download-log',
-        description: 'Download Build Log',
+        description: 'Download Build Logs',
         params: [
           {
             name: 'path',
