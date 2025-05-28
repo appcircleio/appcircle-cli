@@ -1644,7 +1644,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       (certificate: any) => certificate.id === params.certificateId
     );
     const downloadPath = path.resolve(
-      (params.path || '').replace('~', `${os.homedir}`)
+      (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
     );
     const fileName = p12Cert ? p12Cert.filename : 'download.cer';
     const spinner = createOra(
@@ -1703,7 +1703,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail('Upload failed: Keystore was tampered with, or password was incorrect');
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-download`){
-    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
     const spinner = createOra(`Searching file...`).start();
     try {
       const keystoreDetail = await getKeystoreDetailById(params);
@@ -1753,7 +1753,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-download`) {
-    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
     const spinner = createOra('Trying to download the provisioning profile').start();
     try {
       const profile = await getProvisioningProfileDetailById(params);
