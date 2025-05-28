@@ -144,6 +144,7 @@ export const Commands: CommandType[] = [
       {
         name: 'pat',
         description: 'Personal Access Token',
+        longDescription: 'Your Personal Access Token from Appcircle dashboard',
         type: CommandParameterTypes.STRING,
         valueType: 'string',
       },
@@ -156,17 +157,18 @@ export const Commands: CommandType[] = [
     subCommands: [
       {
         command: 'start',
-        description: 'Start a new build.',
+        description: 'Start a new build',
+        longDescription: 'Trigger a new build using the selected profile, branch, and workflow',
         params: [
           {
             name: 'profileId',
-            description: 'Build profile ID',
+            description: 'Build Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
           {
             name: 'branchId',
-            description: 'Branch ID',
+            description: 'Branch Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: false,
@@ -174,7 +176,7 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'commitId',
-            description: 'Commit ID [Optional]',
+            description: 'Commit Message (ID) [Optional]',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: false,
@@ -192,7 +194,7 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'configurationId',
-            description: 'Configuration ID [Optional]',
+            description: 'Configuration Name (ID) [Optional]',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: false,
@@ -200,7 +202,7 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'workflowId',
-            description: 'Workflow ID',
+            description: 'Workflow Name (ID) [Optional]',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: false,
@@ -239,21 +241,21 @@ export const Commands: CommandType[] = [
         params: [
           {
             name: 'profileId',
-            description: 'Build profile ID',
+            description: 'Build Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
           },
           {
             name: 'branchId',
-            description: 'Branch ID',
+            description: 'Branch Name (ID)',
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
           },
           {
             name: 'commitId',
-            description: 'Commit ID',
+            description: 'Commit Message (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
@@ -266,14 +268,14 @@ export const Commands: CommandType[] = [
         params: [
           {
             name: 'profileId',
-            description: 'Build profile ID',
+            description: 'Build Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
           },
           {
             name: 'branchId',
-            description: 'Branch ID',
+            description: 'Branch Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'string',
             requriedForInteractiveMode: true,
@@ -281,13 +283,13 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'commitId',
-            description: 'Commit ID of your build',
+            description: 'Commit Message (ID) of your build',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
           {
             name: 'buildId',
-            description: 'Build ID of your profile',
+            description: 'Build ID (Date) of your profile',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
@@ -295,26 +297,26 @@ export const Commands: CommandType[] = [
       },
       {
         command: 'download',
-        description: 'Download your artifact to the given directory on your machine.',
+        description: 'Download Artifacts',
         params: [
           {
             name: 'path',
             description: '[OPTIONAL] The path for artifacts to be downloaded:',
-            longDescription:'[OPTIONAL] The path for artifacts to be downloaded: (Defaults to the current directory)',
+            longDescription:'[OPTIONAL] The path for artifacts to be downloaded:',
             type: CommandParameterTypes.STRING,
             valueType: 'string',
             required: false,
           },
           {
             name: 'profileId',
-            description: 'Build profile ID',
+            description: 'Build Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
           },
           {
             name: 'branchId',
-            description: 'Branch ID',
+            description: 'Branch Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'string',
             requriedForInteractiveMode: true,
@@ -322,13 +324,13 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'commitId',
-            description: 'Commit ID of your build',
+            description: 'Commit Message (ID) of your build',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
           {
             name: 'buildId',
-            description: 'Build ID of your profile',
+            description: 'Build ID (Date) of your profile',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
@@ -336,26 +338,26 @@ export const Commands: CommandType[] = [
       },
       {
         command: 'download-log',
-        description: 'Download build log to the given directory on your machine.',
+        description: 'Download Build Logs',
         params: [
           {
             name: 'path',
             description: '[OPTIONAL] The path for log to be downloaded:',
-            longDescription:'[OPTIONAL] The path for log to be downloaded: (Defaults to the current directory)',
+            longDescription:'[OPTIONAL] The path for log to be downloaded:',
             type: CommandParameterTypes.STRING,
             valueType: 'string',
             required: false,
           },
           {
             name: 'profileId',
-            description: 'Build profile ID',
+            description: 'Build Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
           },
           {
             name: 'branchId',
-            description: 'Branch ID',
+            description: 'Branch Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'string',
             requriedForInteractiveMode: true,
@@ -363,13 +365,13 @@ export const Commands: CommandType[] = [
           },
           {
             name: 'commitId',
-            description: 'Commit ID of your build',
+            description: 'Commit Message (ID) of your build',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
           {
             name: 'buildId',
-            description: 'Build ID of your profile',
+            description: 'Build ID (Date) of your profile',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
@@ -395,7 +397,7 @@ export const Commands: CommandType[] = [
                 params: [
                   {
                     name: 'profileId',
-                    description: 'Build profile ID',
+                    description: 'Build Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                   },
@@ -407,14 +409,14 @@ export const Commands: CommandType[] = [
                 params: [
                   {
                     name: 'profileId',
-                    description: 'Build profile ID',
+                    description: 'Build Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     requriedForInteractiveMode: true,
                     valueType: 'uuid',
                   },
                   {
                     name: 'branchId',
-                    description: 'Branch ID',
+                    description: 'Branch Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                   },
@@ -429,7 +431,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'profileId',
-                description: 'Build profile ID',
+                description: 'Build Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -441,7 +443,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'profileId',
-                description: 'Build profile ID',
+                description: 'Build Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -484,7 +486,7 @@ export const Commands: CommandType[] = [
                 params: [
                   {
                     name: 'variableGroupId',
-                    description: 'Variable Group ID',
+                    description: 'Which variable group do you want to upload the JSON to?',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -497,6 +499,28 @@ export const Commands: CommandType[] = [
                     required: true
                   }
                 ],
+              },
+              {
+                command: "download",
+                description: 'Download Build environment variables as a JSON file',
+                longDescription: 'Download Build environment variables as a JSON file from a variable group',
+                params: [
+                  {
+                    name: 'variableGroupId',
+                    description: 'Variable Groups Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: true
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The path for JSON file to be downloaded',
+                    longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                  }
+                ],
               }
             ]
           },
@@ -506,7 +530,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'variableGroupId',
-                description: 'Variable group ID',
+                description: 'Variable Group Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -563,32 +587,12 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'variableGroupId',
-                description: 'Variable Groups ID',
+                description: 'Variable Groups Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
             ],
           },
-          {
-            command: "download",
-            description: 'Download environment variables as JSON',
-            params: [
-              {
-                name: 'variableGroupId',
-                description: 'Variable Groups ID',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
-              },
-              {
-                name: 'path',
-                description: '[OPTIONAL] The path for JSON file to be downloaded',
-                longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
-                type: CommandParameterTypes.STRING,
-                valueType: 'string',
-                required: false,
-              }
-            ],
-          }
         ],
         params: []
       }
@@ -669,7 +673,7 @@ export const Commands: CommandType[] = [
             params:[
               {
                 name: 'certificateBundleId',
-                description: 'Certificate Bundle ID',
+                description: 'Certificate Name (Bundle ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -691,7 +695,7 @@ export const Commands: CommandType[] = [
               },
               {
                 name: 'certificateId',
-                description: 'Certificate ID',
+                description: 'Certificate Name (Bundle ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -705,7 +709,7 @@ export const Commands: CommandType[] = [
             params:[
               {
                 name: 'certificateId',
-                description: 'Certificate ID',
+                description: 'Certificate Name (Bundle ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -753,7 +757,7 @@ export const Commands: CommandType[] = [
               },
               {
                 name: 'provisioningProfileId',
-                description: 'Provisioning Profile ID',
+                description: 'Provisioning Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -767,7 +771,7 @@ export const Commands: CommandType[] = [
             params:[
               {
                 name: 'provisioningProfileId',
-                description: 'Provisioning Profile ID',
+                description: 'Provisioning Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -781,7 +785,7 @@ export const Commands: CommandType[] = [
             params:[
               {
                 name: 'provisioningProfileId',
-                description: 'Provisioning Profile ID',
+                description: 'Provisioning Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -882,7 +886,7 @@ export const Commands: CommandType[] = [
               },
               {
                 name: 'keystoreId',
-                description: 'Keystore ID',
+                description: 'Keystore Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -896,7 +900,7 @@ export const Commands: CommandType[] = [
             params:[
               {
                 name: 'keystoreId',
-                description: 'Keystore ID',
+                description: 'Keystore Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -910,7 +914,7 @@ export const Commands: CommandType[] = [
             params:[
               {
                 name: 'keystoreId',
-                description: 'Keystore ID',
+                description: 'Keystore Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -933,7 +937,7 @@ export const Commands: CommandType[] = [
         params: [
           {
             name: 'distProfileId',
-            description: 'Distribution profile ID',
+            description: 'Distribution Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
           },
@@ -983,13 +987,13 @@ export const Commands: CommandType[] = [
                 params: [
                   {
                     name: 'distProfileId',
-                    description: 'Distribution profile ID',
+                    description: 'Distribution Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                   },
                   {
                     name: 'testingGroupIds',
-                    description: 'Testing group IDs for automated distribution.',
+                    description: 'Testing group Names (IDs) for automated distribution.',
                     longDescription: 'Testing group IDs for automated distribution.',
                     type: CommandParameterTypes.MULTIPLE_SELECT,
                     valueType: 'string'
@@ -1020,7 +1024,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'testingGroupId',
-                description: 'Testing group ID',
+                description: 'Testing group name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               }
@@ -1046,7 +1050,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'testingGroupId',
-                description: 'Testing group ID',
+                description: 'Testing group name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               }
@@ -1065,7 +1069,7 @@ export const Commands: CommandType[] = [
                 params: [
                   {
                     name: 'testingGroupId',
-                    description: 'Testing group ID',
+                    description: 'Testing group name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                   },
@@ -1084,7 +1088,7 @@ export const Commands: CommandType[] = [
                 params: [
                   {
                     name: 'testingGroupId',
-                    description: 'Testing group ID',
+                    description: 'Testing group name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                   },
@@ -1115,7 +1119,7 @@ export const Commands: CommandType[] = [
           platformParam,
           {
             name: 'publishProfileId',
-            description: 'Publish Profile ID',
+            description: 'Publish Profile Name',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: true
@@ -1141,7 +1145,7 @@ export const Commands: CommandType[] = [
           platformParam,
           {
             name: 'publishProfileId',
-            description: 'Publish Profile ID',
+            description: 'Publish Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: true
@@ -1189,7 +1193,7 @@ export const Commands: CommandType[] = [
             params: [platformParam,
               {
                 name: 'publishProfileId',
-                description: 'Publish Profile ID',
+                description: 'Publish Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true
@@ -1211,7 +1215,7 @@ export const Commands: CommandType[] = [
             params: [platformParam,
               {
                 name: 'publishProfileId',
-                description: 'Publish Profile ID',
+                description: 'Publish Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true
@@ -1231,7 +1235,7 @@ export const Commands: CommandType[] = [
                 params: [platformParam,
                   {
                     name: 'publishProfileId',
-                    description: 'Publish Profile ID',
+                    description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1245,7 +1249,7 @@ export const Commands: CommandType[] = [
                 params: [platformParam,
                   {
                     name: 'publishProfileId',
-                    description: 'Publish Profile ID',
+                    description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1267,7 +1271,7 @@ export const Commands: CommandType[] = [
                   platformParam,
                   {
                     name: 'publishProfileId',
-                    description: 'Publish Profile ID',
+                    description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1306,7 +1310,7 @@ export const Commands: CommandType[] = [
                   platformParam,
                   {
                     name: 'publishProfileId',
-                    description: 'Publish Profile ID',
+                    description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1336,7 +1340,7 @@ export const Commands: CommandType[] = [
                   platformParam,
                   {
                     name: 'publishProfileId',
-                    description: 'Publish Profile ID',
+                    description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1358,7 +1362,7 @@ export const Commands: CommandType[] = [
                   platformParam,
                   {
                     name: 'publishProfileId',
-                    description: 'Publish Profile ID',
+                    description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1380,7 +1384,7 @@ export const Commands: CommandType[] = [
                   platformParam,
                   {
                     name: 'publishProfileId',
-                    description: 'Publish Profile ID',
+                    description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1402,7 +1406,7 @@ export const Commands: CommandType[] = [
                   platformParam,
                   {
                     name: 'publishProfileId',
-                    description: 'Publish Profile ID',
+                    description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1440,7 +1444,7 @@ export const Commands: CommandType[] = [
                   platformParam,
                   {
                     name: 'publishProfileId',
-                    description: 'Publish Profile ID',
+                    description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1476,19 +1480,6 @@ export const Commands: CommandType[] = [
                 longDescription: 'Publish variable group actions',
                 params: [],
               },
-              // {
-              //   command: "create",
-              //   description: 'Create new group',
-              //   longDescription: 'Create a new publish variable group',
-              //   params: [{
-              //     name: 'name',
-              //     description: 'Group name',
-              //     type: CommandParameterTypes.STRING,
-              //     defaultValue: undefined,
-              //     valueType: 'string',
-              //     required: true,
-              //   }],
-              // },
               {
                 command: "view",
                 description: 'View items of group',
@@ -1510,7 +1501,7 @@ export const Commands: CommandType[] = [
                 params: [
                   {
                     name: 'publishVariableGroupId',
-                    description: 'Variable Group ID',
+                    description: 'Variable Group Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -1525,25 +1516,25 @@ export const Commands: CommandType[] = [
                 ],
               },
               {
-            command: "download",
+                command: "download",
             description: 'Download environment variables as JSON',
-            params: [
-              {
-                name: 'variableGroupId',
-                description: 'Variable Groups ID',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
+                params: [
+                  {
+                    name: 'publishVariableGroupId',
+                    description: 'Variable Groups Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The path for JSON file to be downloaded',
+                    longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                  }
+                ],
               },
-              {
-                name: 'path',
-                description: '[OPTIONAL] The path for JSON file to be downloaded',
-                longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
-                type: CommandParameterTypes.STRING,
-                valueType: 'string',
-                required: false,
-              }
-            ],
-            },
             ]
           }
         ]
@@ -1578,7 +1569,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'entProfileId',
-                description: 'Enterprise Profile ID',
+                description: 'Enterprise Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -1612,7 +1603,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'entProfileId',
-                description: 'Enterprise Profile ID',
+                description: 'Enterprise Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -1663,13 +1654,13 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'entProfileId',
-                description: 'Enterprise Profile ID',
+                description: 'Enterprise Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
               {
                 name: 'entVersionId',
-                description: 'App Version ID',
+                description: 'App Version (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -1681,13 +1672,13 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'entProfileId',
-                description: 'Enterprise Profile ID',
+                description: 'Enterprise Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
               {
                 name: 'entVersionId',
-                description: 'App Version ID',
+                description: 'App Version (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -1700,13 +1691,13 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'entProfileId',
-                description: 'Enterprise Profile ID',
+                description: 'Enterprise Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
               {
                 name: 'entVersionId',
-                description: 'App Version ID',
+                description: 'App Version (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -1730,7 +1721,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'entProfileId',
-                description: 'Enterprise Profile Id',
+                description: 'Enterprise Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -1760,13 +1751,13 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'entProfileId',
-                description: 'Enterprise Profile Id',
+                description: 'Enterprise Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
               {
                 name: 'entVersionId',
-                description: 'App Version ID',
+                description: 'App Version (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
@@ -1779,7 +1770,7 @@ export const Commands: CommandType[] = [
   },
   {
     command: CommandTypes.ORGANIZATION,
-    description: 'Organization management',
+    description: 'Organization Management',
     longDescription: 'Manage organization users, roles, and details.',
     subCommands: [
       {
@@ -1788,7 +1779,7 @@ export const Commands: CommandType[] = [
         longDescription: 'View organization details. If "organizationId" not provided, will list all organizations.',
         params: [{
           name: 'organizationId',
-          description: 'Organization ID [Optional]',
+          description: 'Organization Name (ID) [Optional]',
           type: CommandParameterTypes.SELECT,
           defaultValue: 'all',
           valueType: 'uuid',
@@ -1798,7 +1789,7 @@ export const Commands: CommandType[] = [
       {
         command: 'create-sub',
         description: 'Create a sub-organization',
-        longDescription: 'Create a new sub-organization under the current organization.',
+        longDescription: 'Create a new sub-organization under the current organization',
         params: [{
           name: 'name',
           description: 'Name of the sub-organization',
@@ -1810,14 +1801,14 @@ export const Commands: CommandType[] = [
       {
         command: 'user',
         description: 'User management',
-        longDescription: 'Organization users management (view, invite, re-invite, remove ).',
+        longDescription: 'Organization users management (view, invite, re-invite, remove)',
         subCommands: [
           {
             command: 'view',
             description: 'View users of organization',
             params: [ {
               name: 'organizationId',
-              description: 'Organization ID [Optional]',
+              description: 'Organization Name (ID) [Optional]',
               type: CommandParameterTypes.SELECT,
               defaultValue: 'current',
               valueType: 'uuid',
@@ -1829,7 +1820,7 @@ export const Commands: CommandType[] = [
             description: 'Invite user to organization',
             params: [{
               name: 'organizationId',
-              description: 'Organization ID [Optional]',
+              description: 'Organization Name (ID) [Optional]',
               type: CommandParameterTypes.SELECT,
               defaultValue: 'current',
               valueType: 'uuid',
@@ -1856,7 +1847,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'organizationId',
-                description: 'Organization ID [Optional]',
+                description: 'Organization Name (ID) [Optional]',
                 type: CommandParameterTypes.SELECT,
                 defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
@@ -1876,7 +1867,7 @@ export const Commands: CommandType[] = [
             description: 'Remove user or invitation from organization',
             params: [{
               name: 'organizationId',
-              description: 'Organization ID [Optional]',
+              description: 'Organization Name (ID) [Optional]',
               type: CommandParameterTypes.SELECT,
               defaultValue: CURRENT_PARAM_VALUE,
               valueType: 'uuid',
@@ -1910,7 +1901,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'organizationId',
-                description: 'Organization ID [Optional]',
+                description: 'Organization Name (ID) [Optional]',
                 type: CommandParameterTypes.SELECT,
                 defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
@@ -1918,7 +1909,7 @@ export const Commands: CommandType[] = [
               },
               {
                 name: 'userId',
-                description: 'User ID',
+                description: 'User Email (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -1931,7 +1922,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'organizationId',
-                description: 'Organization ID [Optional]',
+                description: 'Organization Name (ID) [Optional]',
                 type: CommandParameterTypes.SELECT,
                 defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
@@ -1939,7 +1930,7 @@ export const Commands: CommandType[] = [
               },
               {
                 name: 'userId',
-                description: 'User ID',
+                description: 'User Email (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -1959,7 +1950,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'organizationId',
-                description: 'Organization ID [Optional]',
+                description: 'Organization Name (ID) [Optional]',
                 type: CommandParameterTypes.SELECT,
                 defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
@@ -1967,7 +1958,7 @@ export const Commands: CommandType[] = [
               },
               {
                 name: 'userId',
-                description: 'User ID',
+                description: 'User Email (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,
@@ -1988,7 +1979,7 @@ export const Commands: CommandType[] = [
             params: [
               {
                 name: 'organizationId',
-                description: 'Organization ID [Optional]',
+                description: 'Organization Name (ID) [Optional]',
                 type: CommandParameterTypes.SELECT,
                 defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
@@ -1996,7 +1987,7 @@ export const Commands: CommandType[] = [
               },
               {
                 name: 'userId',
-                description: 'User ID',
+                description: 'User Email (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
                 required: true,

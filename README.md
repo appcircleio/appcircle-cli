@@ -167,7 +167,7 @@ Appcircle CLI includes the following improvements for build log downloading func
 - User-friendly animation is displayed: "Waiting for build logs to be prepared..."
 - Support for manual log download with both task ID (`--taskId`) and commit/build ID (`--commitId`/`--buildId`) parameters
 - Automatic fallback to alternative download methods when the primary method fails
-- Log files are saved with descriptive filenames: `build-task-{taskId}-log.txt`
+- Log files are saved with descriptive filenames that include branch name, profile name, and timestamp: `{branchName}-{profileName}-build-logs-{timestamp}.txt`
 
 To download build logs:
 ```shell

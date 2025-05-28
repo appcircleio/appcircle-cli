@@ -1,6 +1,6 @@
 # `appcircle publish variable group download`
 
-Download publish environment variables as JSON
+Download Publish environment variables as a JSON file
 
 ```plaintext
 appcircle publish variable group download [options]

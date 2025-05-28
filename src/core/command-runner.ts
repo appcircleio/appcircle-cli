@@ -1,6 +1,7 @@
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import readline from 'readline'; // Added readline for user prompt
 import { CommandTypes } from './commands';
 import {
   EnvironmentVariables,
@@ -116,7 +117,9 @@ import {
   getLatestAppVersionId,
   getBuildStatusFromQueue,
   downloadTaskLog,
-  createSubOrganization
+  createSubOrganization,
+  getLatestBuildByBranch,
+  getLatestBuildId
 } from '../services';
 import { appcircleApi, getHeaders, OptionsType } from '../services/api';
 import { commandWriter, configWriter } from './writer';
@@ -125,6 +128,30 @@ import { CURRENT_PARAM_VALUE, PROGRAM_NAME, TaskStatus, UNKNOWN_PARAM_VALUE } fr
 import { ProgramError } from './ProgramError';
 import { getMaxUploadBytes, GB } from '../utils/size-limit';
 import chalk from 'chalk';
+import enquirer from 'enquirer';
+
+/**
+ * Prompts the user for a file path with a default value
+ * @param message The message to display to the user
+ * @param defaultPath The default path if user doesn't provide one
+ * @returns The resolved file path
+ */
+async function promptForPath(message: string, defaultPath: string): Promise<string> {
+  try {
+    // @ts-ignore
+    const response: any = await enquirer.prompt({
+      type: 'input',
+      name: 'path',
+      message: message,
+      initial: defaultPath
+    });
+    
+    return response.path.trim() || defaultPath;
+  } catch (err) {
+    // If user cancels, return default path
+    return defaultPath;
+  }
+}
 
 const handleConfigCommand = (command: ProgramCommand) => {
   const action = command.name();
@@ -179,7 +206,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
   }
   params.role = Array.isArray(params.role) ? params.role : [params.role];
   if (command.fullCommandName === `${PROGRAM_NAME}-organization-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing organizations...').start();
     const response = params.organizationId === 'all' || !params.organizationId ? await getOrganizations() : await getOrganizationDetail(params);
     spinner.succeed();
     commandWriter(CommandTypes.ORGANIZATION, {
@@ -187,7 +214,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       data: response,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing organization users...').start();
     const users = await getOrganizationUsersWithRoles(params);
     const invitations = await getOrganizationInvitations(params);
     spinner.succeed();
@@ -233,7 +260,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       });
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing roles...').start();
     const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
     spinner.succeed();
     commandWriter(CommandTypes.ORGANIZATION, {
@@ -293,7 +320,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       data: profileRes,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing publish profiles...').start();
     const profiles = await getPublishProfiles({ platform: params.platform });
     spinner.succeed();
     commandWriter(CommandTypes.PUBLISH, {
@@ -411,7 +438,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       throw error;
     }
   }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-download`) {
-      let spinner = createOra('Fetching app version download link').start();
+      let spinner = createOra('Getting app version download link...').start();
       try {
         let downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
         const responseData = await getAppVersionDownloadLink(params);
@@ -421,7 +448,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
           spinner.fail();
           throw new Error('App version not found');
         }
-        spinner.text = `App version download link fetched successfully.`;
+        spinner.text = `App version download link retrieved successfully.`;
         spinner.text = `Try to download the app version.`;
         downloadPath = path.join(downloadPath, appVersion.fileName);
         await downloadAppVersion({ url: responseData, path:downloadPath });
@@ -451,7 +478,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: response,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`) {
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Listing variable groups...').start();
       const variableGroups = await getPublishVariableGroups();
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -459,7 +486,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: variableGroups,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`) {
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Listing variables...').start();
       const variables = await getPublishVariableListByGroupId(params);
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -473,14 +500,17 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
           spinner.fail('JSON file path is required');
           process.exit(1);
         }
-        
+        if (params.variableGroupId) {
+          const match = /\(([^)]+)\)$/.exec(params.variableGroupId);
+          if (match && match[1]) {
+            params.variableGroupId = match[1];
+          }
+        }
         const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
-        
         if (!fs.existsSync(expandedPath)) {
           spinner.fail('File not found');
           process.exit(1);
         }
-        
         try {
           const fileContent = fs.readFileSync(expandedPath, 'utf8');
           JSON.parse(fileContent);
@@ -488,72 +518,73 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
           spinner.fail('Invalid file');
           process.exit(1);
         }
-        
         params.filePath = expandedPath;
-        
         const responseData = await uploadPublishEnvironmentVariablesFromFile(params as any);
-        if (responseData) {
-          spinner.succeed('Environment variables uploaded successfully');
-        }
+        spinner.succeed('Environment variables uploaded successfully');
       } catch (e) {
         spinner.fail('Failed to upload environment variables');
         throw e;
       }
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-download`) {
-      const spinner = createOra('Downloading publish environment variables...').start();
-      try {
-        const variableGroups = await getPublishVariableGroups();
-        const variableGroup = variableGroups.find((group: any) => group.id === params.publishVariableGroupId);
-        
-        if (!variableGroup) {
-          spinner.fail(`Variable group with ID ${params.publishVariableGroupId} not found`);
-          throw new Error(`Variable group not found`);
-        }
-        
-        const variables = await getPublishVariableListByGroupId(params);
-        
-        let formattedVariables = variables.variables.map((variable: any) => ({
-          key: variable.key,
-          value: variable.value,
-          isSecret: variable.isSecret,
-          isFile: variable.isFile || false,
-          id: variable.key
-        }));
-        
-        formattedVariables.sort((a: any, b: any) => {
-          const aKey = a.key;
-          const bKey = b.key;
-          return bKey.localeCompare(aKey);
-        });
-        
-        const timestamp = Date.now();
-        const fileName = `${variableGroup.name}_${timestamp}.json`;
-        
-        let filePath = params.path || process.cwd();
-        
-        if (filePath.includes('~')) {
-          filePath = filePath.replace(/~/g, os.homedir());
-        }
-        
-        filePath = path.resolve(filePath);
-        
-        if (!fs.existsSync(filePath)) {
-          fs.mkdirSync(filePath, { recursive: true });
-        }
-        
-        if (fs.statSync(filePath).isDirectory()) {
-          filePath = path.join(filePath, fileName);
-        }
-        
-        fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
-        
-        spinner.succeed(`Publish environment variables downloaded successfully to ${filePath}`);
-      } catch (e) {
-        spinner.fail('Failed to download publish environment variables');
-        throw e;
+    if (!params.publishVariableGroupId && params.variableGroupId) {
+      params.publishVariableGroupId = params.variableGroupId;
+    }
+    const spinner = createOra('Downloading publish environment variables...').start();
+    try {
+      const variableGroups = await getPublishVariableGroups();
+      const variableGroup = variableGroups.find((group: any) => group.id === params.publishVariableGroupId);
+      
+      if (!variableGroup) {
+        spinner.fail(`Variable group with ID ${params.publishVariableGroupId} not found`);
+        throw new Error(`Variable group not found`);
       }
-    } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
-      const spinner = createOra('Fetching...').start();
+      
+      const variables = await getPublishVariableListByGroupId(params);
+      
+      let formattedVariables = variables.variables.map((variable: any) => ({
+        key: variable.key,
+        value: variable.value,
+        isSecret: variable.isSecret,
+        isFile: variable.isFile || false,
+        id: variable.key
+      }));
+      
+      formattedVariables.sort((a: any, b: any) => {
+        const aKey = a.key;
+        const bKey = b.key;
+        return bKey.localeCompare(aKey);
+      });
+      
+      const timestamp = Date.now();
+      const fileName = `${variableGroup.name}_${timestamp}.json`;
+      
+      const homeDir = os.homedir();
+      const defaultDownloadDir = path.join(homeDir, 'Downloads');
+      let filePath = params.path || defaultDownloadDir;
+      
+      if (filePath.includes('~')) {
+        filePath = filePath.replace(/~/g, os.homedir());
+      }
+      
+      filePath = path.resolve(filePath);
+      
+      if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(filePath, { recursive: true });
+      }
+      
+      if (fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(filePath, fileName);
+      }
+      
+      fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
+      
+      spinner.succeed(`Publish environment variables downloaded successfully to ${filePath}`);
+    } catch (e) {
+      spinner.fail('Failed to download publish environment variables');
+      throw e;
+    }
+  } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
+      const spinner = createOra('Listing app versions...').start();
       const appVersions = await getAppVersions(params);
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -561,7 +592,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: appVersions,
       });
     } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Getting app version details...').start();
       const appVersion = await getAppVersionDetail(params);
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -578,7 +609,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         throw e;
       }
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Listing active publishes...').start();
       const responseData = await getActivePublishes();
       spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
@@ -586,9 +617,9 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: responseData,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
-      const spinner = createOra('Fetching...').start();
+      const spinner = createOra('Listing publish details...').start();
       const responseData = await getPublisDetailById(params);
-      spinner.succeed();
+        spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
         fullCommandName: command.fullCommandName,
         data: responseData,
@@ -618,7 +649,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         data: responseData,
       });
       
-      spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}\nQueueItemId: ${responseData.queueItemId}`);
+      spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
       
       const progressSpinner = createOra(`Checking build status...`).start();
       let dots = "";
@@ -632,6 +663,8 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       let buildSuccess = false;
       let retryCount = 0;
       const maxRetries = 300;
+      let finalStatusResponse: any = null;
+      let latestBuildId: string | null = null;
       
       try {
         const taskId = responseData.queueItemId;
@@ -641,6 +674,18 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         while (!buildCompleted && retryCount < maxRetries) {
           try {
             const queueResponse = await getBuildStatusFromQueue({ taskId });
+            finalStatusResponse = queueResponse;
+            
+            // Try to get the latest build ID if we have branchId and profileId
+            if (!latestBuildId && params.branchId && params.profileId) {
+              latestBuildId = await getLatestBuildId({ 
+                branchId: params.branchId, 
+                profileId: params.profileId 
+              });
+              if (latestBuildId) {
+                finalStatusResponse.buildId = latestBuildId;
+              }
+            }
             
             const buildStatus = queueResponse && queueResponse.buildStatus !== undefined ? 
               queueResponse.buildStatus : null;
@@ -666,6 +711,8 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                 case 2: // CANCELED
                   progressSpinner.text = chalk.hex('#FF8C32')(`Build canceled 🚫`);
                   buildCompleted = true;
+                  // Let's specifically set a flag to indicate this was a canceled build
+                  params.wasCanceled = true;
                   break;
                 case 3: // TIMEOUT
                   progressSpinner.text = chalk.red(`Build timed out ⏱️`);
@@ -701,7 +748,6 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         if (buildCompleted) {
           if (buildSuccess) {
             try {
-              const finalStatusResponse = await getBuildStatusFromQueue({ taskId });
               const hasWarning = finalStatusResponse && finalStatusResponse.hasWarning === true;
               if (hasWarning) {
                 progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️`);
@@ -713,12 +759,86 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
               progressSpinner.succeed(`Build completed successfully ✅`);
             }
             
-            await downloadBuildLogs(taskId, params);
+            const homeDir = os.homedir();
+            const defaultDownloadDir = path.join(homeDir, 'Downloads');
+                
+            console.log(chalk.cyan('\nWhat would you like to do next?'));
+             
+            try {
+              // @ts-ignore
+              const response: any = await enquirer.prompt({
+                type: 'select',
+                name: 'action',
+                message: 'Choose an option:',
+                choices: [
+                  { name: 'artifacts', message: 'Download Artifacts' },
+                  { name: 'logs', message: 'Download Build Logs' },
+                  { name: 'continue', message: 'Continue without downloading' }
+                ]
+              });
+              
+              if (response.action === 'artifacts') {
+                const artifactDownloadPath = await promptForPath('[OPTIONAL] Enter download path for artifacts', defaultDownloadDir);
+                const commitIdForArtifact = finalStatusResponse?.commitId;
+                const buildIdForArtifact = latestBuildId || finalStatusResponse?.buildId;
+
+                if (commitIdForArtifact && buildIdForArtifact) {
+                  const artifactSpinner = createOra('Downloading artifacts...').start();
+                  try {
+                    const timestamp = Date.now();
+                    const artifactFileName = `artifact-${timestamp}.zip`;
+                    await downloadArtifact({ 
+                      commitId: commitIdForArtifact, 
+                      buildId: buildIdForArtifact,
+                      branchId: params.branchId,
+                      profileId: params.profileId
+                    }, artifactDownloadPath, artifactFileName);
+                    artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(artifactDownloadPath, artifactFileName)}`);
+                  } catch (e: any) {
+                    artifactSpinner.fail(`Failed to download artifacts: ${e.message}`);
+                  }
+                }
+              } else if (response.action === 'logs') {
+                const buildLogPath = await promptForPath('[OPTIONAL] Enter download path for build logs', defaultDownloadDir);
+                params.path = buildLogPath;
+                
+                if (finalStatusResponse && finalStatusResponse.buildStatus === 2) {
+                  params.wasCanceled = true;
+                  console.log(chalk.yellow('Note: Logs for canceled builds might not be immediately available.'));
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                try {
+                  const commitId = finalStatusResponse?.commitId;
+                  const buildId = latestBuildId || finalStatusResponse?.buildId;
+                  
+                  if (commitId && buildId && buildId !== '00000000-0000-0000-0000-000000000000') {
+                    await downloadBuildLogs({ 
+                      commitId, 
+                      buildId,
+                      branchId: params.branchId,
+                      profileId: params.profileId
+                    }, params);
+                  } else {
+                    await downloadBuildLogs(responseData.queueItemId, params);
+                  }
+                } catch (error: any) {
+                  console.log(chalk.yellow(`Error downloading logs: ${error.message}`));
+                  await downloadBuildLogs(responseData.queueItemId, params);
+                }
+              } else {
+                console.log(chalk.gray('Continuing without download.'));
+              }
+              
+              process.exit(0);
+            } catch (err) {
+              console.log(chalk.gray('Continuing without download.'));
+              process.exit(0);
+            }
           } else {
             try {
-              const queueResponse = await getBuildStatusFromQueue({ taskId });
-              const buildStatus = queueResponse && queueResponse.buildStatus !== undefined ? 
-                queueResponse.buildStatus : null;
+              const buildStatus = finalStatusResponse && finalStatusResponse.buildStatus !== undefined ? 
+                finalStatusResponse.buildStatus : null;
               
               if (buildStatus === null || buildStatus === undefined) {
                 progressSpinner.fail(chalk.red(`Build completed but status information is unavailable.`));
@@ -740,11 +860,65 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             } catch (e) {
               progressSpinner.fail(chalk.red(`Build completed unsuccessfully.`));
             }
+            // Offer to download logs even on failure using enquirer
+            console.log(chalk.cyan('\nBuild failed. Would you like to download the logs?'));
             
-            await downloadBuildLogs(taskId, params);
+            try {
+              // @ts-ignore
+              const response: any = await enquirer.prompt({
+                type: 'select',
+                name: 'download',
+                message: 'Do you want to download the publish log? (Y/n)',
+                choices: [
+                  { name: 'yes', message: 'yes' },
+                  { name: 'no', message: 'no' }
+                ],
+                initial: 0
+              });
+              
+              if (response.download === 'yes') {
+                const homeDir = os.homedir();
+                // Use Downloads folder as default
+                const defaultDownloadDir = path.join(homeDir, 'Downloads');
+                const buildLogPath = await promptForPath('[OPTIONAL] Enter download path for build logs', defaultDownloadDir);
+                params.path = buildLogPath;
+                
+                if (finalStatusResponse && finalStatusResponse.buildStatus === 2) {
+                  params.wasCanceled = true;
+                  console.log(chalk.yellow('Note: Logs for canceled builds might not be immediately available.'));
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                try {
+                  const commitId = finalStatusResponse?.commitId;
+                  const buildId = latestBuildId || finalStatusResponse?.buildId;
+                  
+                  if (commitId && buildId && buildId !== '00000000-0000-0000-0000-000000000000') {
+                    await downloadBuildLogs({ 
+                      commitId, 
+                      buildId,
+                      branchId: params.branchId,
+                      profileId: params.profileId
+                    }, params);
+                  } else {
+                    await downloadBuildLogs(responseData.queueItemId, params);
+                  }
+                } catch (error: any) {
+                  console.log(chalk.yellow(`Error downloading logs: ${error.message}`));
+                  await downloadBuildLogs(responseData.queueItemId, params);
+                }
+              } else {
+                console.log(chalk.gray('Skipping log download.'));
+              }
+              process.exit(1); // Exit with error code as build failed
+            } catch (err) {
+              console.log(chalk.gray('Skipping log download.'));
+              process.exit(1); // Exit with error code as build failed
+            }
           }
         } else {
           progressSpinner.fail(chalk.red(`Build monitoring timed out after ${maxRetries * 3} seconds.`));
+          process.exit(1);
         }
       } catch (e) {
         clearInterval(interval);
@@ -755,7 +929,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getBuildProfiles(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -763,7 +937,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getBranches(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -771,7 +945,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   }else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflows`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getWorkflows(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -779,7 +953,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-configurations`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getConfigurations(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -787,7 +961,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-commits`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getCommits(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -795,7 +969,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getBuildsOfCommit(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -803,97 +977,225 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download`){
-    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
-    const spinner = createOra(`Downloading file artifact.zip`).start();
-    try {
-      const responseData = await downloadArtifact(params, downloadPath);
-      commandWriter(CommandTypes.BUILD, {
-        fullCommandName: command.fullCommandName,
-        data: responseData,
-      });
-      spinner.text = `The file artifact.zip is downloaded successfully under path:\n${downloadPath}`;
-      spinner.succeed();
-    } catch (e) {
-      spinner.text = 'The file could not be downloaded.';
-      spinner.fail();
+    const homeDir = os.homedir();
+    const defaultDownloadDir = path.join(homeDir, 'Downloads');
+    let downloadPath = params.path ? path.resolve((params.path).replace('~', homeDir)) : defaultDownloadDir;
+    
+    if (!fs.existsSync(downloadPath)) {
+      try {
+        fs.mkdirSync(downloadPath, { recursive: true });
+      } catch (e) {
+        console.log(chalk.yellow(`Could not create directory at ${downloadPath}. Using home directory instead.`));
+        downloadPath = homeDir;
+      }
     }
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`){
-    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
-    let spinner = createOra(`Waiting for build logs to be prepared...`).start();
+    
+    const timestamp = Date.now();
+    const artifactFileName = `artifact-${timestamp}.zip`;
+    const spinner = createOra(`Downloading`).start();
     
     try {
-      if (params.taskId) {
-        const MAX_WAIT_TIME = 120000;
-        const startTime = Date.now();
-        let logsAvailable = false;
-        let lastError = null;
-        
-        while (!logsAvailable && (Date.now() - startTime < MAX_WAIT_TIME)) {
-          try {
-            await downloadTaskLog({ taskId: params.taskId }, downloadPath);
-            logsAvailable = true;
-            spinner.text = `The build log is downloaded successfully under path:\n${downloadPath}/build-task-${params.taskId}-log.txt`;
-            spinner.succeed();
-            break;
-          } catch (error) {
-            lastError = error;
-            
-            if (error instanceof Error) {
-              if (error.message === 'No Logs Available') {
-                spinner.text = "Waiting for build logs to be prepared...";
-                
-                await new Promise(resolve => setTimeout(resolve, 5000));
-              } else if (error.message.includes('HTTP error')) {
-                spinner.text = "Waiting for build logs to be prepared...";
-                
-                await new Promise(resolve => setTimeout(resolve, 5000));
-              } else {
-                break;
-              }
-            } else {
-              break;
-            }
-          }
-        }
-        
-        if (!logsAvailable) {
-          if (lastError instanceof Error && lastError.message === 'No Logs Available') {
-            spinner.fail(`Logs are not available yet. The build may still be in progress. Please try again later.`);
-          } else if (lastError instanceof Error && lastError.message.includes('HTTP error')) {
-            spinner.fail(`Server error while retrieving logs: ${lastError.message}. Please try again later.`);
-          } else {
-            spinner.fail(`Build logs could not be retrieved after waiting for 2 minutes. Please try again later.`);
-          }
-        }
-      } else if (params.commitId && params.buildId) {
-        spinner.text = "Downloading build log using commit and build IDs...";
-        
+      if (!params.commitId && !params.branchId) {
+        spinner.fail(chalk.red('Missing required parameters. Please provide either --commitId or --branchId parameter.'));
+        return;
+      }
+      
+      if (params.branchId && !params.profileId && params.profileId !== undefined) {
         try {
-          const responseData = await downloadBuildLog({
-            commitId: params.commitId,
-            buildId: params.buildId
-          }, downloadPath);
-          
-          commandWriter(CommandTypes.BUILD, {
-            fullCommandName: command.fullCommandName,
-            data: responseData,
-          });
-          
-          spinner.text = `The build log is downloaded successfully under path:\n${downloadPath}/${params.buildId}-log.txt`;
-          spinner.succeed();
+          const buildProfiles = await getBuildProfiles();
+          if (buildProfiles && buildProfiles.length > 0) {
+            params.profileId = buildProfiles[0].id;
+          }
+        } catch (error: any) {
+          // Silently continue with alternative method
+        }
+      }
+      
+      if (params.branchId && params.profileId) {
+        try {
+          await downloadArtifact({
+            branchId: params.branchId,
+            profileId: params.profileId,
+            commitId: params.commitId || ""
+          }, downloadPath, artifactFileName);
+          const fullPath = path.join(downloadPath, artifactFileName);
+          spinner.succeed(`The file is downloaded successfully: file://${fullPath}`);
+          return;
+        } catch (error: any) {
+          // Silently continue with alternative method
+        }
+      }
+      
+      if (params.commitId) {
+        let shouldUseLatestBuildId = true;
+        try {
+          const buildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
+          if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
+            if (!params.buildId) {
+              params.buildId = buildsResponse.builds[0].id;
+            } else {
+              const requestedBuildExists = buildsResponse.builds.some((build: any) => build.id === params.buildId);
+              if (!requestedBuildExists || (buildsResponse.builds[0].id !== params.buildId)) {
+                params.buildId = buildsResponse.builds[0].id;
+              }
+            }
+          } else {
+            spinner.fail(chalk.yellow(`No builds found for commit ID: ${params.commitId}`));
+            return;
+          }
         } catch (error) {
-          spinner.fail(`Failed to download logs: ${error instanceof Error ? error.message : String(error)}`);
+          if (!params.buildId) {
+            spinner.fail(chalk.red(`Could not get build ID and buildId parameter was not provided.`));
+            return;
+          }
+        }
+        try {
+          await downloadArtifact(params, downloadPath, artifactFileName);
+          const fullPath = path.join(downloadPath, artifactFileName);
+          spinner.succeed(`The file ${artifactFileName} is downloaded successfully: file://${fullPath}`);
+        } catch (e: any) {
+          spinner.fail(`Failed to download artifact: ${e.message || 'Unknown error'}`);
+          
+          try {
+            const buildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
+            
+            if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
+              const latestBuild = buildsResponse.builds[0];
+              console.log(chalk.cyan(`\nTry downloading with the latest build ID:`));
+              console.log(`${PROGRAM_NAME} build download --commitId ${params.commitId} --buildId ${latestBuild.id}`);
+            }
+          } catch (error: any) {
+            // Don't show any error for build list fetch failure
+          }
         }
       } else {
-        spinner.fail('Required parameters missing. Please provide either taskId or both commitId and buildId.');
+        spinner.fail(chalk.red('CommitId or BuildId information not found.'));
       }
-    } catch (e) {
-      console.error(e);
-      spinner.text = 'The build log could not be downloaded.';
-      spinner.fail();
+    } catch (e: any) {
+      spinner.fail(`Failed to download artifact: ${e.message || 'Unknown error'}`);
+    }
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`){
+    let spinner = createOra(`Preparing to download build logs...`).start();
+    
+    try {
+      if (!params.taskId && !params.commitId && !params.branchId) {
+        spinner.fail(chalk.red('Missing required parameters. Please provide either --taskId or (--commitId and --buildId) or (--branchId and --profileId).'));
+        return;
+      }
+      
+      if (params.branchId && !params.profileId && params.profileId !== undefined) {
+        try {
+          const buildProfiles = await getBuildProfiles();
+          if (buildProfiles && buildProfiles.length > 0) {
+            params.profileId = buildProfiles[0].id;
+          }
+        } catch (error: any) {
+          // Silently continue with alternative method
+        }
+      }
+      
+      if (params.taskId) {
+        spinner.succeed("Downloading build logs...");
+        await downloadBuildLogs(params.taskId, params);
+        return;
+      }
+      else if (params.branchId && params.profileId) {
+        try {
+          await downloadBuildLogs({ 
+            branchId: params.branchId, 
+            profileId: params.profileId,
+            commitId: params.commitId
+          }, params);
+          return;
+        } catch (error: any) {
+          // Silently continue with alternative method
+        }
+      }
+      
+      if (params.commitId) {
+        if (!params.buildId) {
+          try {
+            const buildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
+            if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
+              params.buildId = buildsResponse.builds[0].id;
+            } else {
+              spinner.fail(chalk.yellow(`No builds found for commit ID: ${params.commitId}`));
+              return;
+            }
+          } catch (error: any) {
+            spinner.fail(chalk.red(`Could not get build ID and buildId parameter was not provided.`));
+            return;
+          }
+        }
+        
+        try {
+          const buildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
+          if (!buildsResponse || !buildsResponse.builds || buildsResponse.builds.length === 0) {
+            spinner.fail(chalk.yellow(`No builds found for commit ID: ${params.commitId}`));
+            return;
+          }
+          
+          let buildId = params.buildId;
+          const latestBuild = buildsResponse.builds[0];
+          
+          if (latestBuild.id !== params.buildId) {
+            if (!params.forceSelectedBuild) {
+              buildId = latestBuild.id;
+              params.buildId = buildId;
+            }
+          }
+          
+          const build = buildsResponse.builds.find((b: any) => b.id === buildId);
+          if (!build) {
+            spinner.fail(chalk.yellow(`Build ID ${buildId} not found for commit ${params.commitId}`));
+            console.log(chalk.cyan(`Available builds:`));
+            buildsResponse.builds.slice(0, 3).forEach((build: any, index: number) => {
+              console.log(chalk.cyan(`  ${index + 1}. Build ID: ${build.id}`));
+            });
+            return;
+          }
+          
+          if (build.status === 2) {
+            params.wasCanceled = true;
+          }
+        } catch (error: any) {
+          spinner.fail(chalk.red(`Error verifying build: ${error.message || String(error)}`));
+          return;
+        }
+      }
+      
+      const homeDir = os.homedir();
+      const downloadsPath = path.join(homeDir, "Downloads");
+      const defaultDownloadDir = fs.existsSync(downloadsPath) && fs.statSync(downloadsPath).isDirectory() ? 
+                                downloadsPath : process.cwd();
+      
+      if (params.path && typeof params.path === 'string' && params.path.trim() !== "") {
+        const cliPath = path.resolve(params.path.trim().replace('~', os.homedir()));
+        if (!fs.existsSync(cliPath)) {
+          try {
+            fs.mkdirSync(cliPath, { recursive: true });
+          } catch (e: any) {
+            spinner.text = chalk.yellow(`Could not create directory. Using default path.`);
+            params.path = defaultDownloadDir;
+          }
+        } else if (!fs.statSync(cliPath).isDirectory()) {
+          spinner.text = chalk.yellow(`Specified path is not a directory. Using default path.`);
+          params.path = defaultDownloadDir;
+        }
+      } else {
+        params.path = defaultDownloadDir;
+      }
+      
+      spinner.succeed("Downloading build logs...");
+      
+      if (params.commitId && params.buildId) {
+        await downloadBuildLogs({ commitId: params.commitId, buildId: params.buildId }, params);
+      }
+    } catch (e: any) {
+      spinner.fail(`Error downloading build logs: ${e.message || String(e)}`);
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing variable groups...').start();
     const responseData = await getEnvironmentVariableGroups(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -913,14 +1215,17 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         spinner.fail('JSON file path is required');
         process.exit(1);
       }
-      
+      if (params.variableGroupId) {
+        const match = /\(([^)]+)\)$/.exec(params.variableGroupId);
+        if (match && match[1]) {
+          params.variableGroupId = match[1];
+        }
+      }
       const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
-      
       if (!fs.existsSync(expandedPath)) {
         spinner.fail('File not found');
         process.exit(1);
       }
-      
       try {
         const fileContent = fs.readFileSync(expandedPath, 'utf8');
         JSON.parse(fileContent);
@@ -928,9 +1233,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         spinner.fail('Invalid file');
         process.exit(1);
       }
-      
       params.filePath = expandedPath;
-      
       const responseData = await uploadEnvironmentVariablesFromFile(params as any);
       spinner.succeed('Environment variables uploaded successfully');
       commandWriter(CommandTypes.BUILD, {
@@ -941,8 +1244,62 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       spinner.fail('Failed to upload environment variables');
       throw e;
     }
+  } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-download`){
+    const spinner = createOra('Downloading environment variables...').start();
+      try {
+      const variableGroups = await getEnvironmentVariableGroups();
+      const variableGroup = variableGroups.find((group: any) => group.id === params.variableGroupId);
+        
+        if (!variableGroup) {
+        spinner.fail(`Variable group with ID ${params.variableGroupId} not found`);
+          throw new Error(`Variable group not found`);
+        }
+        
+      const responseData = await getEnvironmentVariables(params);
+        
+      let formattedVariables = responseData.map((variable: any) => ({
+          key: variable.key,
+          value: variable.value,
+          isSecret: variable.isSecret,
+          isFile: variable.isFile || false,
+          id: variable.key
+        }));
+        
+        formattedVariables.sort((a: any, b: any) => {
+          const aKey = a.key;
+          const bKey = b.key;
+          return bKey.localeCompare(aKey);
+        });
+        
+        const timestamp = Date.now();
+        const fileName = `${variableGroup.name}_${timestamp}.json`;
+        
+      const homeDir = os.homedir();
+      const defaultDownloadDir = path.join(homeDir, 'Downloads');
+      let filePath = params.path || defaultDownloadDir;
+        
+        if (filePath.includes('~')) {
+          filePath = filePath.replace(/~/g, os.homedir());
+        }
+        
+        filePath = path.resolve(filePath);
+        
+        if (!fs.existsSync(filePath)) {
+          fs.mkdirSync(filePath, { recursive: true });
+        }
+        
+        if (fs.statSync(filePath).isDirectory()) {
+          filePath = path.join(filePath, fileName);
+        }
+        
+        fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
+      spinner.succeed(`Environment variables downloaded successfully to ${filePath}`);
+      } catch (e) {
+      spinner.fail('Failed to download environment variables');
+      throw e;
+    }
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-view`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing variables...').start();
     const responseData = await getEnvironmentVariables(params);
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -978,18 +1335,21 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       
       const timestamp = Date.now();
       const fileName = `${variableGroup.name}_${timestamp}.json`;
-      let filePath = params.path || process.cwd();
+      
+      const homeDir = os.homedir();
+      const defaultDownloadDir = path.join(homeDir, 'Downloads');
+      let filePath = params.path || defaultDownloadDir;
       
       if (filePath.includes('~')) {
         filePath = filePath.replace(/~/g, os.homedir());
       }
       
       filePath = path.resolve(filePath);
-
+      
       if (!fs.existsSync(filePath)) {
         fs.mkdirSync(filePath, { recursive: true });
       }
-
+      
       if (fs.statSync(filePath).isDirectory()) {
         filePath = path.join(filePath, fileName);
       }
@@ -1026,7 +1386,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-active-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing...').start();
     const responseData = await getActiveBuilds();
     spinner.succeed();
     commandWriter(CommandTypes.BUILD, {
@@ -1034,14 +1394,22 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-view`){
-    const spinner = createOra('Fetching...').start();
-    const responseData = await getBuildsOfCommit(params);
-    spinner.succeed();
-    const build = responseData?.builds?.find((build: any) => build.id === params.buildId);
-    commandWriter(CommandTypes.BUILD, {
-      fullCommandName: command.fullCommandName,
-      data: build,
-    });
+    const spinner = createOra('Listing...').start();
+    try {
+      const responseData = await getBuildsOfCommit(params);
+      if (!responseData || !responseData.builds || responseData.builds.length === 0) {
+        spinner.fail('No builds available');
+        return;
+      }
+      spinner.succeed();
+      const build = responseData?.builds?.find((build: any) => build.id === params.buildId);
+      commandWriter(CommandTypes.BUILD, {
+        fullCommandName: command.fullCommandName,
+        data: build,
+      });
+    } catch (err) {
+      spinner.fail('No builds available');
+    }
   }
   else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
@@ -1051,7 +1419,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
 
 const handleDistributionCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing distribution profiles...').start();
     const responseData = await getDistributionProfiles(params);
     if (!responseData || responseData.length === 0) {
       spinner.text = 'No distribution profile available';
@@ -1126,8 +1494,8 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
             while(taskStatus.stateValue === TaskStatus.BEGIN){
               taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
               if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
-                spinner.fail('Warning: Upload task failed or was cancelled');
-                break;
+                spinner.fail('Upload failed: Please make sure that the app version number is unique in selected publish profile.');
+                process.exit(1);
               }
               await new Promise(resolve => setTimeout(resolve, 2000));
             }
@@ -1190,7 +1558,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       spinner.fail('Saving failed');
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing testing groups...').start();
     const responseData = await getTestingGroups();
     spinner.succeed();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
@@ -1198,15 +1566,14 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       data: responseData,
     });
   }else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing testing group details...').start();
     const responseData = await getTestingGroupById(params);
     spinner.succeed();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
-  }
-  else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-create`) {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-create`) {
     const responseData = await createTestingGroup(params);
     console.info(`Testing group named ${responseData.name} created successfully!`);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-remove`) {
@@ -1227,7 +1594,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
 
 const handleSigningIdentityCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing certificates...').start();
     const p12Certs = await getiOSP12Certificates();
     const csrCerts = await getiOSCSRCertificates();
     spinner.succeed();
@@ -1264,7 +1631,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-view`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Getting certificate details...').start();
     const responseData = await getCertificateDetailById(params);
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1277,7 +1644,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       (certificate: any) => certificate.id === params.certificateId
     );
     const downloadPath = path.resolve(
-      (params.path || '').replace('~', `${os.homedir}`)
+      (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
     );
     const fileName = p12Cert ? p12Cert.filename : 'download.cer';
     const spinner = createOra(
@@ -1309,7 +1676,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing keystores...').start();
     const keystores = await getAndroidKeystores();
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1336,7 +1703,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail('Upload failed: Keystore was tampered with, or password was incorrect');
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-download`){
-    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
     const spinner = createOra(`Searching file...`).start();
     try {
       const keystoreDetail = await getKeystoreDetailById(params);
@@ -1350,7 +1717,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail();
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-view`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Getting keystore details...').start();
     const keystore = await getKeystoreDetailById(params);
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1368,7 +1735,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-list`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing provisioning profiles...').start();
     const profiles = await getProvisioningProfiles();
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1386,7 +1753,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-download`) {
-    const downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+    const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
     const spinner = createOra('Trying to download the provisioning profile').start();
     try {
       const profile = await getProvisioningProfileDetailById(params);
@@ -1398,7 +1765,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   }else if(command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`) {
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Getting provisioning profile details...').start();
     const profile = await getProvisioningProfileDetailById(params);
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1419,7 +1786,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
 }
 const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-profile-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing enterprise profiles...').start();
     const responseData = await getEnterpriseProfiles();
     spinner.succeed();
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
@@ -1427,7 +1794,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
       data: responseData,
     });
   } else if(command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-list`){
-    const spinner = createOra('Fetching...').start();
+    const spinner = createOra('Listing enterprise app versions...').start();
     const responseData = await getEnterpriseAppVersions(params);
     spinner.succeed();
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
@@ -1523,11 +1890,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
         throw uploadError;
       }
     } catch (e) {
-      if (e instanceof ProgramError) {
-        spinner.fail(e.message);
-      } else {
-        spinner.fail('Upload failed');
-      }
+      spinner.fail('Upload failed');
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-upload-without-profile`){
@@ -1656,8 +2019,8 @@ async function downloadPublishStepLog(options: OptionsType<{
   return filePath;
 }
 
-async function downloadPublishLogs(publishDetail: any, platform: string, publishProfileId: string) {
-  if (!publishDetail || !publishDetail.steps || !publishDetail.steps.length) {
+async function downloadPublishLogs(publishDetail: any, platform: string, publishProfileId: string, userProvidedPath?: string) {
+  if (!publishDetail || !publishDetail.id) {
     return;
   }
   
@@ -1665,60 +2028,87 @@ async function downloadPublishLogs(publishDetail: any, platform: string, publish
   const downloadSpinner = createOra("Downloading publish logs...").start();
   
   try {
+    let finalDownloadPath = "";
     const homeDir = os.homedir();
-    const downloadsPath = path.join(homeDir, "Downloads");
-    const baseDownloadPath = fs.existsSync(downloadsPath) && fs.statSync(downloadsPath).isDirectory() 
-      ? downloadsPath 
-      : process.cwd();
-    
-    const date = new Date().toISOString().replace(/:/g, '-').slice(0, 19);
-    const folderName = `appcircle_publish_logs_${publishId.slice(0, 8)}_${date}`;
-    const publishLogDir = path.join(baseDownloadPath, folderName);
-    
-    if (!fs.existsSync(publishLogDir)) {
-      fs.mkdirSync(publishLogDir, { recursive: true });
+    const defaultDownloadDir = path.join(homeDir, 'Downloads');
+
+    if (userProvidedPath && userProvidedPath.trim() !== "") {
+        finalDownloadPath = path.resolve(userProvidedPath.trim().replace('~', homeDir));
+        if (!fs.existsSync(finalDownloadPath)) {
+            try {
+                fs.mkdirSync(finalDownloadPath, { recursive: true });
+                console.log(chalk.gray(`Created directory: ${finalDownloadPath}`));
+            } catch (e:any) {
+                console.log(chalk.yellow(`Could not create directory at ${finalDownloadPath}: ${e.message}. Using default download path.`));
+                finalDownloadPath = defaultDownloadDir;
+            }
+        } else if (!fs.statSync(finalDownloadPath).isDirectory()) {
+            console.log(chalk.yellow(`Provided path ${finalDownloadPath} is not a directory. Using default download path.`));
+            finalDownloadPath = defaultDownloadDir;
+        }
+    } else {
+        finalDownloadPath = defaultDownloadDir;
     }
     
-    const totalSteps = publishDetail.steps.length;
+    // Get profile name
+    let profileName = 'unknown';
+    try {
+      const profileDetail = await getPublishProfileDetailById({ platform, publishProfileId });
+      profileName = profileDetail.name || 'unknown';
+    } catch (error) {
+      console.log(chalk.yellow('Could not retrieve profile name, using default name'));
+    }
     
-    let successCount = 0;
-    let failCount = 0;
-    const downloadedFilePaths = [];
+    const timestamp = Date.now();
+    const fileName = `${profileName}-${timestamp}.txt`;
+    const filePath = path.join(finalDownloadPath, fileName);
     
-    for (const step of publishDetail.steps) {
-      const stepName = step.name ? step.name.replace(/[^a-zA-Z0-9_-]/g, '_') : 'step';
-      downloadSpinner.text = `Downloading logs for: ${step.name || 'Unnamed Step'}`;
-      
+    const MAX_WAIT_TIME = 120000; // 2 minutes timeout
+    const startTime = Date.now();
+    let logsAvailable = false;
+    
+    while (!logsAvailable && (Date.now() - startTime < MAX_WAIT_TIME)) {
       try {
-        const filePath = await downloadPublishStepLog(
+        const response = await appcircleApi.get(
+          `publish/v1/profiles/${platform}/${publishProfileId}/publish/${publishId}/logs`,
           {
-            platform,
-            publishProfileId,
-            publishId,
-            stepId: step.id,
-            stepName: stepName
-          },
-          publishLogDir
+            headers: getHeaders(),
+            responseType: 'text'
+          }
         );
         
-        if (filePath) {
-          downloadedFilePaths.push(filePath);
-          successCount++;
+        if (response.status === 200) {
+          const logContent = response.data;
+          
+          if (!logContent || logContent.trim() === '' || logContent.includes('No Logs Available')) {
+            downloadSpinner.text = "Waiting for publish logs to be prepared...";
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          } else {
+            fs.writeFileSync(filePath, logContent);
+            logsAvailable = true;
+            downloadSpinner.succeed(`Publish logs downloaded successfully to: ${filePath}`);
+            break;
+          }
+        } else {
+          downloadSpinner.text = "Waiting for publish logs to be prepared...";
+          await new Promise(resolve => setTimeout(resolve, 5000));
         }
-      } catch (error) {
-        failCount++;
+      } catch (error: any) {
+        if (error.response && error.response.status === 404) {
+          downloadSpinner.text = "Waiting for publish logs to be prepared...";
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } else {
+          throw error;
+        }
       }
     }
     
-    if (successCount === totalSteps) {
-      downloadSpinner.succeed(`Logs downloaded successfully to: ${publishLogDir}`);
-    } else if (successCount > 0) {
-      downloadSpinner.succeed(`Downloaded ${successCount}/${totalSteps} log files to: ${publishLogDir}`);
-    } else {
-      downloadSpinner.fail(`Failed to download logs`);
+    if (!logsAvailable) {
+      fs.writeFileSync(filePath, 'No logs available for this publish.');
+      downloadSpinner.fail('Could not retrieve publish logs after waiting for 2 minutes.');
     }
   } catch (error) {
-    downloadSpinner.fail(`Error downloading publish logs`);
+    downloadSpinner.fail(`Error downloading publish logs: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -1741,7 +2131,7 @@ async function checkPublishStatusDirectly(platform: string, publishProfileId: st
       return { status: 99 }; // Unknown status
     }
   } catch (error: any) {
-    console.log(chalk.yellow(`Error checking publish status: ${error.message || 'Unknown error'}`));
+    console.log(chalk.yellow(`Error checking publish status: ${error.message}`));
     return { status: 99 };
   }
 }
@@ -1826,10 +2216,6 @@ async function monitorPublishProcess(params: any) {
             // May need special handling, but typically not a final state
             break;
             
-          case 200: // NOT STARTED
-            progressSpinner.text = chalk.gray(`Publish has not started yet`);
-            break;
-            
           case 201: // STOPPED
             clearInterval(interval);
             progressSpinner.fail(chalk.hex('#FF8C32')(`Publish was stopped 🛑`));
@@ -1875,25 +2261,72 @@ async function monitorPublishProcess(params: any) {
 async function handleSuccessfulPublish(params: any, progressSpinner: any) {
   try {
     const publishDetail = await getPublisDetailById(params);
-    await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId);
+    
+    // @ts-ignore
+    const response: any = await enquirer.prompt({
+      type: 'select',
+      name: 'download',
+      message: 'Do you want to download the publish log? (Y/n)',
+      choices: [
+        { name: 'yes', message: 'yes' },
+        { name: 'no', message: 'no' }
+      ],
+      initial: 0
+    });
+
+    if (response.download === 'yes') {
+      const homeDir = os.homedir();
+      const defaultDownloadDir = path.join(homeDir, 'Downloads');
+      const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
+      await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
+    } else {
+      console.log(chalk.gray('Skipping log download.'));
+    }
+    console.log(chalk.cyan('\nYou can check the publish details with:'));
+    console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
+    process.exit(0);
   } catch (e) {
-    console.log(chalk.yellow(`\nCould not automatically download logs. You can check details with:`));
+    console.log(chalk.yellow('\nPublish completed successfully, but could not retrieve details to offer log download.'));
+    console.log(chalk.cyan('You can check the publish details with:'));
+    console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
+    process.exit(0);
   }
-  
-  console.log(chalk.green(`\nYou can check the publish details with:`));
-  console.log(`  ${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
 }
 
 async function handleFailedPublish(params: any, progressSpinner: any) {
   try {
     const publishDetail = await getPublisDetailById(params);
-    await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId);
+    console.log(chalk.red('\nPublish process did not complete successfully.'));
+    
+    // @ts-ignore
+    const response: any = await enquirer.prompt({
+      type: 'select',
+      name: 'download',
+      message: 'Do you want to download the publish log? (Y/n)',
+      choices: [
+        { name: 'yes', message: 'yes' },
+        { name: 'no', message: 'no' }
+      ],
+      initial: 0
+    });
+
+    if (response.download === 'yes') {
+      const homeDir = os.homedir();
+      const defaultDownloadDir = path.join(homeDir, 'Downloads');
+      const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
+      await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
+    } else {
+      console.log(chalk.gray('Skipping publish log download.'));
+    }
+    console.log(chalk.yellow('\nView details with:'));
+    console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
+    process.exit(1);
   } catch (e) {
-    console.log(chalk.yellow(`\nCould not automatically download logs. You can check details with:`));
+    console.log(chalk.yellow('\nPublish process did not complete successfully, and could not retrieve details to offer log download.'));
+    console.log(chalk.yellow('View details with:'));
+    console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
+    process.exit(1);
   }
-  
-  console.log(chalk.yellow(`\nView details with:`));
-  console.log(`  ${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
 }
 
 export const runCommand = async (command: ProgramCommand) => {
@@ -1949,91 +2382,249 @@ export const runCommand = async (command: ProgramCommand) => {
   }
 };
 
-async function downloadBuildLogs(taskId: string, params: any) {
-  let downloadSpinner = createOra("Waiting for build logs to be prepared...").start();
+async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; buildId?: string; branchId?: string; profileId?: string; profileName?: string; branchName?: string; path?: string; fileName?: string }, params?: any) {
+  const progressSpinner = createOra('Preparing to download build logs...').start();
   
+  let effectiveTaskId: string | null = null;
+  let providedPath = params?.path;
+  let fileNameFromParams = params?.fileName;
+  let commitId, buildId, branchId, profileId;
+  let wasCanceled = params?.wasCanceled || false;
+
   try {
-    let downloadPath = "";
-    const homeDir = os.homedir();
-    const downloadsPath = path.join(homeDir, "Downloads");
-    
-    if (fs.existsSync(downloadsPath) && fs.statSync(downloadsPath).isDirectory()) {
-      downloadPath = downloadsPath;
-    } else {
-      downloadPath = process.cwd();
-    }
-    
-    // Download logs directly using the task ID with the new endpoint
-    const MAX_WAIT_TIME = 120000; // 2 minutes in milliseconds
-    const startTime = Date.now();
-    let logsAvailable = false;
-    let lastError = null;
-    
-    while (!logsAvailable && (Date.now() - startTime < MAX_WAIT_TIME)) {
-      try {
-        await downloadTaskLog({ taskId }, downloadPath);
-        logsAvailable = true;
-        downloadSpinner.succeed(`Build logs downloaded successfully: ${downloadPath}/build-task-${taskId}-log.txt`);
-      } catch (error) {
-        lastError = error;
-        
-        if (error instanceof Error) {
-          if (error.message === 'No Logs Available') {
-            const elapsedTime = Math.round((Date.now() - startTime) / 1000);
-            const remainingTime = Math.round((MAX_WAIT_TIME - (Date.now() - startTime)) / 1000);
-            
-            // Keep the spinner running with the original message
-            downloadSpinner.text = "Waiting for build logs to be prepared...";
-            
-            // Wait 5 seconds before retrying
-            await new Promise(resolve => setTimeout(resolve, 5000));
-          } else if (error.message.includes('HTTP error')) {
-            const elapsedTime = Math.round((Date.now() - startTime) / 1000);
-            const remainingTime = Math.round((MAX_WAIT_TIME - (Date.now() - startTime)) / 1000);
-            
-            // Keep the spinner running with the original message
-            downloadSpinner.text = "Waiting for build logs to be prepared...";
-            
-            // Wait 5 seconds before retrying
+    if (typeof taskIdOrParams === 'string') {
+      effectiveTaskId = taskIdOrParams;
+      
+      const homeDir = os.homedir();
+      const downloadsPath = path.join(homeDir, "Downloads");
+      const downloadPath = providedPath || 
+                            (fs.existsSync(downloadsPath) && fs.statSync(downloadsPath).isDirectory() ? 
+                              downloadsPath : process.cwd());
+      
+      const MAX_WAIT_TIME = 120000;
+      const startTime = Date.now();
+      let logsAvailable = false;
+      let lastError = null;
+      
+      while (!logsAvailable && (Date.now() - startTime < MAX_WAIT_TIME)) {
+        try {
+          await downloadTaskLog({ taskId: effectiveTaskId }, downloadPath);
+          const logFilePath = path.join(downloadPath, `build-task-${effectiveTaskId}-log.txt`);
+          logsAvailable = true;
+          progressSpinner.succeed(`Build logs downloaded successfully: file://${logFilePath}`);
+          return;
+        } catch (error: any) {
+          lastError = error;
+          
+          if (error.message === 'No Logs Available' || error.message.includes('HTTP error')) {
+            progressSpinner.text = `Waiting for build logs to be prepared... (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`;
             await new Promise(resolve => setTimeout(resolve, 5000));
           } else {
-            // For other errors, try alternative method
             break;
           }
+        }
+      }
+      
+      if (!logsAvailable) {
+        progressSpinner.text = "Trying alternative download method...";
+        
+        try {
+          const taskStatus = await getBuildStatusFromQueue({ taskId: effectiveTaskId });
+          
+          if (taskStatus && taskStatus.commitId) {
+            commitId = taskStatus.commitId;
+            
+            if (!taskStatus.buildId || taskStatus.buildId === '00000000-0000-0000-0000-000000000000') {
+              try {
+                const buildsResponse = await getBuildsOfCommit({ commitId });
+                if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
+                  buildId = buildsResponse.builds[0].id;
+                } else {
+                  buildId = taskStatus.buildId;
+                }
+              } catch (error) {
+                buildId = taskStatus.buildId;
+              }
+            } else {
+              buildId = taskStatus.buildId;
+            }
+            
+            if (taskStatus.buildStatus === 2) {
+              wasCanceled = true;
+            }
+          } else {
+            const idParts = effectiveTaskId.split('-');
+            if (idParts.length >= 2) {
+              commitId = idParts[0];
+              buildId = idParts[1];
+            } else {
+              progressSpinner.fail(chalk.red('Could not get build details from Task ID.'));
+              return;
+            }
+          }
+        } catch (e) {
+          const idParts = effectiveTaskId.split('-');
+          if (idParts.length >= 2) {
+            commitId = idParts[0];
+            buildId = idParts[1];
+          } else {
+            progressSpinner.fail(chalk.red('Could not get build details from Task ID.'));
+            return;
+          }
+        }
+      }
+    } else {
+      commitId = taskIdOrParams.commitId;
+      buildId = taskIdOrParams.buildId;
+      branchId = taskIdOrParams.branchId;
+      profileId = taskIdOrParams.profileId;
+      providedPath = taskIdOrParams.path;
+      fileNameFromParams = taskIdOrParams.fileName;
+    }
+
+    if (branchId && profileId) {
+      progressSpinner.text = "Getting latest build ID with Branch and Profile ID...";
+      try {
+        const latestBuild = await getLatestBuildByBranch({ branchId, profileId });
+        if (latestBuild) {
+          buildId = latestBuild.id;
+          commitId = latestBuild.commitId;
         } else {
-          // Unknown error type, try alternative method
+          progressSpinner.fail(chalk.yellow(`No builds found for Branch and Profile ID.`));
+          return;
+        }
+      } catch (error: any) {
+        // Silently continue with alternative method
+      }
+    }
+
+    if (!buildId || buildId === '00000000-0000-0000-0000-000000000000') {
+      if (commitId) {
+        try {
+          const buildsResponse = await getBuildsOfCommit({ commitId });
+          if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
+            buildId = buildsResponse.builds[0].id;
+          }
+        } catch (error) {
+          // Continue with existing information
+        }
+      }
+    }
+
+    if (!commitId || !buildId) {
+      progressSpinner.fail(chalk.red('Missing required parameters: commitId and buildId'));
+      return;
+    }
+
+    const homeDir = os.homedir();
+    const downloadsPath = path.join(homeDir, 'Downloads');
+    const defaultDownloadDir = fs.existsSync(downloadsPath) && fs.statSync(downloadsPath).isDirectory() ? 
+                                downloadsPath : process.cwd();
+    
+    let finalDownloadPath = defaultDownloadDir;
+
+    if (providedPath) {
+      if (typeof providedPath === 'string' && providedPath.trim() !== "") {
+        const cliPath = path.resolve(providedPath.trim().replace('~', homeDir));
+        if (!fs.existsSync(cliPath)) {
+          try {
+            fs.mkdirSync(cliPath, { recursive: true });
+            finalDownloadPath = cliPath;
+          } catch (e: any) {
+            progressSpinner.fail(chalk.yellow(`Could not create directory: ${cliPath}. Using default path: ${defaultDownloadDir}`));
+            finalDownloadPath = defaultDownloadDir;
+          }
+        } else if (fs.statSync(cliPath).isDirectory()) {
+          finalDownloadPath = cliPath;
+        } else {
+          progressSpinner.fail(chalk.yellow(`Specified path is not a directory: ${cliPath}. Using default path: ${defaultDownloadDir}`));
+          finalDownloadPath = defaultDownloadDir;
+        }
+      } else {
+        finalDownloadPath = defaultDownloadDir;
+      }
+    }
+
+    let profileName = 'unknown';
+    let branchName = 'unknown';
+    if (params?.profileId) {
+      try {
+        const profileInfo = await getBranches({ profileId: params.profileId, branchId: params.branchId });
+        profileName = profileInfo.profileName || 'unknown';
+        branchName = profileInfo.branchName || 'unknown';
+      } catch (error) {
+        // Use default names if profile info cannot be fetched
+      }
+    }
+
+    const timestamp = Date.now();
+    const fileName = fileNameFromParams || 
+                    `${branchName}-${profileName}-build-${buildId}-logs-${timestamp}.txt`;
+    
+    if (wasCanceled) {
+      progressSpinner.text = "Waiting for canceled build logs to be prepared...";
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } else {
+      progressSpinner.text = "Waiting for build logs to be prepared...";
+    }
+    
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 3000;
+    let attempt = 0;
+    let lastError = null;
+    
+    while (attempt < MAX_RETRIES) {
+      try {
+        await downloadBuildLog({ commitId, buildId }, finalDownloadPath, fileName);
+        const fullPath = path.join(finalDownloadPath, fileName);
+        progressSpinner.succeed(`Build logs downloaded successfully: file://${fullPath}`);
+        return;
+      } catch (error: any) {
+        lastError = error;
+        
+        const isNotFoundError = error.message && (
+          error.message.includes('404') || 
+          error.message.includes('No Logs Available') ||
+          error.message.includes('HTTP error')
+        );
+        
+        attempt++;
+        
+        if (wasCanceled && isNotFoundError && attempt < MAX_RETRIES) {
+          progressSpinner.text = `Waiting for canceled build logs to be prepared... (Attempt ${attempt})`;
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * 2));
+        } else if (isNotFoundError && attempt < MAX_RETRIES) {
+          progressSpinner.text = `Waiting for build logs to be prepared... (Attempt ${attempt})`;
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        } else {
           break;
         }
       }
     }
     
-    // If we've waited the maximum time and still don't have logs
-    if (!logsAvailable) {
-      if (lastError instanceof Error && lastError.message === 'No Logs Available') {
-        downloadSpinner.fail(chalk.yellow(`Logs are not available yet. The build may still be in progress. Please try again later.`));
-      } else if (lastError instanceof Error && lastError.message.includes('HTTP error')) {
-        downloadSpinner.fail(chalk.red(`Server error while retrieving logs: ${lastError.message}. Please try again later.`));
-      } else {
-        downloadSpinner.fail(chalk.yellow(`Build logs could not be retrieved after waiting for 2 minutes. Please try again later.`));
-      }
-      
-      // Try the commit/build approach if we have that information
-      if (params.commitId && params.buildId) {
-        downloadSpinner = createOra("Trying alternative download method...").start();
-        
-        try {
-          await downloadBuildLog({
-            commitId: params.commitId,
-            buildId: params.buildId
-          }, downloadPath);
-          
-          downloadSpinner.succeed(`Build logs downloaded successfully using alternative method: ${downloadPath}/${params.buildId}-log.txt`);
-        } catch (error) {
-          downloadSpinner.fail(chalk.red(`Failed to download logs using all available methods. The logs may not be ready yet.`));
+    if (lastError) {
+      if (lastError.message && lastError.message.includes('No Logs Available')) {
+        if (wasCanceled) {
+          progressSpinner.fail(
+            chalk.yellow(`No logs available for this canceled build.`)
+          );
+        } else {
+          progressSpinner.fail(
+            chalk.yellow(`No logs available for this build. The build may not be completed yet.`)
+          );
         }
+      } else if (lastError.message && lastError.message.includes('404')) {
+        progressSpinner.fail(
+          chalk.yellow(`Build logs are not ready yet. Please try again later.`)
+        );
+      } else {
+        progressSpinner.fail(`Failed to download logs: ${lastError.message || String(lastError)}`);
       }
+    } else {
+      progressSpinner.fail(`Failed to download logs after multiple attempts.`);
     }
-  } catch (error) {
-    downloadSpinner.fail(chalk.red(`Error while downloading build logs: ${error instanceof Error ? error.message : String(error)}`));
+    
+  } catch (e: any) {
+    progressSpinner.fail(chalk.red(`Error downloading build logs: ${e.message}`));
   }
 }

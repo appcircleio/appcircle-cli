@@ -1,6 +1,6 @@
 # `appcircle build variable group upload`
 
-Upload environment variables from JSON file to a variable group.
+Upload Build environment variables from a JSON file to a variable group.
 
 ```plaintext
 appcircle build variable group upload [options]
