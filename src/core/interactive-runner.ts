@@ -3,11 +3,10 @@ import chalk from 'chalk';
 import ora from 'ora';
 import moment from 'moment';
 //@ts-ignore https://github.com/enquirer/enquirer/issues/212
-import { prompt, Select, AutoComplete, BooleanPrompt, MultiSelect } from 'enquirer';
+import { prompt, Select, AutoComplete, BooleanPrompt } from 'enquirer';
 import { runCommand } from './command-runner';
-import { Commands, CommandParameterTypes, CommandTypes, CommandType } from './commands';
+import { Commands, CommandParameterTypes, CommandType } from './commands';
 import { APPCIRCLE_COLOR, OperatingSystems, UNKNOWN_PARAM_VALUE } from '../constant';
-import { createOra } from '../utils/orahelper';
 import {
   getBranches,
   getEnterpriseProfiles,
@@ -38,89 +37,10 @@ import {
   getTestingGroupById,
   RoleType,
 } from '../services';
-import { DefaultEnvironmentVariables, getConfigStore } from '../config';
 import { ProgramCommand, createCommandActionCallback } from '../program';
 import path from 'path';
 import os from 'os';
 
-const prepareConfigCommand = async () => {
-  const commandSelect = new Select({
-    name: 'action',
-    message: 'Which action do you want?',
-    choices: [
-      { name: 'list', message: '1. List (List CLI properties for all configurations)' },
-      { name: 'get', message: '2. Get (Print the value of an CLI currently active configuration property)' },
-      { name: 'set', message: '3. Set (Set a CLI currently active configuration property)' },
-      { name: 'current', message: '4. Current (Set a CLI currently active configuration property)' },
-      { name: 'add', message: '5. Add (Add a new CLI configuration environment)' },
-      { name: 'reset', message: '6. Reset (Reset a CLI configuration to default)' },
-    ],
-  });
-  const action = await commandSelect.run();
-
-  const configActionCommandArgs = [] as string[];
-  const configActionCommand = {
-    parent: { name: () => 'config', args: () => [], opts: () => ({}), parent: {} },
-    name: () => action,
-    args: () => configActionCommandArgs,
-    opts: () => ({}),
-  };
-
-  const keySelect = async (questionStr: string = 'Key') => {
-    const keySelect = new Select({
-      name: 'action',
-      message: questionStr,
-      choices: Object.keys(DefaultEnvironmentVariables),
-    });
-    const key = await keySelect.run();
-    configActionCommandArgs.push(key);
-  };
-
-  const valueInput = async () => {
-    const valueResponse = (await prompt({
-      type: 'input',
-      name: 'value',
-      message: 'Value',
-    })) as any;
-    configActionCommandArgs.push(valueResponse.value as string);
-  };
-
-  const envSelect = async (questionStr: string = 'Which key do you want?') => {
-    const envSelect = new Select({
-      name: 'action',
-      message: 'Environment',
-      choices: Object.keys(getConfigStore().envs),
-    });
-    const key = await envSelect.run();
-    configActionCommandArgs.push(key);
-  };
-
-  let args = [];
-  switch (action) {
-    case 'reset':
-    case 'list': {
-      break;
-    }
-    case 'get': {
-      await keySelect();
-      break;
-    }
-    case 'set': {
-      await keySelect();
-      await valueInput();
-      break;
-    }
-    case 'current': {
-      await envSelect();
-      break;
-    }
-    case 'add': {
-      await valueInput();
-      break;
-    }
-  }
-  return configActionCommand;
-};
 
 const expandTilde = (filePath: string): string => {
   if (!filePath) return filePath;
@@ -167,6 +87,24 @@ const handleInteractiveParamsOrArguments = async (
       param.params = branches.map((branch: any) => ({ name: `${branch.name} (${branch.id})`, message: `${branch.name} (${branch.id})` }));
       spinner.text = 'Branches listed';
       spinner.succeed();
+      // Prompt for selection and always extract UUID
+      const selectPrompt = new AutoComplete({
+        name: param.name,
+        message: param.description || 'Branch',
+        initial: param.defaultValue,
+        limit: 10,
+        choices: Array.isArray(param.params) ? param.params : [],
+      });
+      const selected = await selectPrompt.run();
+      const match = /\(([^)]+)\)$/.exec(selected);
+      if (match && match[1]) {
+        params.branchId = match[1].trim();
+      } else {
+        // fallback: try to find by name
+        const found = branches.find((b: any) => `${b.name} (${b.id})` === selected || b.id === selected);
+        params.branchId = found ? found.id : selected;
+      }
+      continue;
     } else if (param.name === 'profileId') {
       const spinner = ora('Listing build profiles...').start();
       const profiles = await getBuildProfiles();
@@ -181,6 +119,23 @@ const handleInteractiveParamsOrArguments = async (
       param.params = profiles.map((profile: any) => ({ name: `${profile.name} (${profile.id})`, message: `${profile.name} (${profile.id})` }));
       spinner.text = 'Build profiles listed';
       spinner.succeed();
+      const selectPrompt = new AutoComplete({
+        name: param.name,
+        message: param.description || 'Build Profile',
+        initial: param.defaultValue,
+        limit: 10,
+        choices: Array.isArray(param.params) ? param.params : [],
+      });
+      const selected = await selectPrompt.run();
+      const match = /\(([^)]+)\)$/.exec(selected);
+      if (match && match[1]) {
+        params.profileId = match[1].trim();
+      } else {
+        // fallback: try to find by name
+        const found = profiles.find((p: any) => `${p.name} (${p.id})` === selected || p.id === selected);
+        params.profileId = found ? found.id : selected;
+      }
+      continue;
     } else if (param.name === 'commitId') {
       const spinner = ora('Listing commits...').start();
       if (params.branchId && branchesList.length > 0) {
@@ -239,19 +194,35 @@ const handleInteractiveParamsOrArguments = async (
         builds = buildsResponse.builds;
       } catch (err) {
         spinner.stop();
-        console.log('✖ No builds available');
         // Suppress all further error output
         return;
       }
       if (!builds || builds.length === 0) {
         spinner.stop();
-        console.log('✖ No builds available');
         // Suppress all further error output
         return;
       }
       spinner.stop();
       //@ts-ignore
-      param.params = builds.map((build: any) => ({ name: build.id, message: `${build.id} (${moment(build.startDate).calendar()})` }));
+      param.params = builds.map((build: any) => {
+        const dateStr = build.startDate ? moment(build.startDate).format('YYYY-MM-DD HH:mm') : '-';
+        return { name: `${build.id} (${dateStr})`, message: `${build.id} (${dateStr})` };
+      });
+      const selectPrompt = new AutoComplete({
+        name: param.name,
+        message: param.description || 'Build ID',
+        initial: param.defaultValue,
+        limit: 10,
+        choices: Array.isArray(param.params) ? param.params : [],
+      });
+      const selected = await selectPrompt.run();
+      const match = /^([0-9a-fA-F-]{36})/.exec(selected);
+      if (match && match[1]) {
+        params.buildId = match[1].trim();
+      } else {
+        params.buildId = selected;
+      }
+      continue;
     } else if (param.name === 'entProfileId') {
       const spinner = ora('Listing enterprise profiles...').start();
       const profiles = await getEnterpriseProfiles();
@@ -287,6 +258,24 @@ const handleInteractiveParamsOrArguments = async (
       //@ts-ignore
       param.params = groups.map((group: any) => ({ name: `${group.name} (${group.id})`, message: `${group.name} (${group.id})` }));
       spinner.succeed();
+      // Prompt for selection and always extract UUID
+      const selectPrompt = new AutoComplete({
+        name: param.name,
+        message: param.description || 'Variable Group',
+        initial: param.defaultValue,
+        limit: 10,
+        choices: Array.isArray(param.params) ? param.params : [],
+      });
+      const selected = await selectPrompt.run();
+      const match = /\(([^)]+)\)$/.exec(selected);
+      if (match && match[1]) {
+        params.variableGroupId = match[1].trim();
+      } else {
+        // fallback: try to find by name
+        const found = groups.find((g: any) => `${g.name} (${g.id})` === selected || g.id === selected);
+        params.variableGroupId = found ? found.id : selected;
+      }
+      continue;
     } else if (param.name === 'entVersionId') {
       const spinner = ora('Listing enterprise versions...').start();
       const profiles = await getEnterpriseAppVersions({ entProfileId: params.entProfileId, publishType: '' });
@@ -516,9 +505,33 @@ const handleInteractiveParamsOrArguments = async (
         spinner.fail();
         return { isError: true };
       }else {
-        param.params = groups.map((group:any) => ({name:group.id, message: ` ${group.id} (${group.name})`}));
+        param.params = groups.map((group:any) => ({name:`${group.name} (${group.id})`, message: `${group.name} (${group.id})`}));
         spinner.text = 'Publish variable groups listed';
         spinner.succeed();
+        // Prompt for selection and always extract UUID
+        const selectPrompt = new AutoComplete({
+          name: param.name,
+          message: param.description || 'Publish Variable Group',
+          initial: param.defaultValue,
+          limit: 10,
+          choices: Array.isArray(param.params) ? param.params : [],
+        });
+        const selected = await selectPrompt.run();
+        const match = /\(([^)]+)\)$/.exec(selected);
+        let selectedId = match && match[1] ? match[1].trim() : null;
+        if (!selectedId) {
+          // fallback: try to find by name
+          const found = groups.find((g: any) => `${g.name} (${g.id})` === selected || g.id === selected);
+          selectedId = found ? found.id : selected;
+        }
+        const validGroup = groups.find((g: any) => g.id === selectedId);
+        if (!validGroup) {
+          spinner.fail(`Selected variable group not found! Lütfen geçerli bir grup seçin.`);
+          return { isError: true };
+        }
+        params.publishVariableGroupId = selectedId;
+        params.variableGroupId = undefined;
+        continue;
       }
     }
     else if (param.name === 'email' && param.type === CommandParameterTypes.SELECT) {

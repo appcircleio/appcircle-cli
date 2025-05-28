@@ -526,61 +526,64 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         throw e;
       }
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-download`) {
-      const spinner = createOra('Downloading publish environment variables...').start();
-      try {
-        const variableGroups = await getPublishVariableGroups();
-        const variableGroup = variableGroups.find((group: any) => group.id === params.publishVariableGroupId);
-        
-        if (!variableGroup) {
-          spinner.fail(`Variable group with ID ${params.publishVariableGroupId} not found`);
-          throw new Error(`Variable group not found`);
-        }
-        
-        const variables = await getPublishVariableListByGroupId(params);
-        
-        let formattedVariables = variables.variables.map((variable: any) => ({
-          key: variable.key,
-          value: variable.value,
-          isSecret: variable.isSecret,
-          isFile: variable.isFile || false,
-          id: variable.key
-        }));
-        
-        formattedVariables.sort((a: any, b: any) => {
-          const aKey = a.key;
-          const bKey = b.key;
-          return bKey.localeCompare(aKey);
-        });
-        
-        const timestamp = Date.now();
-        const fileName = `${variableGroup.name}_${timestamp}.json`;
-        
-        const homeDir = os.homedir();
-        const defaultDownloadDir = path.join(homeDir, 'Downloads');
-        let filePath = params.path || defaultDownloadDir;
-        
-        if (filePath.includes('~')) {
-          filePath = filePath.replace(/~/g, os.homedir());
-        }
-        
-        filePath = path.resolve(filePath);
-        
-        if (!fs.existsSync(filePath)) {
-          fs.mkdirSync(filePath, { recursive: true });
-        }
-        
-        if (fs.statSync(filePath).isDirectory()) {
-          filePath = path.join(filePath, fileName);
-        }
-        
-        fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
-        
-        spinner.succeed(`Publish environment variables downloaded successfully to ${filePath}`);
-      } catch (e) {
-        spinner.fail('Failed to download publish environment variables');
-        throw e;
+    if (!params.publishVariableGroupId && params.variableGroupId) {
+      params.publishVariableGroupId = params.variableGroupId;
+    }
+    const spinner = createOra('Downloading publish environment variables...').start();
+    try {
+      const variableGroups = await getPublishVariableGroups();
+      const variableGroup = variableGroups.find((group: any) => group.id === params.publishVariableGroupId);
+      
+      if (!variableGroup) {
+        spinner.fail(`Variable group with ID ${params.publishVariableGroupId} not found`);
+        throw new Error(`Variable group not found`);
       }
-    } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
+      
+      const variables = await getPublishVariableListByGroupId(params);
+      
+      let formattedVariables = variables.variables.map((variable: any) => ({
+        key: variable.key,
+        value: variable.value,
+        isSecret: variable.isSecret,
+        isFile: variable.isFile || false,
+        id: variable.key
+      }));
+      
+      formattedVariables.sort((a: any, b: any) => {
+        const aKey = a.key;
+        const bKey = b.key;
+        return bKey.localeCompare(aKey);
+      });
+      
+      const timestamp = Date.now();
+      const fileName = `${variableGroup.name}_${timestamp}.json`;
+      
+      const homeDir = os.homedir();
+      const defaultDownloadDir = path.join(homeDir, 'Downloads');
+      let filePath = params.path || defaultDownloadDir;
+      
+      if (filePath.includes('~')) {
+        filePath = filePath.replace(/~/g, os.homedir());
+      }
+      
+      filePath = path.resolve(filePath);
+      
+      if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(filePath, { recursive: true });
+      }
+      
+      if (fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(filePath, fileName);
+      }
+      
+      fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
+      
+      spinner.succeed(`Publish environment variables downloaded successfully to ${filePath}`);
+    } catch (e) {
+      spinner.fail('Failed to download publish environment variables');
+      throw e;
+    }
+  } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
       const spinner = createOra('Listing app versions...').start();
       const appVersions = await getAppVersions(params);
       spinner.succeed();
@@ -616,7 +619,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
       const spinner = createOra('Listing publish details...').start();
       const responseData = await getPublisDetailById(params);
-      spinner.succeed();
+        spinner.succeed();
       commandWriter(CommandTypes.PUBLISH, {
         fullCommandName: command.fullCommandName,
         data: responseData,
@@ -1109,9 +1112,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         }
       }
       
-      if (params.commitId) { 
-        spinner.text = "Verifying build...";
-        
+      if (params.commitId) {
         if (!params.buildId) {
           try {
             const buildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
@@ -1245,55 +1246,55 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     }
   } else if(command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-download`){
     const spinner = createOra('Downloading environment variables...').start();
-    try {
+      try {
       const variableGroups = await getEnvironmentVariableGroups();
       const variableGroup = variableGroups.find((group: any) => group.id === params.variableGroupId);
-      
-      if (!variableGroup) {
+        
+        if (!variableGroup) {
         spinner.fail(`Variable group with ID ${params.variableGroupId} not found`);
-        throw new Error(`Variable group not found`);
-      }
-      
+          throw new Error(`Variable group not found`);
+        }
+        
       const responseData = await getEnvironmentVariables(params);
-      
+        
       let formattedVariables = responseData.map((variable: any) => ({
-        key: variable.key,
-        value: variable.value,
-        isSecret: variable.isSecret,
-        isFile: variable.isFile || false,
-        id: variable.key
-      }));
-      
-      formattedVariables.sort((a: any, b: any) => {
-        const aKey = a.key;
-        const bKey = b.key;
-        return bKey.localeCompare(aKey);
-      });
-      
-      const timestamp = Date.now();
-      const fileName = `${variableGroup.name}_${timestamp}.json`;
-      
+          key: variable.key,
+          value: variable.value,
+          isSecret: variable.isSecret,
+          isFile: variable.isFile || false,
+          id: variable.key
+        }));
+        
+        formattedVariables.sort((a: any, b: any) => {
+          const aKey = a.key;
+          const bKey = b.key;
+          return bKey.localeCompare(aKey);
+        });
+        
+        const timestamp = Date.now();
+        const fileName = `${variableGroup.name}_${timestamp}.json`;
+        
       const homeDir = os.homedir();
       const defaultDownloadDir = path.join(homeDir, 'Downloads');
       let filePath = params.path || defaultDownloadDir;
-      
-      if (filePath.includes('~')) {
-        filePath = filePath.replace(/~/g, os.homedir());
-      }
-      
-      filePath = path.resolve(filePath);
-      
-      if (!fs.existsSync(filePath)) {
-        fs.mkdirSync(filePath, { recursive: true });
-      }
-      
-      if (fs.statSync(filePath).isDirectory()) {
-        filePath = path.join(filePath, fileName);
-      }
-      
-      fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
+        
+        if (filePath.includes('~')) {
+          filePath = filePath.replace(/~/g, os.homedir());
+        }
+        
+        filePath = path.resolve(filePath);
+        
+        if (!fs.existsSync(filePath)) {
+          fs.mkdirSync(filePath, { recursive: true });
+        }
+        
+        if (fs.statSync(filePath).isDirectory()) {
+          filePath = path.join(filePath, fileName);
+        }
+        
+        fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
       spinner.succeed(`Environment variables downloaded successfully to ${filePath}`);
-    } catch (e) {
+      } catch (e) {
       spinner.fail('Failed to download environment variables');
       throw e;
     }
@@ -1394,13 +1395,21 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-view`){
     const spinner = createOra('Listing...').start();
-    const responseData = await getBuildsOfCommit(params);
-    spinner.succeed();
-    const build = responseData?.builds?.find((build: any) => build.id === params.buildId);
-    commandWriter(CommandTypes.BUILD, {
-      fullCommandName: command.fullCommandName,
-      data: build,
-    });
+    try {
+      const responseData = await getBuildsOfCommit(params);
+      if (!responseData || !responseData.builds || responseData.builds.length === 0) {
+        spinner.fail('No builds available');
+        return;
+      }
+      spinner.succeed();
+      const build = responseData?.builds?.find((build: any) => build.id === params.buildId);
+      commandWriter(CommandTypes.BUILD, {
+        fullCommandName: command.fullCommandName,
+        data: build,
+      });
+    } catch (err) {
+      spinner.fail('No builds available');
+    }
   }
   else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
@@ -1797,7 +1806,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
       fullCommandName: command.fullCommandName,
       data: responseData,
-       });
+    });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-unpublish`){
     const responseData = await unpublishEnterpriseAppVersion(params);
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
@@ -2207,10 +2216,6 @@ async function monitorPublishProcess(params: any) {
             // May need special handling, but typically not a final state
             break;
             
-          case 200: // NOT STARTED
-            progressSpinner.text = chalk.gray(`Publish has not started yet`);
-            break;
-            
           case 201: // STOPPED
             clearInterval(interval);
             progressSpinner.fail(chalk.hex('#FF8C32')(`Publish was stopped 🛑`));
@@ -2271,7 +2276,6 @@ async function handleSuccessfulPublish(params: any, progressSpinner: any) {
 
     if (response.download === 'yes') {
       const homeDir = os.homedir();
-      // Use Downloads folder as default
       const defaultDownloadDir = path.join(homeDir, 'Downloads');
       const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
       await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
