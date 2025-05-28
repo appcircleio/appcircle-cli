@@ -324,10 +324,30 @@ const handleInteractiveParamsOrArguments = async (
         spinner.fail();
         return;
       }
+      const versionMap = new Map(profiles.map((profile: any) => [profile.id, `${profile.version} (${profile.versionCode}) (${profile.id})`]));
       //@ts-ignore
-      param.params = profiles.map((profile: any) => ({ name: profile.id, message: `${profile.version} (${profile.versionCode})` }));
+      param.params = profiles.map((profile: any) => ({ 
+        name: versionMap.get(profile.id), 
+        message: `${profile.version} (${profile.versionCode}) (${profile.id})` 
+      }));
       spinner.text = 'Enterprise versions listed';
       spinner.succeed();
+      
+      const selectPrompt = new AutoComplete({
+        name: param.name,
+        message: param.description || 'App Version ID',
+        initial: param.defaultValue,
+        limit: 10,
+        choices: Array.isArray(param.params) ? param.params : [],
+      });
+      const selected = await selectPrompt.run();
+      const match = /\(([\w-]+)\)$/.exec(selected);
+      if (match && match[1]) {
+        params.entVersionId = match[1].trim();
+      } else {
+        params.entVersionId = selected;
+      }
+      continue;
     } else if (param.name === 'workflowId') {
       const spinner = ora('Listing workflows...').start();
       if (params.workflowId) {
