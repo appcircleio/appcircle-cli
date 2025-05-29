@@ -1609,7 +1609,7 @@ export const Commands: CommandType[] = [
               },
               {
                 name: 'entVersionId',
-                description: 'App Version ID',
+                description: 'App Version (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               },
