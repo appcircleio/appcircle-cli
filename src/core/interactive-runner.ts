@@ -40,7 +40,18 @@ import {
 import { ProgramCommand, createCommandActionCallback } from '../program';
 import path from 'path';
 import os from 'os';
+import minimist from 'minimist';
+import { AppcircleExitError } from './AppcircleExitError';
 
+interface NavigationState {
+  command: CommandType;
+  preparedCommand?: ProgramCommand;
+}
+
+const navigationStack: NavigationState[] = [];
+let hasShownLogo = false;
+
+const previousSelections = new Map<string, number>();
 
 const expandTilde = (filePath: string): string => {
   if (!filePath) return filePath;
@@ -259,7 +270,7 @@ const handleInteractiveParamsOrArguments = async (
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No distribution profile available';
         spinner.fail();
-        process.exit(1);
+        throw new AppcircleExitError('No distribution profile available', 1);
       }
       //@ts-ignore
       param.params = profiles.map((profile: any) => {
@@ -1002,29 +1013,64 @@ const handleCommandParamsAndArguments = async (selectedCommand: CommandType, par
 const handleSelectedCommand = async (command: CommandType, __parentCommand?: any): Promise<ProgramCommand | undefined> => {
   const preparedCommand = await handleCommandParamsAndArguments(command, __parentCommand);
   if (command.subCommands?.length) {
+    const availableChoices = command.subCommands.filter((cmd) => !cmd.ignore);
+    
+    // If there's only one subcommand available, execute it directly
+    if (availableChoices.length === 1) {
+      return await handleSelectedCommand(availableChoices[0], preparedCommand);
+    }
+    
+    const choices = availableChoices.map((cmd, index) => {
+      return { name: cmd.command, message: `${index + 1}. ${cmd.description}` };
+    });
+
+    if (navigationStack.length > 0) {
+      choices.push({ name: 'back', message: '⬅ Back' });
+    }
+
     const commandSelect = new AutoComplete({
       name: 'action',
       limit: 10,
-      message: `Which sub-command of "${command.command}" do you want to run?${` (${command.subCommands.length} Options)`}`,
-      choices: command.subCommands.filter((cmd) => !cmd.ignore).map((cmd, index) => {
-        return { name: cmd.command, message: `${index + 1}. ${cmd.description}` };
-      }),
+      message: `Which sub-command of "${command.command}" do you want to run? (${choices.length} Options)`,
+      choices: choices,
     });
-    const slectedCommandName = await commandSelect.run();
-    const selectedCommand = command.subCommands.find((s) => s.command === slectedCommandName);
-    return handleSelectedCommand(selectedCommand as CommandType, preparedCommand);
+
+    const selectedActionName = await commandSelect.run();
+    
+    if (selectedActionName === 'back') {
+      navigationStack.pop();
+      if (navigationStack.length === 0) {
+        // Signal to return to main menu
+        return { isBackToMainMenu: true } as any;
+      }
+      const parentCommand = navigationStack[navigationStack.length - 1];
+      return await handleSelectedCommand(parentCommand.command, parentCommand.preparedCommand);
+    }
+
+    const selectedCommand = availableChoices.find((cmd) => cmd.command === selectedActionName);
+    if (selectedCommand) {
+      navigationStack.push({ command: selectedCommand, preparedCommand });
+      return await handleSelectedCommand(selectedCommand, preparedCommand);
+    }
   }
+  
   return preparedCommand;
 };
 
-export const runCommandsInteractively = async () => {
+const runCommandsInteractivelyInner = async () => {
   let selectedCommand: (typeof Commands)[number];
   let selectedCommandDescription = '';
   let selectedCommandIndex = -1;
+  const argv = minimist(process.argv.slice(2));
+  // Distinguish between explicit interactive mode (-i/--interactive) and default (no params)
+  const isExplicitInteractiveMode = argv.i || argv.interactive;
+  const isDefaultInteractiveMode = process.argv.length === 2;
 
-  console.info(
-    chalk.hex(APPCIRCLE_COLOR)(
-      `
+  const showMainMenu = async () => {
+    if (!hasShownLogo) {
+      console.info(
+        chalk.hex(APPCIRCLE_COLOR)(
+          `
       ███████ ██████╗ ██████╗  ██████╗██╗██████╗  ██████╗██╗     ███████╗
       ██╔══██╗██╔══██╗██╔══██╗██╔════╝██║██╔══██╗██╔════╝██║     ██╔════╝
       ███████║██████╔╝██████╔╝██║     ██║██████╔╝██║     ██║     █████╗  
@@ -1032,21 +1078,103 @@ export const runCommandsInteractively = async () => {
       ██║  ██║██║     ██║     ╚██████╗██║██║  ██║╚██████╗███████╗███████╗
       ╚═╝  ╚═╝╚═╝     ╚═╝      ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝             
                   `
-    )
-  );
+        )
+      );
+      hasShownLogo = true;
+    }
 
-  const commandSelect = new AutoComplete({
-    name: 'command',
-    message: `What do you want to do?${` (${Commands.length} Options)`}`,
-    limit: 10,
-    choices: [...Commands.map((command, index) => `${index + 1}. ${command.description}`)],
-  });
+    const choices = [
+      ...Commands.map((command, index) => `${index + 1}. ${command.description}`),
+      '0. Exit'
+    ];
 
-  selectedCommandIndex = Number((await commandSelect.run()).split('.')[0]) - 1;
-  selectedCommand = Commands[selectedCommandIndex];
+    const commandSelect = new AutoComplete({
+      name: 'command',
+      message: `What do you want to do?${` (${Commands.length} Options)`}`,
+      limit: 10,
+      choices,
+      initial: previousSelections.get('main'),
+    });
 
-  const preparedProgramCommand = await handleSelectedCommand(selectedCommand, {});
-  if (preparedProgramCommand) {
-    runCommand(preparedProgramCommand);
+    const selected = await commandSelect.run();
+    
+    if (selected === '0. Exit') {
+      console.log('Goodbye! 👋');
+      throw new AppcircleExitError('User exited from main menu', 0);
+    }
+
+    selectedCommandIndex = Number(selected.split('.')[0]) - 1;
+    previousSelections.set('main', selectedCommandIndex);
+    
+    selectedCommand = Commands[selectedCommandIndex];
+    navigationStack.length = 0;
+    navigationStack.push({ command: selectedCommand, preparedCommand: undefined });
+
+    const preparedProgramCommand = await handleSelectedCommand(selectedCommand, {});
+    if (preparedProgramCommand) {
+      // Check if this is a signal to return to main menu
+      if ((preparedProgramCommand as any).isBackToMainMenu) {
+        // Clear navigation stack and return signal to show main menu again
+        navigationStack.length = 0;
+        return { shouldShowMainMenuAgain: true };
+      }
+      
+      try {
+        await runCommand(preparedProgramCommand);
+        // For successful completion without error, check if we should return to main menu
+        if (isExplicitInteractiveMode) {
+          return { shouldShowMainMenuAgain: true };
+        }
+        // For default interactive mode, just exit after running the command
+      } catch (commandError) {
+        if (commandError instanceof AppcircleExitError) {
+          if (commandError.code === 0) {
+            // Successful completion, only show main menu again if in explicit interactive mode
+            if (isExplicitInteractiveMode) {
+              return { shouldShowMainMenuAgain: true };
+            }
+            return;
+          } else {
+            // Command failed, re-throw to be handled by outer catch
+            throw commandError;
+          }
+        } else {
+          // Non-AppcircleExitError, re-throw
+          throw commandError;
+        }
+      }
+    }
+  };
+
+  // Main loop for interactive mode
+  while (true) {
+    const result = await showMainMenu();
+    if (!result || !(result as any).shouldShowMainMenuAgain) {
+      break;
+    }
+  }
+};
+
+export const runCommandsInteractively = async () => {
+  try {
+    await runCommandsInteractivelyInner();
+  } catch (err) {
+    if (err instanceof AppcircleExitError) {
+      if (err.code === 0) {
+        process.exit(0);
+      } else {
+        console.error(err.message);
+        // Only restart in explicit interactive mode
+        const argv = minimist(process.argv.slice(2));
+        const isExplicitInteractiveMode = argv.i || argv.interactive;
+        if (isExplicitInteractiveMode) {
+          await runCommandsInteractively();
+        } else {
+          process.exit(err.code);
+        }
+      }
+    } else {
+      throw err;
+    }
   }
 };
