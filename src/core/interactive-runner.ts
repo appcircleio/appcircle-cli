@@ -1014,18 +1014,22 @@ const handleSelectedCommand = async (command: CommandType, __parentCommand?: any
   const preparedCommand = await handleCommandParamsAndArguments(command, __parentCommand);
   if (command.subCommands?.length) {
     const availableChoices = command.subCommands.filter((cmd) => !cmd.ignore);
-    
+
     // If there's only one subcommand available, execute it directly
     if (availableChoices.length === 1) {
       return await handleSelectedCommand(availableChoices[0], preparedCommand);
     }
-    
+
     const choices = availableChoices.map((cmd, index) => {
       return { name: cmd.command, message: `${index + 1}. ${cmd.description}` };
     });
 
     if (navigationStack.length > 0) {
-      choices.push({ name: 'back', message: '⬅ Back' });
+      const isTopLevelDirectCommand = process.argv.length > 2 && ['-i', '--interactive'].every(flag => !process.argv.includes(flag));
+      choices.push({
+        name: 'back',
+        message: navigationStack.length === 1 && isTopLevelDirectCommand ? '⬅ Exit' : '⬅ Back'
+      });
     }
 
     const commandSelect = new AutoComplete({
@@ -1036,11 +1040,11 @@ const handleSelectedCommand = async (command: CommandType, __parentCommand?: any
     });
 
     const selectedActionName = await commandSelect.run();
-    
+
     if (selectedActionName === 'back') {
       navigationStack.pop();
       if (navigationStack.length === 0) {
-        // Signal to return to main menu
+        // Signal to exit if at top-level
         return { isBackToMainMenu: true } as any;
       }
       const parentCommand = navigationStack[navigationStack.length - 1];
@@ -1053,7 +1057,7 @@ const handleSelectedCommand = async (command: CommandType, __parentCommand?: any
       return await handleSelectedCommand(selectedCommand, preparedCommand);
     }
   }
-  
+
   return preparedCommand;
 };
 
@@ -1062,6 +1066,24 @@ const runCommandsInteractivelyInner = async () => {
   let selectedCommandDescription = '';
   let selectedCommandIndex = -1;
   const argv = minimist(process.argv.slice(2));
+  if (argv._.length === 1 && typeof argv._[0] === 'string') {
+    const directCommand = Commands.find((cmd) => cmd.command === argv._[0]);
+    if (directCommand) {
+      navigationStack.length = 0;
+      navigationStack.push({ command: directCommand, preparedCommand: undefined });
+
+      const preparedProgramCommand = await handleSelectedCommand(directCommand, {});
+      if (preparedProgramCommand && typeof preparedProgramCommand === 'object') {
+        if ((preparedProgramCommand as any).isBackToMainMenu) {
+          console.log('Goodbye! 👋');
+          process.exit(0);
+        } else {
+          await runCommand(preparedProgramCommand);
+        }
+      }
+      return;
+    }
+  }
   // Distinguish between explicit interactive mode (-i/--interactive) and default (no params)
   const isExplicitInteractiveMode = argv.i || argv.interactive;
   const isDefaultInteractiveMode = process.argv.length === 2;
