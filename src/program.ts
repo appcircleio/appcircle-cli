@@ -6,7 +6,11 @@ export type ProgramCommand = { fullCommandName: string, isGroupCommand: (command
 
 const createCommands = (program: any, commands: typeof Commands, actionCb: any) => {
   commands.filter((c) => !c.ignore).forEach((command) => {
-    let comandPrg = program.command(command.command).description(command.longDescription || command.description);
+    let comandPrg = program.command(command.command).description(command.description);
+
+    if (command.longDescription) {
+      comandPrg.addHelpText('after', `\n${command.longDescription}\n`);
+    }
 
     //Create arguments
     command.arguments?.forEach((arg) => {
@@ -57,6 +61,39 @@ export const createProgram = () => {
   program.option("-o, --output <type>", "output type (json, plain)", "plain");
   
   createCommands(program, Commands, actionCb);
+
+  program.configureOutput({
+    outputError: (str, write) => {
+      if (str.includes('error: required option')) {
+        const inputArgs = process.argv.slice(2);
+        function findCommandRecursive(args: string[], commandList: import('./core/commands').CommandType[]): import('./core/commands').CommandType | undefined {
+          if (!args.length) return undefined;
+          const [head, ...tail] = args;
+          const cmd = commandList.find((c: import('./core/commands').CommandType) => c.command === head);
+          if (cmd) {
+            if (tail.length && cmd.subCommands) {
+              const sub = findCommandRecursive(tail, cmd.subCommands);
+              return sub || cmd;
+            }
+            return cmd;
+          }
+          return undefined;
+        }
+        const foundCommand = findCommandRecursive(inputArgs, Commands);
+        if (foundCommand && foundCommand.longDescription) {
+          write(foundCommand.longDescription + '\n');
+        } else {
+          write('Missing or invalid parameter. Please check the correct usage and examples with --help or see the documentation.\n');
+        }
+      } else if (str.includes('error: unknown command') || str.includes('error: unknown option')) {
+        write('Incorrect Usage.\n\n');
+        write('Use --help to see available commands and options.\n');
+        write('Example: appcircle [command] [subcommand] --help\n');
+      } else {
+        write(str);
+      }
+    }
+  });
 
   program.hook("preAction", (thisCommand: any, actionCommand: any) => {
     //console.log(thisCommand.name(), thisCommand.args , actionCommand.parent?.name())
