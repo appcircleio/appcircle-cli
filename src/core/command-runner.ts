@@ -130,6 +130,7 @@ import { getMaxUploadBytes, GB } from '../utils/size-limit';
 import chalk from 'chalk';
 import enquirer from 'enquirer';
 import { AppcircleExitError } from './AppcircleExitError';
+import { Commands, CommandType } from './commands';
 
 /**
  * Prompts the user for a file path with a default value
@@ -306,7 +307,12 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
     }
   } else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
-    console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
+    const desc = getLongDescriptionForCommand(command.fullCommandName);
+    if (desc) {
+      console.error(`\n${desc}\n`);
+    } else {
+      console.error(`"${beutufiyCommandName} ..." command not found.`);
+    }
   }
 };
 
@@ -628,7 +634,12 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
     } 
     else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
-    console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
+    const desc = getLongDescriptionForCommand(command.fullCommandName);
+    if (desc) {
+      console.error(`\n${desc}\n`);
+    } else {
+      console.error(`"${beutufiyCommandName} ..." command not found.`);
+    }
   }
 };
 
@@ -1362,7 +1373,12 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
   }
   else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
-    console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
+    const desc = getLongDescriptionForCommand(command.fullCommandName);
+    if (desc) {
+      console.error(`\n${desc}\n`);
+    } else {
+      console.error(`"${beutufiyCommandName} ..." command not found.`);
+    }
   }
 }
 
@@ -1537,7 +1553,12 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
   }
   else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
-    console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
+    const desc = getLongDescriptionForCommand(command.fullCommandName);
+    if (desc) {
+      console.error(`\n${desc}\n`);
+    } else {
+      console.error(`"${beutufiyCommandName} ..." command not found.`);
+    }
   }
 }
 
@@ -1898,7 +1919,12 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
   }
   else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
-    console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
+    const desc = getLongDescriptionForCommand(command.fullCommandName);
+    if (desc) {
+      console.error(`\n${desc}\n`);
+    } else {
+      console.error(`"${beutufiyCommandName} ..." command not found.`);
+    }
   }
 }
 
@@ -2642,6 +2668,23 @@ async function handleFailedPublish(params: any, progressSpinner: any) {
   }
 }
 
+function findCommandByParts(parts: string[], commandList: CommandType[]): CommandType | undefined {
+  if (!parts.length) return undefined;
+  const [head, ...tail] = parts;
+  const found = commandList.find(cmd => cmd.command === head);
+  if (!found) return undefined;
+  if (tail.length === 0) return found;
+  if (found.subCommands) return findCommandByParts(tail, found.subCommands);
+  return found;
+}
+
+function getLongDescriptionForCommand(fullCommandName: string): string | undefined {
+  const parts = fullCommandName.replace(/^appcircle-/, '').split('-');
+  const cmd = findCommandByParts(parts, Commands);
+  if (cmd) return cmd.longDescription || cmd.description;
+  return undefined;
+}
+
 export const runCommand = async (command: ProgramCommand) => {
   const params = command.opts() as any;
   const commandName = command.name();
@@ -2689,7 +2732,12 @@ export const runCommand = async (command: ProgramCommand) => {
     }
     default: {
       const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
-      console.error(`"${beutufiyCommandName} ..." command not found \nRun "${beutufiyCommandName} --help" for more information`);
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      } else {
+        console.error(`"${beutufiyCommandName} ..." command not found.`);
+      }
       throw new AppcircleExitError('Command not found', 1);
     }
   }
