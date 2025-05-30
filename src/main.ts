@@ -9,6 +9,7 @@ import { getConsoleOutputType, setConsoleOutputType } from './config.js';
 import { ProgramError } from './core/ProgramError.js';
 import { PROGRAM_NAME } from './constant.js';
 import chalk from 'chalk';
+import { Commands } from './core/commands.js';
 
 const collectErrorMessageFromData = (data: any) => {
   if(data && (typeof data === 'string' || data instanceof String || data instanceof ArrayBuffer)) {
@@ -61,18 +62,42 @@ process.on('unCaughtException', (error) => {
 const main = async () => {
   const program = createProgram();
   const argv = minimist(process.argv.slice(2));
+  
+  const knownTopLevelCommands = Commands.map(cmd => cmd.command);
+  
+  let isFallbackToInteractive = false;
+  
+  if (argv._.length === 1 && knownTopLevelCommands.includes(argv._[0])) {
+    if (argv._[0] === 'login' && argv.pat) {
+      isFallbackToInteractive = false;
+    } else {
+      isFallbackToInteractive = true;
+    }
+  } else if (argv._.length >= 2) {
+    const topLevelCommand = Commands.find(cmd => cmd.command === argv._[0]);
+    if (topLevelCommand && argv._[1]) {
+      const subCommand = topLevelCommand.subCommands?.find(sub => sub.command === argv._[1]);
+      if (!subCommand) {
+        console.error('Incorrect Usage.\n');
+        console.error(`Unknown subcommand "${argv._[1]}" for "${argv._[0]}".`);
+        console.error(`\nUse --help to see available commands and options.`);
+        console.error(`Example: appcircle ${argv._[0]} --help`);
+        process.exit(1);
+      }
+    }
+  }
+
+  if (isFallbackToInteractive) {
+    process.argv.push('-i');
+  }
+
   try {
     setConsoleOutputType(argv.output || argv.o || 'plain');
-    if (process.argv.length === 2 || argv.i || argv.interactive) {
+    if (process.argv.length === 2 || argv.i || argv.interactive || isFallbackToInteractive) {
       runCommandsInteractively();
     } else {
       program.onCommandRun(runCommand);
-      try {
-        program.parse();
-      } catch (err) {
-        //handling command error
-        process.exit(1);
-      }
+      program.parse();
     }
   } catch (error) {
     if (getConsoleOutputType() === 'json') {
