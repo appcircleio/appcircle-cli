@@ -1,4 +1,5 @@
-import fs from 'fs';
+import * as fs from 'fs';
+import * as path from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
 import moment from 'moment';
@@ -38,7 +39,6 @@ import {
   RoleType,
 } from '../services';
 import { ProgramCommand, createCommandActionCallback } from '../program';
-import path from 'path';
 import os from 'os';
 import minimist from 'minimist';
 import { AppcircleExitError } from './AppcircleExitError';
@@ -1068,6 +1068,8 @@ const runCommandsInteractivelyInner = async () => {
 
   const showMainMenu = async () => {
     if (!hasShownLogo) {
+      const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'));
+      const version = `v${packageJson.version}`;
       console.info(
         chalk.hex(APPCIRCLE_COLOR)(
           `
@@ -1077,7 +1079,8 @@ const runCommandsInteractivelyInner = async () => {
       ██╔══██║██╔═══╝ ██╔═══╝ ██║     ██║██╔══██╗██║     ██║     ██╔══╝  
       ██║  ██║██║     ██║     ╚██████╗██║██║  ██║╚██████╗███████╗███████╗
       ╚═╝  ╚═╝╚═╝     ╚═╝      ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝             
-                  `
+      \t\t\t\t\t\t\t${version}
+      `
         )
       );
       hasShownLogo = true;
