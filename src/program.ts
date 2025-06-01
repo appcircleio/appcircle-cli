@@ -55,8 +55,16 @@ return ({
 export const createProgram = () => {
   const program = createCommand();
   let actionCb = (cmd: ProgramCommand) => {};
-
-  program.version(require("../package.json").version, "-v, --version", "output the version number");
+  
+  const version = require("../package.json").version;
+  
+  program.version(`v${version}`, "-v, --version", "output the version number");
+  
+  program.addHelpText(
+    'before',
+    `Appcircle CLI\n\nVersion: v${version}\n`
+  );
+  
   program.option("-i, --interactive", "interactive mode (AppCircle GUI)");
   program.option("-o, --output <type>", "output type (json, plain)", "plain");
   
