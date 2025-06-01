@@ -1081,6 +1081,19 @@ const runCommandsInteractivelyInner = async () => {
         )
       );
       hasShownLogo = true;
+    } else {
+      const label = ' Main Menu ';
+      const totalWidth = 80;
+      const dash = '─';
+
+      const sideLength = Math.floor((totalWidth - label.length) / 2);
+      const line = chalk.hex("#ffffff")(
+        dash.repeat(sideLength) +
+        chalk.hex("#ffffff")(label) +
+        dash.repeat(totalWidth - sideLength - label.length)
+      );
+
+      console.log('\n' + line + '\n');
     }
 
     const choices = [
