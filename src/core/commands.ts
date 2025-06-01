@@ -60,12 +60,12 @@ export const Commands: CommandType[] = [
   {
     command: CommandTypes.CONFIG,
     description: 'Config',
-    longDescription: 'View and set Appcircle CLI properties.',
+    longDescription: 'View and set Appcircle CLI properties',
     params: [],
     subCommands: [
       {
         command: 'list',
-        description: 'List Appcircle CLI properties for all configurations.',
+        description: 'List Appcircle CLI properties for All Configurations',
         longDescription: `List all Appcircle CLI configuration properties and environments
 
 USAGE
@@ -86,7 +86,7 @@ LEARN MORE
       },
       {
         command: 'get',
-        description: 'Get Print the value of a Appcircle CLI currently active configuration property.',
+        description: 'Get Print the value of a Appcircle CLI Currently Active Configuration property',
         longDescription: `Get the value of a specific configuration property from the active environment
 
 USAGE
@@ -120,7 +120,7 @@ LEARN MORE
       },
       {
         command: 'set',
-        description: 'Set a Appcircle CLI currently active configuration property.',
+        description: 'Set a Appcircle CLI Currently Active Configuration property',
         longDescription: `Set the value of a configuration property in the active environment
 
 USAGE
@@ -153,14 +153,14 @@ LEARN MORE
           },
           {
             name: 'value',
-            description: 'Config value',
+            description: 'Config Value',
             type: CommandParameterTypes.STRING,
           },
         ],
       },
       {
         command: 'current',
-        description: 'Set a Appcircle CLI currently active configuration environment',
+        description: 'Set a Appcircle CLI Currently Active Configuration Environment',
         longDescription: `Switch to a different configuration environment
 
 USAGE
@@ -187,7 +187,7 @@ LEARN MORE
         arguments: [
           {
             name: 'value',
-            description: 'Current configuration environment name',
+            description: 'Current Configuration Environment Name',
             type: CommandParameterTypes.SELECT,
             params: Object.keys(getConfigStore().envs),
           },
@@ -195,7 +195,7 @@ LEARN MORE
       },
       {
         command: 'add',
-        description: 'Add a new Appcircle CLI configuration environment.',
+        description: 'Add a New Appcircle CLI Configuration Environment',
         longDescription: `Create a new configuration environment
 
 USAGE
@@ -222,14 +222,14 @@ LEARN MORE
         arguments: [
           {
             name: 'value',
-            description: 'New configuration environment name',
+            description: 'New Configuration Environment Name',
             type: CommandParameterTypes.STRING,
           },
         ],
       },
       {
         command: 'reset',
-        description: 'Reset a Appcircle CLI configuration to default.',
+        description: 'Reset a Appcircle CLI Configuration to default',
         longDescription: `Reset the current configuration environment to default values
 
 USAGE
@@ -251,7 +251,7 @@ LEARN MORE
       },
       {
         command: 'trust',
-        description: 'Trust the SSL certificate of the self-hosted Appcircle server.',
+        description: 'Trust the SSL Certificate of the self-hosted Appcircle Server',
         longDescription: `Trust SSL certificates for self-hosted Appcircle instances
 
 USAGE
@@ -318,11 +318,11 @@ LEARN MORE
   {
     command: CommandTypes.BUILD,
     description: 'Build',
-    longDescription: 'Manage build actions.',
+    longDescription: 'Manage Build Actions',
     subCommands: [
       {
         command: 'start',
-        description: 'Start a new build',
+        description: 'Start a New Build',
         longDescription: `Trigger a new build using the selected profile, branch, and workflow
 
 USAGE
@@ -423,7 +423,7 @@ LEARN MORE
       },
       {
         command: 'active-list',
-        description: 'Get a list of active builds in the queue.',
+        description: 'Get a List of Active Builds in the Queue',
         longDescription: `Get a list of builds currently active and queued for processing
 
 USAGE
@@ -444,7 +444,7 @@ LEARN MORE
       },
       {
         command: "list",
-        description: 'Get list of builds of a commit',
+        description: 'Get List of Builds of a Commit',
         longDescription: `Get a list of builds associated with a specific commit
 
 USAGE
@@ -491,7 +491,7 @@ LEARN MORE
       },
       {
         command: 'view',
-        description: 'View details of a build',
+        description: 'View Details of a Build',
         longDescription: `View comprehensive details of a build, including its status, duration, and other relevant information
 
 USAGE
@@ -576,8 +576,8 @@ LEARN MORE
         params: [
           {
             name: 'path',
-            description: '[OPTIONAL] The path for artifacts to be downloaded:',
-            longDescription:'[OPTIONAL] The path for artifacts to be downloaded:',
+            description: '[OPTIONAL] The Path for artifacts to be downloaded:',
+            longDescription:'[OPTIONAL] The Path for artifacts to be downloaded:',
             type: CommandParameterTypes.STRING,
             valueType: 'string',
             required: false,
@@ -645,8 +645,8 @@ LEARN MORE
         params: [
           {
             name: 'path',
-            description: '[OPTIONAL] The path for log to be downloaded:',
-            longDescription:'[OPTIONAL] The path for log to be downloaded:',
+            description: '[OPTIONAL] The Path for log to be downloaded:',
+            longDescription:'[OPTIONAL] The Path for log to be downloaded:',
             type: CommandParameterTypes.STRING,
             valueType: 'string',
             required: false,
@@ -686,7 +686,7 @@ LEARN MORE
       },
       {
         command:'profile',
-        description: 'Build profile actions.',
+        description: 'Build Profile Actions',
         longDescription: `Manage build profiles and their settings
 
 DESCRIPTION
@@ -713,7 +713,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'list',
-            description: 'Get list of build profiles',
+            description: 'Get List of Build Profiles',
             longDescription: `Get a list of all build profiles in your organization
 
 USAGE
@@ -730,11 +730,11 @@ LEARN MORE
           },
           {
             command: 'branch',
-            description: 'Build profile branch actions',
+            description: 'Build Profile Branch Actions',
             subCommands: [
               {
                 command: 'list',
-                description: 'Get list of branches of a build profile',
+                description: 'Get List of Branches of a Build Profile',
                 longDescription: `Get a list of all branches for a specific build profile
 
 USAGE
@@ -762,7 +762,7 @@ LEARN MORE
               },
               {
                 command: 'commits',
-                description: 'Get list of commits of a branch',
+                description: 'Get List of Commits of a Branch',
                 longDescription: `Get a list of all commits for a specific branch in a build profile
 
 USAGE
@@ -803,7 +803,7 @@ LEARN MORE
           },
           {
             command: 'workflows',
-            description: 'Get list of workflows of a build profile',
+            description: 'Get List of Workflows of a Build Profile',
             longDescription: `Get a list of all workflows for a specific build profile
 
 USAGE
@@ -831,7 +831,7 @@ LEARN MORE
           },
           {
             command: 'configurations',
-            description: 'Get list of configurations of a build profile',
+            description: 'Get List of Configurations of a Build Profile',
             longDescription: `Get a list of all configurations for a specific build profile
 
 USAGE
@@ -862,12 +862,12 @@ LEARN MORE
       },
       {
         command: 'variable',
-        description: 'Environment variable actions',
+        description: 'Environment Variable Actions',
         subCommands: [
           {
             command: 'group',
             description: 'Group Actions',
-            longDescription: 'Environment variable group actions',
+            longDescription: 'Environment Variable Group Actions',
             params: [],
             subCommands:[
               {
@@ -891,7 +891,7 @@ LEARN MORE
               },
               {
                 command: "create",
-                description: 'Create an environment variable group',
+                description: 'Create an Environment Variable Group',
                 longDescription: `
 USAGE
   appcircle build variable group create --name <group-name>
@@ -913,7 +913,7 @@ LEARN MORE
                 params: [
                   {
                     name: 'name',
-                    description: 'Variable group name',
+                    description: 'Variable Group Name',
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
                     required: true,
@@ -922,7 +922,7 @@ LEARN MORE
               },
               {
                 command: "upload",
-                description: 'Upload environment variables from JSON file',
+                description: 'Upload Environment Variables from JSON File',
                 longDescription: `
 USAGE
   appcircle build variable group upload --variableGroupId <uuid> --filePath <path>
@@ -954,7 +954,7 @@ LEARN MORE
                   },
                   {
                     name: 'filePath',
-                    description: 'JSON file path',
+                    description: 'JSON File Path',
                     type: CommandParameterTypes.STRING,
                     valueType: 'path',
                     required: true
@@ -963,7 +963,7 @@ LEARN MORE
               },
               {
                 command: "download",
-                description: 'Download environment variables as JSON',
+                description: 'Download Environment Variables as JSON',
                 longDescription: `
 USAGE
   appcircle build variable group download --variableGroupId <uuid> [--path <directory>]
@@ -996,8 +996,8 @@ LEARN MORE
                   },
                   {
                     name: 'path',
-                    description: '[OPTIONAL] The path for JSON file to be downloaded',
-                    longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                    description: '[OPTIONAL] The Path for JSON file to be downloaded',
+                    longDescription:'[OPTIONAL] The Path for JSON file to be downloaded (Defaults to the current directory)',
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
                     required: false,
@@ -1008,7 +1008,7 @@ LEARN MORE
           },
           {
             command: 'create',
-            description: 'Create a file or text environment variable',
+            description: 'Create a File or Text Environment Variable',
             longDescription: `
 USAGE
   appcircle build variable create --variableGroupId <uuid> --type <type> --key <key> [options]
@@ -1098,7 +1098,7 @@ LEARN MORE
           },
           {
             command: "view",
-            description: 'Get list of environment variables',
+            description: 'Get List of Environment Variables',
             longDescription: `
 USAGE
   appcircle build variable view --variableGroupId <uuid>
@@ -1163,7 +1163,7 @@ LEARN MORE
     subCommands:[
       {
         command: 'certificate',
-        description: 'iOS Certificate actions',
+        description: 'iOS Certificate Actions',
         longDescription: `Manage iOS certificates for app signing
 
 DESCRIPTION
@@ -1192,7 +1192,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'list',
-            description: 'Certificates list',
+            description: 'Certificates List',
             longDescription: `Get a list of all uploaded iOS certificates
 
 USAGE
@@ -1213,7 +1213,7 @@ LEARN MORE
           },
           {
             command: 'upload',
-            description: 'Upload a new certificate bundle (.p12)',
+            description: 'Upload a New Certificate Bundle (.p12)',
             longDescription: `Upload a new iOS certificate bundle to your organization
 
 USAGE
@@ -1238,14 +1238,14 @@ LEARN MORE
             params:[
               {
                 name: 'path',
-                description: 'Certificate path',
+                description: 'Certificate Path',
                 type: CommandParameterTypes.STRING,
                 valueType: 'path',
                 required: true
               },
               {
                 name: 'password',
-                description: 'Certificate password',
+                description: 'Certificate Password',
                 type: CommandParameterTypes.PASSWORD,
                 valueType: 'string',
                 required: true
@@ -1254,7 +1254,7 @@ LEARN MORE
           },
           {
             command: 'create',
-            description: 'Generate signing request to create certificates.',
+            description: 'Generate Signing Request to Create Certificates',
             longDescription: `Generate a Certificate Signing Request (CSR) for iOS certificate creation
 
 USAGE
@@ -1280,7 +1280,7 @@ LEARN MORE
             params:[
               {
                 name: 'name',
-                description: 'Certificate name',
+                description: 'Certificate Name',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
                 required: true,
@@ -1294,7 +1294,7 @@ LEARN MORE
               },
               {
                 name: 'countryCode',
-                description: 'Country code',
+                description: 'Country Code',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'string',
                 required: true,
@@ -1303,7 +1303,7 @@ LEARN MORE
           },
           {
             command: 'view',
-            description: 'View details of a certificate bundle. (.p12)',
+            description: 'View Details of a Certificate Bundle. (.p12)',
             longDescription: `View detailed information about an iOS certificate bundle
 
 USAGE
@@ -1335,7 +1335,7 @@ LEARN MORE
           },
           {
             command: 'download',
-            description: 'Download certificate.',
+            description: 'Download Certificate',
             longDescription: `Download an iOS certificate file to your local machine
 
 USAGE
@@ -1361,8 +1361,8 @@ LEARN MORE
             params:[
               {
                 name: 'path',
-                description: '[OPTIONAL] The path for certificate to be downloaded:',
-                longDescription:'[OPTIONAL] The path for certificate to be downloaded: (Defaults to the current directory)',
+                description: '[OPTIONAL] The Path for certificate to be downloaded:',
+                longDescription:'[OPTIONAL] The Path for certificate to be downloaded: (Defaults to the current directory)',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
                 required: false,
@@ -1378,7 +1378,7 @@ LEARN MORE
           },
           {
             command: 'remove',
-            description: 'Remove certificate.',
+            description: 'Remove Certificate',
             longDescription: `Remove an iOS certificate from your organization
 
 USAGE
@@ -1412,7 +1412,7 @@ LEARN MORE
       },
       {
         command: 'provisioning-profile',
-        description: 'iOS Provisioning Profile actions',
+        description: 'iOS Provisioning Profile Actions',
         longDescription: `Manage iOS provisioning profiles for app signing
 
 DESCRIPTION
@@ -1440,7 +1440,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'list',
-            description: 'Provisioning profile list',
+            description: 'Provisioning Profile List',
             longDescription: `Get a list of all uploaded iOS provisioning profiles
 
 USAGE
@@ -1461,7 +1461,7 @@ LEARN MORE
           },
           {
             command: 'upload',
-            description: 'Upload a provisioning profile (.mobileprovision).',
+            description: 'Upload a Provisioning Profile (.mobileprovision)',
             longDescription: `Upload a new iOS provisioning profile to your organization
 
 USAGE
@@ -1484,7 +1484,7 @@ LEARN MORE
   Use 'appcircle signing-identity provisioning-profile upload' without options for interactive mode.`,
             params:[{
               name: 'path',
-              description: 'Provisioning profile path',
+              description: 'Provisioning Profile Path',
               type: CommandParameterTypes.STRING,
               valueType: 'path',
               required: true
@@ -1492,7 +1492,7 @@ LEARN MORE
           },
           {
             command: 'download',
-            description: 'Download provisioning profile.',
+            description: 'Download Provisioning Profile',
             longDescription: `Download an iOS provisioning profile to your local machine
 
 USAGE
@@ -1518,8 +1518,8 @@ LEARN MORE
             params:[
               {
                 name: 'path',
-                description: '[OPTIONAL] The path for provisioning profile to be downloaded:',
-                longDescription:'[OPTIONAL] The path for provisioning profile to be downloaded: (Defaults to the current directory)',
+                description: '[OPTIONAL] The Path for provisioning profile to be downloaded:',
+                longDescription:'[OPTIONAL] The Path for provisioning profile to be downloaded: (Defaults to the current directory)',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
                 required: false,
@@ -1535,7 +1535,7 @@ LEARN MORE
           },
           {
             command: 'view',
-            description: 'View details of a provisioning profile.',
+            description: 'View Details of a Provisioning Profile',
             longDescription: `View detailed information about an iOS provisioning profile
 
 USAGE
@@ -1567,7 +1567,7 @@ LEARN MORE
           },
           {
             command: 'remove',
-            description: 'Remove provisioning profile.',
+            description: 'Remove Provisioning Profile',
             longDescription: `Remove an iOS provisioning profile from your organization
 
 USAGE
@@ -1601,7 +1601,7 @@ LEARN MORE
       },
       {
         command: 'keystore',
-        description: 'Android Keystore actions',
+        description: 'Android Keystore Actions',
         longDescription: `Manage Android keystores for app signing
 
 DESCRIPTION
@@ -1630,7 +1630,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'list',
-            description: 'Keystores list',
+            description: 'Keystores List',
             longDescription: `Get a list of all uploaded Android keystores
 
 USAGE
@@ -1651,7 +1651,7 @@ LEARN MORE
           },
           {
             command: 'create',
-            description: 'Generate a new keystore.',
+            description: 'Generate a New Keystore',
             longDescription: `Generate a new Android keystore for app signing
 
 USAGE
@@ -1679,13 +1679,13 @@ LEARN MORE
                 params: [
                   {
               name: 'name',
-              description: 'Keystore name',
+              description: 'Keystore Name',
               type: CommandParameterTypes.STRING,
               valueType: 'string',
             },
             {
               name: 'password',
-              description: 'Keystore password',
+              description: 'Keystore Password',
               type: CommandParameterTypes.PASSWORD,
               valueType: 'string',
             },
@@ -1697,7 +1697,7 @@ LEARN MORE
             },
             {
               name: 'aliasPassword',
-              description: 'Alias password.',
+              description: 'Alias password',
               type: CommandParameterTypes.PASSWORD,
               valueType: 'string',
             },
@@ -1711,7 +1711,7 @@ LEARN MORE
           },
           {
             command: 'upload',
-            description: 'Upload keystore file (.jks or .keystore)',
+            description: 'Upload Keystore File (.jks or .keystore)',
             longDescription: `Upload an Android keystore file to your organization
 
 USAGE
@@ -1737,21 +1737,21 @@ LEARN MORE
             params: [
               {
                 name: 'path',
-                description: 'Keystore path',
+                description: 'Keystore Path',
                 type: CommandParameterTypes.STRING,
                 valueType: 'path',
                 required: true
               },
               {
                 name: 'password',
-                description: 'Keystore password',
+                description: 'Keystore Password',
                 type: CommandParameterTypes.PASSWORD,
                 valueType: 'string',
                 required: true
               },
               {
                 name: 'aliasPassword',
-                description: 'Alias password',
+                description: 'Alias Password',
                 type: CommandParameterTypes.PASSWORD,
                 valueType: 'string',
                 required: true
@@ -1760,7 +1760,7 @@ LEARN MORE
           },
           {
             command: 'download',
-            description: 'Download keystore file (.jks or .keystore)',
+            description: 'Download Keystore File (.jks or .keystore)',
             longDescription: `Download an Android keystore file to your local machine
 
 USAGE
@@ -1786,8 +1786,8 @@ LEARN MORE
             params: [
               {
                 name: 'path',
-                description: '[OPTIONAL] The path for keystore file to be downloaded:',
-                longDescription:'[OPTIONAL] The path for keystore file to be downloaded: (Defaults to the current directory)',
+                description: '[OPTIONAL] The Path for keystore file to be downloaded:',
+                longDescription:'[OPTIONAL] The Path for keystore file to be downloaded: (Defaults to the current directory)',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
                 required: false,
@@ -1803,7 +1803,7 @@ LEARN MORE
           },
           {
             command: 'view',
-            description: 'View details of keystore.',
+            description: 'View Details of Keystore',
             longDescription: `View detailed information about an Android keystore
 
 USAGE
@@ -1835,7 +1835,7 @@ LEARN MORE
           },
           {
             command: 'remove',
-            description: 'Remove keystore.',
+            description: 'Remove Keystore',
             longDescription: `Remove an Android keystore from your organization
 
 USAGE
@@ -1900,7 +1900,7 @@ LEARN MORE
     subCommands: [
       {
         command: 'upload',
-        description: 'Upload mobile apps to distribution profiles',
+        description: 'Upload Mobile Apps to Distribution Profiles',
         longDescription: `Upload your mobile application to a testing distribution profile
 
 USAGE
@@ -1932,13 +1932,13 @@ LEARN MORE
           },
           {
             name: 'message',
-            description: 'Release notes',
+            description: 'Release Notes',
             type: CommandParameterTypes.STRING,
             valueType: 'string',
           },
           {
             name: 'app',
-            description: 'App path',
+            description: 'App Path',
             type: CommandParameterTypes.STRING,
             valueType: 'path',
           },
@@ -1946,7 +1946,7 @@ LEARN MORE
       },
       {
         command:'profile',
-        description: 'Distribution profile actions',
+        description: 'Distribution Profile Actions',
         longDescription: `Manage testing distribution profiles and their settings
 
 DESCRIPTION
@@ -1956,7 +1956,7 @@ DESCRIPTION
 SUBCOMMANDS
   list:     List all distribution profiles
   create:   Create a new distribution profile
-  settings: Configure distribution profile settings
+  settings: Configure Distribution Profile Settings
 
 USAGE
   appcircle testing-distribution profile <action> [flags]
@@ -1971,7 +1971,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'list',
-            description: 'Get list of distribution profiles',
+            description: 'Get List of Distribution Profiles',
             longDescription: `Get a list of all distribution profiles
 
 USAGE
@@ -1991,7 +1991,7 @@ LEARN MORE
           },
           {
             command: 'create',
-            description: 'Create a new distribution profile',
+            description: 'Create a New Distribution Profile',
             longDescription: `Create a new distribution profile for testing distribution
 
 USAGE
@@ -2013,7 +2013,7 @@ LEARN MORE
             params: [
               {
                 name: 'name',
-                description: 'Distribution profile name',
+                description: 'Distribution Profile Name',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
               },
@@ -2021,7 +2021,7 @@ LEARN MORE
           },
           {
             command: 'settings',
-            description: 'Configure distribution profile settings',
+            description: 'Configure Distribution Profile Settings',
             longDescription: `Configure settings for a distribution profile
 
 DESCRIPTION
@@ -2066,8 +2066,8 @@ LEARN MORE
               },
               {
                 name: 'testingGroupIds',
-                description: 'Testing group Names (IDs) for automated distribution.',
-                longDescription: 'Testing group IDs for automated distribution.',
+                description: 'Testing Group Names (IDs) for Automated Distribution',
+                longDescription: 'Testing Group IDs for Automated Distribution',
                 type: CommandParameterTypes.MULTIPLE_SELECT,
                 valueType: 'string'
               }
@@ -2075,7 +2075,7 @@ LEARN MORE
           },
           {
             command: 'auto-send',
-            description: 'Select the test groups for automated distribution',
+            description: 'Select the Test Groups for Automated Distribution',
             longDescription: `Configure automated distribution to testing groups
 
 USAGE
@@ -2106,8 +2106,8 @@ LEARN MORE
               },
               {
                 name: 'testingGroupIds',
-                description: 'Testing group Names (IDs) for automated distribution.',
-                longDescription: 'Testing group IDs for automated distribution.',
+                description: 'Testing Group Names (IDs) for automated Distribution',
+                longDescription: 'Testing Group IDs for automated Distribution',
                 type: CommandParameterTypes.MULTIPLE_SELECT,
                 valueType: 'string'
               }
@@ -2118,7 +2118,7 @@ LEARN MORE
       },
       {
         command: 'testing-group',
-        description: 'Testing group actions',
+        description: 'Testing Group Actions',
         longDescription: `Manage testing groups and their testers
 
 DESCRIPTION
@@ -2146,7 +2146,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'list',
-            description: 'Get all testing group list of current organization.',
+            description: 'Get All Testing Group List of Current Organization',
             longDescription: `Get a list of all testing groups in your organization
 
 USAGE
@@ -2167,7 +2167,7 @@ LEARN MORE
           },
           {
             command: 'view',
-            description: 'View details of testing group.',
+            description: 'View Details of Testing Group',
             longDescription: `View detailed information about a testing group
 
 USAGE
@@ -2198,7 +2198,7 @@ LEARN MORE
           },
           {
             command: 'create',
-            description: 'Create a new testing group.',
+            description: 'Create a New Testing Group',
             longDescription: `Create a new testing group for organizing testers
 
 USAGE
@@ -2222,7 +2222,7 @@ LEARN MORE
             params: [
               {
                 name: 'name',
-                description: 'Testing group name',
+                description: 'Testing Group Name',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
               }
@@ -2230,7 +2230,7 @@ LEARN MORE
           },
           {
             command: 'remove',
-            description: 'Remove testing group.',
+            description: 'Remove Testing Group',
             longDescription: `Remove a testing group from your organization
 
 USAGE
@@ -2261,7 +2261,7 @@ LEARN MORE
           },
           {
             command: 'tester',
-            description: 'Testing group tester actions.',
+            description: 'Testing Group Tester Actions',
             longDescription: `Manage testers within testing groups
 
 DESCRIPTION
@@ -2285,7 +2285,7 @@ LEARN MORE
             subCommands: [
               {
                 command: 'add',
-                description: 'Add tester to selected testing group.',
+                description: 'Add Tester to Selected Testing Group',
                 longDescription: `Add a tester to a testing group by email address
 
 USAGE
@@ -2316,7 +2316,7 @@ LEARN MORE
                   },
                   {
                     name: 'testerEmail',
-                    description: 'Email of tester',
+                    description: 'Email of Tester',
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
                   }
@@ -2324,7 +2324,7 @@ LEARN MORE
               },
               {
                 command: 'remove',
-                description: 'Remove selected tester from selected testing group.',
+                description: 'Remove Selected Tester from Selected Testing Group',
                 longDescription: `Remove a tester from a testing group
 
 USAGE
@@ -2354,7 +2354,7 @@ LEARN MORE
                   },
                   {
                     name: 'testerEmail',
-                    description: 'Email of tester',
+                    description: 'Email of Tester',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'string',
                   }
@@ -2397,7 +2397,7 @@ LEARN MORE
     subCommands: [
       {
         command: 'start',
-        description: 'Start a new app publish',
+        description: 'Start a New App Publish',
         longDescription: `Start a new app publishing process to distribute your app
 
 USAGE
@@ -2431,7 +2431,7 @@ LEARN MORE
           },
           {
             name: 'appVersionId',
-            description: 'App version',
+            description: 'App Version',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: true
@@ -2440,7 +2440,7 @@ LEARN MORE
       },
       {
         command: 'active-list',
-        description: 'Get a list of active publishing processes currently in the queue.',
+        description: 'Get a List of Active Publishing Processes Currently in the Queue',
         longDescription: `Get a list of active publishing processes currently in the queue
 
 USAGE
@@ -2460,7 +2460,7 @@ LEARN MORE
       },
       {
         command: 'view',
-        description: 'View details of the publishing process by app version.',
+        description: 'View Details of the Publishing Process by App Version',
         longDescription: `View detailed information about a publishing process
 
 USAGE
@@ -2494,7 +2494,7 @@ LEARN MORE
           },
           {
             name: 'appVersionId',
-            description: 'App version',
+            description: 'App Version',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: true
@@ -2503,7 +2503,7 @@ LEARN MORE
       },
       {
         command: 'profile',
-        description: 'Publish profile actions',
+        description: 'Publish Profile Actions',
         longDescription: `Manage publishing profiles and app versions
 
 DESCRIPTION
@@ -2532,7 +2532,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'list',
-            description: 'Publish profile list',
+            description: 'Publish Profile List',
             longDescription: `Get a list of all publishing profiles for a platform
 
 USAGE
@@ -2557,7 +2557,7 @@ LEARN MORE
           },
           {
             command: 'create',
-            description: 'Create a publish profile',
+            description: 'Create a Publish Profile',
             longDescription: `Create a new publish profile for a platform
 
 DESCRIPTION
@@ -2576,7 +2576,7 @@ LEARN MORE
             params: [platformParam,
               {
                 name: 'name',
-                description: 'Profile name',
+                description: 'Profile Name',
                 type: CommandParameterTypes.STRING,
                 defaultValue: undefined,
                 valueType: 'string',
@@ -2586,7 +2586,7 @@ LEARN MORE
           },
           {
             command: 'rename',
-            description: 'Rename publish profile',
+            description: 'Rename Publish Profile',
             longDescription: `Rename an existing publish profile
 
 DESCRIPTION
@@ -2612,7 +2612,7 @@ LEARN MORE
               },
               {
                 name: 'name',
-                description: 'New profile name',
+                description: 'New Profile Name',
                 type: CommandParameterTypes.STRING,
                 defaultValue: undefined,
                 valueType: 'string',
@@ -2622,7 +2622,7 @@ LEARN MORE
           },
           {
             command: 'delete',
-            description: 'Remove publish profile',
+            description: 'Remove Publish Profile',
             longDescription: `Remove a publish profile from your organization
 
 DESCRIPTION
@@ -2650,7 +2650,7 @@ LEARN MORE
           },
           {
             command: 'version',
-            description: 'App version actions',
+            description: 'App Version Actions',
             longDescription: `Manage app versions within a publish profile
 
 DESCRIPTION
@@ -2679,7 +2679,7 @@ LEARN MORE
             subCommands: [
               {
                 command: 'list',
-                description: 'App version list',
+                description: 'App Version List',
                 longDescription: `Get a list of all app versions for a given publish profile
 
 USAGE
@@ -2710,7 +2710,7 @@ LEARN MORE
               },
               {
                 command: 'view',
-                description: 'View details of app version.',
+                description: 'View Details of App Version',
                 longDescription: `View details of a specific app version
 
 USAGE
@@ -2739,7 +2739,7 @@ LEARN MORE
                   },
                   {
                     name: 'appVersionId',
-                    description: 'App version',
+                    description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -2748,7 +2748,7 @@ LEARN MORE
               },
               {
                 command: 'upload',
-                description: 'Upload a new app version',
+                description: 'Upload a New App Version',
                 longDescription: `Upload a new app version to a publish profile
 
 USAGE
@@ -2779,7 +2779,7 @@ LEARN MORE
                   },
                   {
                     name: 'app',
-                    description: 'App path',
+                    description: 'App Path',
                     type: CommandParameterTypes.STRING,
                     valueType: 'path',
                     required: true
@@ -2805,7 +2805,7 @@ LEARN MORE
               },
               {
                 command: 'download',
-                description: 'Download app version',
+                description: 'Download App Version',
                 longDescription: `Download an app version from a publish profile
 
 USAGE
@@ -2837,15 +2837,15 @@ LEARN MORE
                   },
                   {
                     name: 'appVersionId',
-                    description: 'App version',
+                    description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
                   },
                   {
                     name: 'path',
-                    description: '[OPTIONAL] The path for artifacts to be downloaded:',
-                    longDescription:'[OPTIONAL] The path for artifacts to be downloaded: (Defaults to the current directory)',
+                    description: '[OPTIONAL] The Path for artifacts to be downloaded:',
+                    longDescription:'[OPTIONAL] The Path for artifacts to be downloaded: (Defaults to the current directory)',
                     type: CommandParameterTypes.STRING,
                     valueType: 'path',
                     required: false
@@ -2854,7 +2854,7 @@ LEARN MORE
               },
               {
                 command: 'delete',
-                description: 'Remove app version',
+                description: 'Remove App Version',
                 longDescription: `Remove an app version from a publish profile
 
 USAGE
@@ -2884,7 +2884,7 @@ LEARN MORE
                   },
                   {
                     name: 'appVersionId',
-                    description: 'App version',
+                    description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -2923,7 +2923,7 @@ LEARN MORE
                   },
                   {
                     name: 'appVersionId',
-                    description: 'App version',
+                    description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -2962,7 +2962,7 @@ LEARN MORE
                   },
                   {
                     name: 'appVersionId',
-                    description: 'App version',
+                    description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -2971,7 +2971,7 @@ LEARN MORE
               },
               {
                 command: 'update-release-note',
-                description: 'Update the release notes for the app version.',
+                description: 'Update the Release Notes for the App Version',
                 longDescription: `Update the release notes for a specific app version
 
 USAGE
@@ -3002,7 +3002,7 @@ LEARN MORE
                   },
                   {
                     name: 'appVersionId',
-                    description: 'App version',
+                    description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
                     required: true
@@ -3021,7 +3021,7 @@ LEARN MORE
           },
           {
             command: 'settings',
-            description: 'Publish profile settings',
+            description: 'Publish Profile Settings',
             longDescription: `Manage settings for a publish profile
 
 DESCRIPTION
@@ -3157,7 +3157,7 @@ LEARN MORE
               },
               {
                 command: "view",
-                description: 'View items of group',
+                description: 'View Items of Group',
                 longDescription: `View variables in a specific publishing variable group
 
 USAGE
@@ -3186,7 +3186,7 @@ LEARN MORE
               },
               {
                 command: "upload",
-                description: 'Upload publish environment variables from JSON file',
+                description: 'Upload Publish Environment Variables from JSON File',
                 longDescription: `Upload environment variables from a JSON file to a variable group
 
 USAGE
@@ -3214,7 +3214,7 @@ LEARN MORE
                   },
                   {
                     name: 'filePath',
-                    description: 'JSON file path',
+                    description: 'JSON File Path',
                     type: CommandParameterTypes.STRING,
                     valueType: 'path',
                     required: true
@@ -3223,7 +3223,7 @@ LEARN MORE
               },
               {
                 command: "download",
-                description: 'Download environment variables as JSON',
+                description: 'Download Environment Variables as JSON',
                 longDescription: `Download environment variables from a group as a JSON file
 
 USAGE
@@ -3251,8 +3251,8 @@ LEARN MORE
                   },
                   {
                     name: 'path',
-                    description: '[OPTIONAL] The path for JSON file to be downloaded',
-                    longDescription:'[OPTIONAL] The path for JSON file to be downloaded (Defaults to the current directory)',
+                    description: '[OPTIONAL] The Path for JSON file to be downloaded',
+                    longDescription:'[OPTIONAL] The Path for JSON file to be downloaded (Defaults to the current directory)',
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
                     required: false
@@ -3290,7 +3290,7 @@ LEARN MORE
     subCommands: [
       {
         command: 'profile-list',
-        description: 'Get list of Enterprise profiles',
+        description: 'Get List of Enterprise Profiles',
         longDescription: `List all enterprise app store profiles
 
 USAGE
@@ -3306,7 +3306,7 @@ EXAMPLES
       },
       {
         command: 'version',
-        description: 'Enterprise app version actions',
+        description: 'Enterprise App Version Actions',
         longDescription: `Manage enterprise app versions
 
 DESCRIPTION
@@ -3334,7 +3334,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'list',
-            description: 'Get list of enterprise app versions',
+            description: 'Get List of Enterprise App Versions',
             longDescription: `List all app versions for a given enterprise profile
 
 USAGE
@@ -3383,7 +3383,7 @@ EXAMPLES
           },
           {
             command: 'publish',
-            description: 'Publish enterprise app version',
+            description: 'Publish Enterprise App Version',
             longDescription: `Publish an enterprise app version
 
 USAGE
@@ -3451,7 +3451,7 @@ EXAMPLES
           },
           {
             command: 'unpublish',
-            description: 'Unpublish enterprise app version',
+            description: 'Unpublish Enterprise App Version',
             longDescription: `Unpublish an enterprise app version
 
 USAGE
@@ -3483,7 +3483,7 @@ EXAMPLES
           },
           {
             command: 'remove',
-            description: 'Remove enterprise app version',
+            description: 'Remove Enterprise App Version',
             longDescription: `Remove an enterprise app version
 
 USAGE
@@ -3562,7 +3562,7 @@ EXAMPLES
           },
           {
             command: 'upload-for-profile',
-            description: 'Upload enterprise app version for a profile',
+            description: 'Upload Enterprise App Version for a Profile',
             longDescription: `Upload an enterprise app version for a profile
 
 USAGE
@@ -3586,7 +3586,7 @@ EXAMPLES
               },
               {
                 name: 'app',
-                description: 'App path',
+                description: 'App Path',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
               },
@@ -3594,7 +3594,7 @@ EXAMPLES
           },
           {
             command: 'upload-without-profile',
-            description: 'Upload enterprise app version without a profile',
+            description: 'Upload Enterprise App Version without a Profile',
             longDescription: `Upload an enterprise app version without specifying a profile
 
 USAGE
@@ -3611,7 +3611,7 @@ EXAMPLES
             params: [
               {
                 name: 'app',
-                description: 'App path',
+                description: 'App Path',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
               },
@@ -3619,7 +3619,7 @@ EXAMPLES
           },
           {
             command: 'download-link',
-            description: 'Get enterprise app download link',
+            description: 'Get Enterprise App Download Link',
             longDescription: `Get the download link for an enterprise app version
 
 USAGE
@@ -3682,7 +3682,7 @@ LEARN MORE
     subCommands: [
       {
         command: 'view',
-        description: 'View organizations details',
+        description: 'View Organizations Details',
         longDescription: `View details of your organization or a specific organization
 
 USAGE
@@ -3708,7 +3708,7 @@ LEARN MORE
       },
       {
         command: 'create-sub',
-        description: 'Create a sub-organization',
+        description: 'Create a Sub-Organization',
         longDescription: `Create a new sub-organization under the current organization
 
 USAGE
@@ -3727,7 +3727,7 @@ LEARN MORE
   Use 'appcircle organization view' to see all organizations.`,
         params: [{
           name: 'name',
-          description: 'Name of the sub-organization',
+          description: 'Name of the Sub-Organization',
           type: CommandParameterTypes.STRING,
           valueType: 'string',
           required: true,
@@ -3735,7 +3735,7 @@ LEARN MORE
       },
       {
         command: 'user',
-        description: 'User management',
+        description: 'User Management',
         longDescription: `Manage organization users (view, invite, re-invite, remove)
 
 USAGE
@@ -3761,7 +3761,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'view',
-            description: 'View users of organization',
+            description: 'View Users of Organization',
             longDescription: `View users of your organization
 
 USAGE
@@ -3787,7 +3787,7 @@ LEARN MORE
           },
           {
             command: 'invite',
-            description: 'Invite user to organization',
+            description: 'Invite User to Organization',
             longDescription: `Invite a user to your organization
 
 USAGE
@@ -3830,7 +3830,7 @@ LEARN MORE
           },
           {
             command: 're-invite',
-            description: 'Re-invite user to organization',
+            description: 'Re-invite User to Organization',
             longDescription: `Re-invite a user to your organization
 
 USAGE
@@ -3867,7 +3867,7 @@ LEARN MORE
           },
           {
             command: 'remove',
-            description: 'Remove user or invitation from organization',
+            description: 'Remove User or Invitation from Organization',
             longDescription: `Remove a user or invitation from your organization
 
 USAGE
@@ -3909,7 +3909,7 @@ LEARN MORE
           },
           {
         command: 'role',
-        description: 'Roles management',
+        description: 'Roles Management',
         longDescription: `Manage organization user roles (view, add, remove, clear )
 
 USAGE
@@ -3935,7 +3935,7 @@ LEARN MORE
         subCommands: [
           {
             command: 'view',
-            description: 'View roles of the given userId within the organizationId.',
+            description: 'View roles of the given userId within the organizationId',
             longDescription: `View roles of a user in your organization
 
 USAGE
@@ -3969,7 +3969,7 @@ LEARN MORE
       },
           {
             command: 'add',
-            description: 'Add roles to the given userId within the organizationId.',
+            description: 'Add roles to the given userId within the organizationId',
             longDescription: `Add roles to a user in your organization
 
 USAGE
@@ -4014,7 +4014,7 @@ LEARN MORE
               },
               {
                 command: 'remove',
-                description: 'Remove given roles from the given userId within the organizationId.',
+                description: 'Remove given roles from the given userId within the organizationId',
                 longDescription: `Remove roles from a user in your organization
 
 USAGE
@@ -4060,7 +4060,7 @@ LEARN MORE
               },
               {
                 command: 'clear',
-                description: 'Remove all roles from the given userId within the organizationId.',
+                description: 'Remove all roles from the given userId within the organizationId',
                 longDescription: `Remove all roles from a user in your organization
 
 USAGE

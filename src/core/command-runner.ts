@@ -208,7 +208,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
   }
   params.role = Array.isArray(params.role) ? params.role : [params.role];
   if (command.fullCommandName === `${PROGRAM_NAME}-organization-view`) {
-    const spinner = createOra('Listing organizations...').start();
+    const spinner = createOra('Listing Organizations...').start();
     const response = params.organizationId === 'all' || !params.organizationId ? await getOrganizations() : await getOrganizationDetail(params);
     spinner.succeed();
     commandWriter(CommandTypes.ORGANIZATION, {
@@ -216,7 +216,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       data: response,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-view`) {
-    const spinner = createOra('Listing organization users...').start();
+    const spinner = createOra('Listing Organization Users...').start();
     const users = await getOrganizationUsersWithRoles(params);
     const invitations = await getOrganizationInvitations(params);
     spinner.succeed();
@@ -262,7 +262,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       });
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
-    const spinner = createOra('Listing roles...').start();
+    const spinner = createOra('Listing Roles...').start();
     const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
     spinner.succeed();
     commandWriter(CommandTypes.ORGANIZATION, {
@@ -327,9 +327,9 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       data: profileRes,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-list`) {
-    const spinner = createOra('Listing publish profiles...').start();
+    const spinner = createOra('Listing Publish Profiles...').start();
     const profiles = await getPublishProfiles({ platform: params.platform });
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.PUBLISH, {
       fullCommandName: command.fullCommandName,
       data: profiles,
@@ -381,8 +381,8 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         while(taskStatus.stateValue === TaskStatus.BEGIN){
           taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
           if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
-            spinner.fail('Upload failed: Please make sure that the app version number is unique in selected publish profile.');
-            throw new AppcircleExitError('Upload failed: Please make sure that the app version number is unique in selected publish profile.', 1);
+            spinner.fail('Upload failed: Please make sure that the app version number is unique in selected Publish Profile.');
+            throw new AppcircleExitError('Upload failed: Please make sure that the app version number is unique in selected Publish Profile.', 1);
           }
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
@@ -419,14 +419,14 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
     try {
       const responseData = await deleteAppVersion(params);
       commandWriter(CommandTypes.PUBLISH, responseData);
-      spinner.text = `App version removed successfully.\n\nTaskId: ${responseData.taskId}`;
+      spinner.text = `App Version removed successfully.\n\nTaskId: ${responseData.taskId}`;
       spinner.succeed();
     } catch (e: any) {
       spinner.fail('Remove failed');
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-start`) {
-    const spinner = createOra('Starting publish flow...').start();
+    const spinner = createOra('Starting Publish flow...').start();
     try {
       const publish = await getPublishByAppVersion(params);
       const firstStep = publish.steps[0];
@@ -438,7 +438,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       if (params.platform && params.publishProfileId && params.appVersionId) {
         await monitorPublishProcess(params);
       } else {
-        console.log(chalk.yellow('\nInsufficient parameters to monitor publish status. Please provide platform, publishProfileId, and appVersionId for monitoring.'));
+        console.log(chalk.yellow('\nInsufficient parameters to monitor Publish Status. Please provide platform, publishProfileId, and appVersionId for monitoring.'));
       }
     } catch (error) {
       spinner.fail('Failed to start publish');
@@ -485,23 +485,23 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: response,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`) {
-      const spinner = createOra('Listing variable groups...').start();
+      const spinner = createOra('Listing Variable Groups...').start();
       const variableGroups = await getPublishVariableGroups();
-      spinner.succeed();
+      spinner.stop();
       commandWriter(CommandTypes.PUBLISH, {
         fullCommandName: command.fullCommandName,
         data: variableGroups,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`) {
-      const spinner = createOra('Listing variables...').start();
+      const spinner = createOra('Listing Variables...').start();
       const variables = await getPublishVariableListByGroupId(params);
-      spinner.succeed();
+      spinner.stop();
       commandWriter(CommandTypes.PUBLISH, {
         fullCommandName: command.fullCommandName,
         data: variables.variables,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-upload`) {
-      const spinner = createOra('Loading environment variables from JSON file...').start();
+      const spinner = createOra('Loading Environment Variables from JSON file...').start();
       try {
         if (!params.filePath) {
           spinner.fail('JSON file path is required');
@@ -527,23 +527,23 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         }
         params.filePath = expandedPath;
         const responseData = await uploadPublishEnvironmentVariablesFromFile(params as any);
-        spinner.succeed('Environment variables uploaded successfully');
+        spinner.succeed('Environment Variables uploaded successfully');
       } catch (e) {
-        spinner.fail('Failed to upload environment variables');
+        spinner.fail('Failed to upload Environment Variables');
         throw e;
       }
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-variable-group-download`) {
     if (!params.publishVariableGroupId && params.variableGroupId) {
       params.publishVariableGroupId = params.variableGroupId;
     }
-    const spinner = createOra('Downloading publish environment variables...').start();
+    const spinner = createOra('Downloading Publish Environment Variables...').start();
     try {
       const variableGroups = await getPublishVariableGroups();
       const variableGroup = variableGroups.find((group: any) => group.id === params.publishVariableGroupId);
       
       if (!variableGroup) {
-        spinner.fail(`Variable group with ID ${params.publishVariableGroupId} not found`);
-        throw new Error(`Variable group not found`);
+        spinner.fail(`Variable Group with ID ${params.publishVariableGroupId} not found`);
+        throw new Error(`Variable Group not found`);
       }
       
       const variables = await getPublishVariableListByGroupId(params);
@@ -585,23 +585,23 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       
       fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
       
-      spinner.succeed(`Publish environment variables downloaded successfully to ${filePath}`);
+      spinner.succeed(`Publish Environment Variables downloaded successfully to ${filePath}`);
     } catch (e) {
-      spinner.fail('Failed to download publish environment variables');
+      spinner.fail('Failed to download Publish Environment Variables');
       throw e;
     }
   } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-list`){
-      const spinner = createOra('Listing app versions...').start();
+      const spinner = createOra('Listing App Versions...').start();
       const appVersions = await getAppVersions(params);
-      spinner.succeed();
+      spinner.stop();
       commandWriter(CommandTypes.PUBLISH, {
         fullCommandName: command.fullCommandName,
         data: appVersions,
       });
     } else if(command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-view`){
-      const spinner = createOra('Getting app version details...').start();
+      const spinner = createOra('Getting App Version Details...').start();
       const appVersion = await getAppVersionDetail(params);
-      spinner.succeed();
+      spinner.stop();
       commandWriter(CommandTypes.PUBLISH, {
         fullCommandName: command.fullCommandName,
         data: appVersion,
@@ -616,17 +616,17 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         throw e;
       }
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-active-list`){
-      const spinner = createOra('Listing active publishes...').start();
+      const spinner = createOra('Listing Active Publishes...').start();
       const responseData = await getActivePublishes();
-      spinner.succeed();
+      spinner.stop();
       commandWriter(CommandTypes.PUBLISH, {
         fullCommandName: command.fullCommandName,
         data: responseData,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-view`){
-      const spinner = createOra('Listing publish details...').start();
+      const spinner = createOra('Listing Publish Details...').start();
       const responseData = await getPublisDetailById(params);
-        spinner.succeed();
+        spinner.stop();
       commandWriter(CommandTypes.PUBLISH, {
         fullCommandName: command.fullCommandName,
         data: responseData,
@@ -653,7 +653,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       console.error('error: You must provide either workflowId or workflow parameter');
       throw new AppcircleExitError('You must provide either workflowId or workflow parameter', 1);
     }
-    const spinner = createOra(`Starting build...`).start();
+    const spinner = createOra(`Starting Build...`).start();
     try {
       const responseData = await startBuild(params);
       commandWriter(CommandTypes.BUILD, {
@@ -663,7 +663,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       
       spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
       
-      const progressSpinner = createOra(`Checking build status...`).start();
+      const progressSpinner = createOra(`Checking Build Status...`).start();
       let dots = "";
       
       const interval = setInterval(() => {
@@ -703,7 +703,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
               queueResponse.buildStatus : null;
             
             if (buildStatus === null || buildStatus === undefined) {
-              progressSpinner.text = chalk.gray(`Build status is pending...`);
+              progressSpinner.text = chalk.gray(`Build Status is pending...`);
             } else {
               switch (buildStatus) {
                 case 0: // SUCCESS
@@ -740,7 +740,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                   progressSpinner.text = chalk.blue(`Build finishing... 🔜`);
                   break;
                 default:
-                  progressSpinner.text = chalk.gray(`Build status: ${buildStatus}`);
+                  progressSpinner.text = chalk.gray(`Build Status: ${buildStatus}`);
               }
             }
             
@@ -815,18 +815,19 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                   console.log(chalk.yellow('Build completed successfully but could not get artifact information.'));
                 }
               } else if (response.action === 'logs') {
-                const buildLogPath = await promptForPath('[OPTIONAL] Enter download path for build logs', defaultDownloadDir);
+                const buildLogPath = await promptForPath('[OPTIONAL] Enter download path for Build Logs', defaultDownloadDir);
                 params.path = buildLogPath;
                 
                 if (finalStatusResponse && finalStatusResponse.buildStatus === 2) {
                   params.wasCanceled = true;
-                  console.log(chalk.yellow('Note: Logs for canceled builds might not be immediately available.'));
+                  console.log(chalk.yellow('Note: Logs for canceled Builds might not be immediately available.'));
                   await new Promise(resolve => setTimeout(resolve, 1000));
                 }
                 
                 try {
                   const commitId = finalStatusResponse?.commitId;
                   const buildId = latestBuildId || finalStatusResponse?.buildId;
+                  
                   
                   if (commitId && buildId && buildId !== '00000000-0000-0000-0000-000000000000') {
                     await downloadBuildLogs({ 
@@ -898,7 +899,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
               const response: any = await enquirer.prompt({
                 type: 'select',
                 name: 'download',
-                message: 'Do you want to download the publish log? (Y/n)',
+                message: 'Do you want to download the Build Logs? (Y/n)',
                 choices: [
                   { name: 'yes', message: 'yes' },
                   { name: 'no', message: 'no' }
@@ -910,12 +911,12 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                 const homeDir = os.homedir();
                 // Use Downloads folder as default
                 const defaultDownloadDir = path.join(homeDir, 'Downloads');
-                const buildLogPath = await promptForPath('[OPTIONAL] Enter download path for build logs', defaultDownloadDir);
+                const buildLogPath = await promptForPath('[OPTIONAL] Enter download path for Build Logs', defaultDownloadDir);
                 params.path = buildLogPath;
                 
                 if (finalStatusResponse && finalStatusResponse.buildStatus === 2) {
                   params.wasCanceled = true;
-                  console.log(chalk.yellow('Note: Logs for canceled builds might not be immediately available.'));
+                  console.log(chalk.yellow('Note: Logs for canceled Builds might not be immediately available.'));
                   await new Promise(resolve => setTimeout(resolve, 1000));
                 }
                 
@@ -969,7 +970,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             throw e;
           }
         }
-        progressSpinner.fail(chalk.red(`Error while monitoring build.`));
+        progressSpinner.fail(chalk.red(`Error while monitoring Build.`));
         throw new AppcircleExitError('Build monitoring failed', 1);
       }
     } catch (e) {
@@ -978,13 +979,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
           throw e;
         }
       }
-      spinner.fail('Failed to start build');
+      spinner.fail('Failed to start Build');
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`) {
     const spinner = createOra('Listing...').start();
     const responseData = await getBuildProfiles(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -992,7 +993,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`) {
     const spinner = createOra('Listing...').start();
     const responseData = await getBranches(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -1000,7 +1001,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflows`) {
     const spinner = createOra('Listing...').start();
     const responseData = await getWorkflows(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -1008,7 +1009,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-configurations`) {
     const spinner = createOra('Listing...').start();
     const responseData = await getConfigurations(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -1016,7 +1017,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-commits`) {
     const spinner = createOra('Listing...').start();
     const responseData = await getCommits(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -1024,7 +1025,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-list`) {
     const spinner = createOra('Listing...').start();
     const responseData = await getBuildsOfCommit(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -1093,12 +1094,12 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
               }
             }
           } else {
-            spinner.fail(chalk.yellow(`No builds found for commit ID: ${params.commitId}`));
+            spinner.fail(chalk.yellow(`No Builds found for commit ID: ${params.commitId}`));
             return;
           }
         } catch (error) {
           if (!params.buildId) {
-            spinner.fail(chalk.red(`Could not get build ID and buildId parameter was not provided.`));
+            spinner.fail(chalk.red(`Could not get Build ID and buildId parameter was not provided.`));
             return;
           }
         }
@@ -1114,7 +1115,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             
             if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
               const latestBuild = buildsResponse.builds[0];
-              console.log(chalk.cyan(`\nTry downloading with the latest build ID:`));
+              console.log(chalk.cyan(`\nTry downloading with the latest Build ID:`));
               console.log(`${PROGRAM_NAME} build download --commitId ${params.commitId} --buildId ${latestBuild.id}`);
             }
           } catch (error: any) {
@@ -1151,13 +1152,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       }
       await downloadBuildLogs(params, params);
     } catch (e: any) {
-      console.error(`Error downloading build logs: ${e.message || String(e)}`);
+      console.error(`Error downloading Build Logs: ${e.message || String(e)}`);
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-list`) {
-    const spinner = createOra('Listing variable groups...').start();
+    const spinner = createOra('Listing Variable Groups...').start();
     const responseData = await getEnvironmentVariableGroups(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -1169,7 +1170,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: { ...responseData, name: params.name },
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-upload`) {
-    const spinner = createOra('Loading environment variables from JSON file...').start();
+    const spinner = createOra('Loading Environment Variables from JSON file...').start();
     try {
       if (!params.filePath) {
         spinner.fail('JSON file path is required');
@@ -1195,24 +1196,24 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       }
       params.filePath = expandedPath;
       const responseData = await uploadEnvironmentVariablesFromFile(params as any);
-      spinner.succeed('Environment variables uploaded successfully');
+      spinner.succeed('Environment Variables uploaded successfully');
       commandWriter(CommandTypes.BUILD, {
         fullCommandName: command.fullCommandName,
         data: responseData,
       });
     } catch (e) {
-      spinner.fail('Failed to upload environment variables');
+      spinner.fail('Failed to upload Environment Variables');
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-download`) {
-    const spinner = createOra('Downloading environment variables...').start();
+    const spinner = createOra('Downloading Environment Variables...').start();
       try {
       const variableGroups = await getEnvironmentVariableGroups();
       const variableGroup = variableGroups.find((group: any) => group.id === params.variableGroupId);
         
         if (!variableGroup) {
-        spinner.fail(`Variable group with ID ${params.variableGroupId} not found`);
-          throw new Error(`Variable group not found`);
+        spinner.fail(`Variable Group with ID ${params.variableGroupId} not found`);
+          throw new Error(`Variable Group not found`);
         }
         
       const responseData = await getEnvironmentVariables(params);
@@ -1253,28 +1254,28 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         }
         
         fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
-      spinner.succeed(`Environment variables downloaded successfully to ${filePath}`);
+      spinner.succeed(`Environment Variables downloaded successfully to ${filePath}`);
       } catch (e) {
-      spinner.fail('Failed to download environment variables');
+      spinner.fail('Failed to download Environment Variables');
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-view`) {
-    const spinner = createOra('Listing variables...').start();
+    const spinner = createOra('Listing Variables...').start();
     const responseData = await getEnvironmentVariables(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-download`) {
-    const spinner = createOra('Downloading environment variables...').start();
+    const spinner = createOra('Downloading Environment Variables...').start();
     try {
       const variableGroups = await getEnvironmentVariableGroups();
       const variableGroup = variableGroups.find((group: any) => group.id === params.variableGroupId);
       
       if (!variableGroup) {
-        spinner.fail(`Variable group with ID ${params.variableGroupId} not found`);
-        throw new Error(`Variable group not found`);
+        spinner.fail(`Variable Group with ID ${params.variableGroupId} not found`);
+        throw new Error(`Variable Group not found`);
       }
       
       const responseData = await getEnvironmentVariables(params);
@@ -1315,13 +1316,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       }
       
       fs.writeFileSync(filePath, JSON.stringify(formattedVariables));
-    spinner.succeed(`Environment variables downloaded successfully to ${filePath}`);
+    spinner.succeed(`Environment Variables downloaded successfully to ${filePath}`);
     } catch (e) {
-      spinner.fail('Failed to download environment variables');
+      spinner.fail('Failed to download Environment Variables');
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-create`) {
-    const spinner = createOra('Creating environment variable').start();
+    const spinner = createOra('Creating Environment Variable').start();
     try {
       if (params.type === 'file') {
         if (!params.filePath) {
@@ -1336,19 +1337,19 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         params.filePath = expandedPath;
       }
       const responseData = await createEnvironmentVariable(params as any);
-      spinner.succeed('Environment variable created successfully');
+      spinner.succeed('Environment Variable created successfully');
       commandWriter(CommandTypes.BUILD, {
         fullCommandName: command.fullCommandName,
         data: { ...responseData, key: params.key },
       });
     } catch (e) {
-      spinner.fail('Failed to create environment variable');
+      spinner.fail('Failed to create Environment Variable');
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-active-list`) {
     const spinner = createOra('Listing...').start();
     const responseData = await getActiveBuilds();
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.BUILD, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -1358,17 +1359,17 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     try {
       const responseData = await getBuildsOfCommit(params);
       if (!responseData || !responseData.builds || responseData.builds.length === 0) {
-        spinner.fail('No builds available');
-        throw new AppcircleExitError('No builds available', 1);
+        spinner.fail('No Builds available');
+        throw new AppcircleExitError('No Builds available', 1);
       }
-      spinner.succeed();
+      spinner.stop();
       const build = responseData?.builds?.find((build: any) => build.id === params.buildId);
       commandWriter(CommandTypes.BUILD, {
         fullCommandName: command.fullCommandName,
         data: build,
       });
     } catch (err) {
-      spinner.fail('No builds available');
+      spinner.fail('No Builds available');
     }
   }
   else {
@@ -1384,14 +1385,14 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
 
 const handleDistributionCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`) {
-    const spinner = createOra('Listing distribution profiles...').start();
+    const spinner = createOra('Listing Distribution Profiles...').start();
     const responseData = await getDistributionProfiles(params);
     if (!responseData || responseData.length === 0) {
-      spinner.text = 'No distribution profile available';
+      spinner.text = 'No Distribution Profile available';
       spinner.fail();
-      throw new AppcircleExitError('No distribution profile available', 1);
+      throw new AppcircleExitError('No Distribution Profile available', 1);
     }
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -1407,9 +1408,9 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
     try {
       const profiles = await getDistributionProfiles(params);
       if (!profiles || profiles.length === 0) {
-        spinner.text = 'No distribution profile available';
+        spinner.text = 'No Distribution Profile available';
         spinner.fail();
-        throw new AppcircleExitError('No distribution profile available', 1);
+        throw new AppcircleExitError('No Distribution Profile available', 1);
       }
 
       let expandedPath = params.app;
@@ -1459,8 +1460,8 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
             while(taskStatus.stateValue === TaskStatus.BEGIN){
               taskStatus = await getTaskStatus({taskId: commitFileResponse.taskId});
               if(taskStatus.stateValue !== TaskStatus.BEGIN && taskStatus.stateValue !== TaskStatus.COMPLETED){
-                spinner.fail('Upload failed: Please make sure that the app version number is unique in selected publish profile.');
-                throw new AppcircleExitError('Upload failed: Please make sure that the app version number is unique in selected publish profile.', 1);
+                spinner.fail('Upload failed: Please make sure that the app version number is unique in selected Testing Distribution Profile.');
+                throw new AppcircleExitError('Upload failed: Please make sure that the app version number is unique in selected Testing Distribution Profile.', 1);
               }
               await new Promise(resolve => setTimeout(resolve, 2000));
             }
@@ -1514,42 +1515,42 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-settings-auto-send`) {
-    const spinner = createOra('Testing groups saving').start();
+    const spinner = createOra('Testing Groups saving').start();
     try {
       params.testingGroupIds = Array.isArray(params.testingGroupIds) ? params.testingGroupIds : params.testingGroupIds.split(' '); 
       await updateDistributionProfileSettings(params);
-      spinner.succeed('Testing groups saved successfully.');
+      spinner.succeed('Testing Groups saved successfully.');
     } catch (e) {
       spinner.fail('Saving failed');
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-list`) {
-    const spinner = createOra('Listing testing groups...').start();
+    const spinner = createOra('Listing Testing Groups...').start();
     const responseData = await getTestingGroups();
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-view`) {
-    const spinner = createOra('Listing testing group details...').start();
+    const spinner = createOra('Listing Testing Group details...').start();
     const responseData = await getTestingGroupById(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-create`) {
     const responseData = await createTestingGroup(params);
-    console.info(`Testing group named ${responseData.name} created successfully!`);
+    console.info(`Testing Group named ${responseData.name} created successfully!`);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-remove`) {
     await deleteTestingGroup(params);
-    console.info(`Selected testing group removed successfully!`);
+    console.info(`Selected Testing Group removed successfully!`);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-add`) {
     await addTesterToTestingGroup(params);
-    console.info(`Tester has been successfully added to the selected testing group!`);
+    console.info(`Tester has been successfully added to the selected Testing Group!`);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-remove`) {
     await removeTesterFromTestingGroup(params);
-    console.info(`Tester has been successfully removed from the selected testing group!`);
+    console.info(`Tester has been successfully removed from the selected Testing Group!`);
   }
   else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
@@ -1564,16 +1565,16 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
 
 const handleSigningIdentityCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-list`) {
-    const spinner = createOra('Listing certificates...').start();
+    const spinner = createOra('Listing Certificates...').start();
     const p12Certs = await getiOSP12Certificates();
     const csrCerts = await getiOSCSRCertificates();
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: [...p12Certs,...csrCerts],
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-upload`) {
-    const spinner = createOra('Try to upload the certificate').start();
+    const spinner = createOra('Try to upload the Certificate').start();
     try {
       const responseData = await uploadP12Certificate(params);
       commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1587,7 +1588,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-create`) {
-    const spinner = createOra('Try to create the certificate request').start();
+    const spinner = createOra('Try to create the Certificate request').start();
     try {
       const responseData = await createCSRCertificateRequest(params);
       commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1601,9 +1602,9 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-view`) {
-    const spinner = createOra('Getting certificate details...').start();
+    const spinner = createOra('Getting Certificate details...').start();
     const responseData = await getCertificateDetailById(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: responseData
@@ -1618,7 +1619,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
     );
     const fileName = p12Cert ? p12Cert.filename : 'download.cer';
     const spinner = createOra(
-      `Downloading ${p12Cert ? `certificate bundle: ${p12Cert.filename}` : '.cer file'} `
+      `Downloading ${p12Cert ? `Certificate Bundle: ${p12Cert.filename}` : '.cer file'} `
     ).start();
     try {
       await downloadCertificateById(
@@ -1634,7 +1635,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail();
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-remove`) {
-    const spinner = createOra('Try to remove the certificate').start();
+    const spinner = createOra('Try to remove the Certificate').start();
     try {
       const csrCerts = await getiOSCSRCertificates();
       const csrCert = csrCerts?.find((certificate:any) => certificate.id === params.certificateId);
@@ -1648,13 +1649,13 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-list`) {
     const spinner = createOra('Listing keystores...').start();
     const keystores = await getAndroidKeystores();
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: keystores
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-create`) {
-    const spinner = createOra('Trying to generate new keystore.').start();
+    const spinner = createOra('Trying to generate new Keystore.').start();
     try {
       await generateNewKeystore(params);
       spinner.text = `Keystore generated successfully.\n\n Keystore name: ${params.name}`;
@@ -1664,7 +1665,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-upload`) {
-    const spinner = createOra('Trying to upload the keystore file').start();
+    const spinner = createOra('Trying to upload the Keystore file').start();
     try {
       await uploadAndroidKeystoreFile(params);
       spinner.text = `Keystore file uploaded successfully.\n\n`;
@@ -1687,15 +1688,15 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail();
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-view`) {
-    const spinner = createOra('Getting keystore details...').start();
+    const spinner = createOra('Getting Keystore details...').start();
     const keystore = await getKeystoreDetailById(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: keystore
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-remove`) {
-    const spinner = createOra('Try to remove the keystore').start();
+    const spinner = createOra('Try to remove the Keystore').start();
     try {
       await removeKeystore(params);
       spinner.text = `Keystore removed successfully.\n\n`;
@@ -1705,7 +1706,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-list`) {
-    const spinner = createOra('Listing provisioning profiles...').start();
+    const spinner = createOra('Listing Provisioning Profiles...').start();
     const profiles = await getProvisioningProfiles();
     spinner.succeed();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
@@ -1713,10 +1714,10 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       data: profiles
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-upload`) {
-    const spinner = createOra('Trying to upload the provisioning profile').start();
+    const spinner = createOra('Trying to upload the Provisioning Profile').start();
     try {
       await uploadProvisioningProfile(params);
-      spinner.text = `Provisioning profile uploaded successfully.\n\n`;
+      spinner.text = `Provisioning Profile uploaded successfully.\n\n`;
       spinner.succeed();
     } catch (e) {
       spinner.fail('Upload failed');
@@ -1724,7 +1725,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-download`) {
     const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
-    const spinner = createOra('Trying to download the provisioning profile').start();
+    const spinner = createOra('Trying to download the Provisioning Profile').start();
     try {
       const profile = await getProvisioningProfileDetailById(params);
       await downloadProvisioningProfileById(params, downloadPath, profile.filename);
@@ -1735,18 +1736,18 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`) {
-    const spinner = createOra('Getting provisioning profile details...').start();
+    const spinner = createOra('Getting Provisioning Profile details...').start();
     const profile = await getProvisioningProfileDetailById(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: profile
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-remove`) {
-    const spinner = createOra('Try to remove the provisioning profile').start();
+    const spinner = createOra('Try to remove the Provisioning Profile').start();
     try {
       await removeProvisioningProfile(params);
-      spinner.text = `Provisioning profile removed successfully.\n\n`;
+      spinner.text = `Provisioning Profile removed successfully.\n\n`;
       spinner.succeed();
     } catch (e: any) {
       spinner.fail('Remove failed');
@@ -1757,17 +1758,17 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
 
 const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-profile-list`) {
-    const spinner = createOra('Listing enterprise profiles...').start();
+    const spinner = createOra('Listing Enterprise Profiles...').start();
     const responseData = await getEnterpriseProfiles();
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-list`) {
-    const spinner = createOra('Listing enterprise app versions...').start();
+    const spinner = createOra('Listing Enterprise App Versions...').start();
     const responseData = await getEnterpriseAppVersions(params);
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
       fullCommandName: command.fullCommandName,
       data: responseData,
@@ -1929,7 +1930,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
 }
 
 async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; buildId?: string; branchId?: string; profileId?: string; profileName?: string; branchName?: string; path?: string; fileName?: string }, params?: any) {
-  const progressSpinner = createOra('Preparing to download build logs...').start();
+  const progressSpinner = createOra('Preparing to download Build Logs...').start();
   
   let effectiveTaskId: string | null = null;
   let providedPath = params?.path;
@@ -1954,12 +1955,12 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
           await downloadTaskLog({ taskId: effectiveTaskId }, downloadPath);
           const logFilePath = path.join(downloadPath, `build-task-${effectiveTaskId}-log.txt`);
           logsAvailable = true;
-          progressSpinner.succeed(`Build logs downloaded successfully: file://${logFilePath}`);
+          progressSpinner.succeed(`Build Logs downloaded successfully: file://${logFilePath}`);
           return;
         } catch (error: any) {
           lastError = error;
           if (error.message === 'No Logs Available' || error.message.includes('HTTP error')) {
-            progressSpinner.text = `Waiting for build logs to be prepared... (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`;
+            progressSpinner.text = `Waiting for Build Logs to be prepared... (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`;
             await new Promise(resolve => setTimeout(resolve, 5000));
           } else {
             break;
@@ -1995,7 +1996,7 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
               commitId = idParts[0];
               buildId = idParts[1];
             } else {
-              progressSpinner.fail(chalk.red('Could not get build details from Task ID.'));
+              progressSpinner.fail(chalk.red('Could not get Build details from Task ID.'));
               return;
             }
           }
@@ -2005,7 +2006,7 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
             commitId = idParts[0];
             buildId = idParts[1];
           } else {
-            progressSpinner.fail(chalk.red('Could not get build details from Task ID.'));
+            progressSpinner.fail(chalk.red('Could not get Build details from Task ID.'));
             return;
           }
         }
@@ -2020,15 +2021,15 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
     }
 
     if (branchId && profileId) {
-      progressSpinner.text = "Getting latest build ID with Branch and Profile ID...";
+      progressSpinner.text = "Getting latest Build ID with Branch and Profile ID...";
       try {
         const latestBuild = await getLatestBuildByBranch({ branchId, profileId });
         if (latestBuild) {
           buildId = latestBuild.id;
           commitId = latestBuild.commitId;
-          progressSpinner.text = `Got latest build ID from API: ${buildId}`;
+          progressSpinner.text = `Got latest Build ID from API: ${buildId}`;
         } else {
-          progressSpinner.fail(chalk.yellow(`No builds found for Branch and Profile ID.`));
+          progressSpinner.fail(chalk.yellow(`No Builds found for Branch and Profile ID.`));
           return;
         }
       } catch (error: any) {
@@ -2117,10 +2118,10 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
                     `${branchName}-${profileName}-build-${buildId}-logs-${timestamp}.txt`;
     
     if (wasCanceled) {
-      progressSpinner.text = "Waiting for canceled build logs to be prepared...";
+      progressSpinner.text = "Waiting for canceled Build Logs to be prepared...";
       await new Promise(resolve => setTimeout(resolve, 2000));
     } else {
-      progressSpinner.text = "Waiting for build logs to be prepared...";
+      progressSpinner.text = "Waiting for Build Logs to be prepared...";
     }
     
     const MAX_RETRIES = 5;
@@ -2131,7 +2132,7 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
       try {
         await downloadBuildLog({ commitId, buildId }, finalDownloadPath, fileName);
         const fullPath = path.join(finalDownloadPath, fileName);
-        progressSpinner.succeed(`Build logs downloaded successfully: file://${fullPath}`);
+        progressSpinner.succeed(`Build Logs downloaded successfully: file://${fullPath}`);
         return;
       } catch (error: any) {
         lastError = error;
@@ -2142,10 +2143,10 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
         );
         attempt++;
         if (wasCanceled && isNotFoundError && attempt < MAX_RETRIES) {
-          progressSpinner.text = `Waiting for canceled build logs to be prepared... (Attempt ${attempt})`;
+          progressSpinner.text = `Waiting for canceled Build Logs to be prepared... (Attempt ${attempt})`;
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * 2));
         } else if (isNotFoundError && attempt < MAX_RETRIES) {
-          progressSpinner.text = `Waiting for build logs to be prepared... (Attempt ${attempt})`;
+          progressSpinner.text = `Waiting for Build Logs to be prepared... (Attempt ${attempt})`;
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         } else {
           break;
@@ -2156,16 +2157,16 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
       if (lastError.message && lastError.message.includes('No Logs Available')) {
         if (wasCanceled) {
           progressSpinner.fail(
-            chalk.yellow(`No logs available for this canceled build.`)
+            chalk.yellow(`No Logs available for this canceled Build.`)
           );
         } else {
           progressSpinner.fail(
-            chalk.yellow(`No logs available for this build. The build may not be completed yet.`)
+            chalk.yellow(`No Logs available for this Build. The Build may not be completed yet.`)
           );
         }
       } else if (lastError.message && lastError.message.includes('404')) {
         progressSpinner.fail(
-          chalk.yellow(`Build logs are not ready yet. Please try again later.`)
+          chalk.yellow(`Build Logs are not ready yet. Please try again later.`)
         );
       } else {
         progressSpinner.fail(`Failed to download logs: ${lastError.message || String(lastError)}`);
@@ -2174,7 +2175,7 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
       progressSpinner.fail(`Failed to download logs after multiple attempts.`);
     }
   } catch (e: any) {
-    progressSpinner.fail(chalk.red(`Error downloading build logs: ${e.message}`));
+    progressSpinner.fail(chalk.red(`Error downloading Build Logs: ${e.message || String(e)}`));
   }
 }
 
@@ -2184,7 +2185,7 @@ async function downloadPublishLogs(publishDetail: any, platform: string, publish
   }
   
   const publishId = publishDetail.id;
-  const downloadSpinner = createOra("Downloading publish logs...").start();
+  const downloadSpinner = createOra("Downloading Publish Logs...").start();
   
   try {
     let finalDownloadPath = "";
@@ -2240,21 +2241,21 @@ async function downloadPublishLogs(publishDetail: any, platform: string, publish
           const logContent = response.data;
           
           if (!logContent || logContent.trim() === '' || logContent.includes('No Logs Available')) {
-            downloadSpinner.text = "Waiting for publish logs to be prepared...";
+            downloadSpinner.text = "Waiting for Publish Logs to be prepared...";
             await new Promise(resolve => setTimeout(resolve, 5000));
           } else {
             fs.writeFileSync(filePath, logContent);
             logsAvailable = true;
-            downloadSpinner.succeed(`Publish logs downloaded successfully to: ${filePath}`);
+            downloadSpinner.succeed(`Publish Logs downloaded successfully to: ${filePath}`);
             break;
           }
         } else {
-          downloadSpinner.text = "Waiting for publish logs to be prepared...";
+          downloadSpinner.text = "Waiting for Publish Logs to be prepared...";
           await new Promise(resolve => setTimeout(resolve, 5000));
         }
       } catch (error: any) {
         if (error.response && error.response.status === 404) {
-          downloadSpinner.text = "Waiting for publish logs to be prepared...";
+          downloadSpinner.text = "Waiting for Publish Logs to be prepared...";
           await new Promise(resolve => setTimeout(resolve, 5000));
         } else {
           throw error;
@@ -2264,10 +2265,10 @@ async function downloadPublishLogs(publishDetail: any, platform: string, publish
     
     if (!logsAvailable) {
       fs.writeFileSync(filePath, 'No logs available for this publish.');
-      downloadSpinner.fail('Could not retrieve publish logs after waiting for 2 minutes.');
+      downloadSpinner.fail('Could not retrieve Publish Logs after waiting for 2 minutes.');
     }
   } catch (error) {
-    downloadSpinner.fail(`Error downloading publish logs: ${error instanceof Error ? error.message : String(error)}`);
+    downloadSpinner.fail(`Error downloading Publish Logs: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -2286,11 +2287,11 @@ async function checkPublishStatusDirectly(platform: string, publishProfileId: st
         detail: response.data
       };
     } else {
-      console.log(chalk.yellow(`Could not get publish status. Status code: ${response.status}`));
+      console.log(chalk.yellow(`Could not get Publish Status. Status code: ${response.status}`));
       return { status: 99 }; // Unknown status
     }
   } catch (error: any) {
-    console.log(chalk.yellow(`Error checking publish status: ${error.message}`));
+    console.log(chalk.yellow(`Error checking Publish Status: ${error.message}`));
     return { status: 99 };
   }
 }
@@ -2298,7 +2299,7 @@ async function checkPublishStatusDirectly(platform: string, publishProfileId: st
 async function monitorPublishProcess(params: any) {
   const { platform, publishProfileId, appVersionId } = params;
   
-  const progressSpinner = createOra(`Checking publish status...`).start();
+  const progressSpinner = createOra(`Checking Publish Status...`).start();
   let dots = "";
   
   const interval = setInterval(() => {
@@ -2333,7 +2334,7 @@ async function monitorPublishProcess(params: any) {
               const response: any = await enquirer.prompt({
                 type: 'select',
                 name: 'download',
-                message: 'Do you want to download the publish log? (Y/n)',
+                message: 'Do you want to download the Publish Logs? (Y/n)',
                 choices: [
                   { name: 'yes', message: 'yes' },
                   { name: 'no', message: 'no' }
@@ -2344,17 +2345,17 @@ async function monitorPublishProcess(params: any) {
               if (response.download === 'yes') {
                 const homeDir = os.homedir();
                 const defaultDownloadDir = path.join(homeDir, 'Downloads');
-                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
+                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for Publish Logs', defaultDownloadDir);
                 await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
               } else {
-                console.log(chalk.gray('Skipping log download.'));
+                console.log(chalk.gray('Skipping Publish Logs download.'));
               }
-              console.log(chalk.cyan('\nYou can check the publish details with:'));
+              console.log(chalk.cyan('\nYou can check the Publish details with:'));
               console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
             } catch (e) {
-              // If we can't get publish details, just show the command
+              // If we can't get Publish details, just show the command
               console.log(chalk.yellow('\nPublish completed successfully, but could not retrieve details to offer log download.'));
-              console.log(chalk.cyan('You can check the publish details with:'));
+              console.log(chalk.cyan('You can check the Publish details with:'));
               console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
             }
             
@@ -2377,7 +2378,7 @@ async function monitorPublishProcess(params: any) {
               const response: any = await enquirer.prompt({
                 type: 'select',
                 name: 'download',
-                message: 'Do you want to download the publish log? (Y/n)',
+                message: 'Do you want to download the Publish Logs? (Y/n)',
                 choices: [
                   { name: 'yes', message: 'yes' },
                   { name: 'no', message: 'no' }
@@ -2388,10 +2389,10 @@ async function monitorPublishProcess(params: any) {
               if (response.download === 'yes') {
                 const homeDir = os.homedir();
                 const defaultDownloadDir = path.join(homeDir, 'Downloads');
-                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
+                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for Publish Logs', defaultDownloadDir);
                 await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
               } else {
-                console.log(chalk.gray('Skipping publish log download.'));
+                console.log(chalk.gray('Skipping Publish Logs download.'));
               }
               console.log(chalk.yellow('\nView details with:'));
               console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
@@ -2418,7 +2419,7 @@ async function monitorPublishProcess(params: any) {
               const response: any = await enquirer.prompt({
                 type: 'select',
                 name: 'download',
-                message: 'Do you want to download the publish log? (Y/n)',
+                message: 'Do you want to download the Publish Logs? (Y/n)',
                 choices: [
                   { name: 'yes', message: 'yes' },
                   { name: 'no', message: 'no' }
@@ -2429,10 +2430,10 @@ async function monitorPublishProcess(params: any) {
               if (response.download === 'yes') {
                 const homeDir = os.homedir();
                 const defaultDownloadDir = path.join(homeDir, 'Downloads');
-                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
+                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for Publish Logs', defaultDownloadDir);
                 await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
               } else {
-                console.log(chalk.gray('Skipping publish log download.'));
+                console.log(chalk.gray('Skipping Publish Logs download.'));
               }
               console.log(chalk.yellow('\nView details with:'));
               console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
@@ -2459,7 +2460,7 @@ async function monitorPublishProcess(params: any) {
               const response: any = await enquirer.prompt({
                 type: 'select',
                 name: 'download',
-                message: 'Do you want to download the publish log? (Y/n)',
+                message: 'Do you want to download the Publish Logs? (Y/n)',
                 choices: [
                   { name: 'yes', message: 'yes' },
                   { name: 'no', message: 'no' }
@@ -2470,10 +2471,10 @@ async function monitorPublishProcess(params: any) {
               if (response.download === 'yes') {
                 const homeDir = os.homedir();
                 const defaultDownloadDir = path.join(homeDir, 'Downloads');
-                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
+                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for Publish Logs', defaultDownloadDir);
                 await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
               } else {
-                console.log(chalk.gray('Skipping publish log download.'));
+                console.log(chalk.gray('Skipping Publish Logs download.'));
               }
               console.log(chalk.yellow('\nView details with:'));
               console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
@@ -2500,11 +2501,11 @@ async function monitorPublishProcess(params: any) {
             break;
             
           case 99: // UNKNOWN
-            progressSpinner.text = chalk.gray(`Publish status unknown`);
+            progressSpinner.text = chalk.gray(`Publish Status unknown`);
             break;
             
           case 100: // SKIPPED
-            progressSpinner.text = chalk.hex('#9370DB')(`Publish step skipped ⏭️`);
+            progressSpinner.text = chalk.hex('#9370DB')(`Publish Step skipped ⏭️`);
             // May need special handling, but typically not a final state
             break;
             
@@ -2521,7 +2522,7 @@ async function monitorPublishProcess(params: any) {
               const response: any = await enquirer.prompt({
                 type: 'select',
                 name: 'download',
-                message: 'Do you want to download the publish log? (Y/n)',
+                message: 'Do you want to download the Publish Logs? (Y/n)',
                 choices: [
                   { name: 'yes', message: 'yes' },
                   { name: 'no', message: 'no' }
@@ -2532,10 +2533,10 @@ async function monitorPublishProcess(params: any) {
               if (response.download === 'yes') {
                 const homeDir = os.homedir();
                 const defaultDownloadDir = path.join(homeDir, 'Downloads');
-                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
+                const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for Publish Logs', defaultDownloadDir);
                 await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
               } else {
-                console.log(chalk.gray('Skipping publish log download.'));
+                console.log(chalk.gray('Skipping Publish Logs download.'));
               }
               console.log(chalk.yellow('\nView details with:'));
               console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
@@ -2558,7 +2559,7 @@ async function monitorPublishProcess(params: any) {
             break;
             
           default:
-            progressSpinner.text = chalk.gray(`Publish status: ${status}`);
+            progressSpinner.text = chalk.gray(`Publish Status: ${status}`);
         }
         
         await new Promise(resolve => setTimeout(resolve, 10000)); // Check every 10 seconds
@@ -2574,7 +2575,7 @@ async function monitorPublishProcess(params: any) {
     
     if (!publishCompleted) {
       progressSpinner.fail(chalk.red(`Publish monitoring timed out after ${maxRetries * 10} seconds.`));
-      throw new AppcircleExitError('Build monitoring timed out', 1);
+      throw new AppcircleExitError('Publish monitoring timed out', 1);
     }
   } catch (e) {
     clearInterval(interval);
@@ -2582,8 +2583,8 @@ async function monitorPublishProcess(params: any) {
     if (e instanceof AppcircleExitError) {
       throw e;
     }
-    progressSpinner.fail(chalk.red(`Error while monitoring publish status.`));
-    throw new AppcircleExitError('Error while monitoring publish status', 1);
+    progressSpinner.fail(chalk.red(`Error while monitoring Publish Status.`));
+    throw new AppcircleExitError('Error while monitoring Publish Status', 1);
   }
 }
 
@@ -2595,7 +2596,7 @@ async function handleSuccessfulPublish(params: any, progressSpinner: any) {
     const response: any = await enquirer.prompt({
       type: 'select',
       name: 'download',
-      message: 'Do you want to download the publish log? (Y/n)',
+      message: 'Do you want to download the Publish Logs? (Y/n)',
       choices: [
         { name: 'yes', message: 'yes' },
         { name: 'no', message: 'no' }
@@ -2606,12 +2607,12 @@ async function handleSuccessfulPublish(params: any, progressSpinner: any) {
     if (response.download === 'yes') {
       const homeDir = os.homedir();
       const defaultDownloadDir = path.join(homeDir, 'Downloads');
-      const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
+      const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for Publish Logs', defaultDownloadDir);
       await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
     } else {
-      console.log(chalk.gray('Skipping log download.'));
+      console.log(chalk.gray('Skipping Publish Logs download.'));
     }
-    console.log(chalk.cyan('\nYou can check the publish details with:'));
+    console.log(chalk.cyan('\nYou can check the Publish details with:'));
     console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
     throw new AppcircleExitError('Publish completed successfully', 0);
   } catch (e) {
@@ -2621,7 +2622,7 @@ async function handleSuccessfulPublish(params: any, progressSpinner: any) {
     }
     // Only handle actual errors here, not successful completion
     console.log(chalk.yellow('\nPublish completed successfully, but could not retrieve details to offer log download.'));
-    console.log(chalk.cyan('You can check the publish details with:'));
+    console.log(chalk.cyan('You can check the Publish details with:'));
     console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);
     throw new AppcircleExitError('Publish completed successfully', 0);
   }
@@ -2636,7 +2637,7 @@ async function handleFailedPublish(params: any, progressSpinner: any) {
     const response: any = await enquirer.prompt({
       type: 'select',
       name: 'download',
-      message: 'Do you want to download the publish log? (Y/n)',
+      message: 'Do you want to download the Publish Logs? (Y/n)',
       choices: [
         { name: 'yes', message: 'yes' },
         { name: 'no', message: 'no' }
@@ -2647,10 +2648,10 @@ async function handleFailedPublish(params: any, progressSpinner: any) {
     if (response.download === 'yes') {
       const homeDir = os.homedir();
       const defaultDownloadDir = path.join(homeDir, 'Downloads');
-      const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for publish logs', defaultDownloadDir);
+      const publishLogPath = await promptForPath('[OPTIONAL] Enter download path for Publish Logs', defaultDownloadDir);
       await downloadPublishLogs(publishDetail, params.platform, params.publishProfileId, publishLogPath);
     } else {
-      console.log(chalk.gray('Skipping publish log download.'));
+      console.log(chalk.gray('Skipping Publish Logs download.'));
     }
     console.log(chalk.yellow('\nView details with:'));
     console.log(`${PROGRAM_NAME} publish view --platform ${params.platform} --publishProfileId ${params.publishProfileId} --appVersionId ${params.appVersionId}`);

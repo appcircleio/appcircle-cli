@@ -69,7 +69,7 @@ const handleInteractiveParamsOrArguments = async (
   const configurationsList: any[] = [];
   for (let param of commandParams) {
     if (param.name === 'branchId') {
-      const spinner = ora('Listing branches...').start();
+      const spinner = ora('Listing Branches...').start();
       if (params.profileId && buildProfilesList.length > 0) {
         const match = /\(([^)]+)\)$/.exec(params.profileId);
         const selectedProfileId = match ? match[1] : params.profileId;
@@ -96,8 +96,7 @@ const handleInteractiveParamsOrArguments = async (
       branchesList.push(...branches);
       //@ts-ignore
       param.params = branches.map((branch: any) => ({ name: `${branch.name} (${branch.id})`, message: `${branch.name} (${branch.id})` }));
-      spinner.text = 'Branches listed';
-      spinner.succeed();
+      spinner.stop();
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
@@ -117,7 +116,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     } else if (param.name === 'profileId') {
-      const spinner = ora('Listing build profiles...').start();
+      const spinner = ora('Listing Build Profiles...').start();
       const profiles = await getBuildProfiles();
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No build profile available';
@@ -128,8 +127,7 @@ const handleInteractiveParamsOrArguments = async (
       buildProfilesList.push(...profiles);
       //@ts-ignore
       param.params = profiles.map((profile: any) => ({ name: `${profile.name} (${profile.id})`, message: `${profile.name} (${profile.id})` }));
-      spinner.text = 'Build profiles listed';
-      spinner.succeed();
+      spinner.stop();
       const selectPrompt = new AutoComplete({
         name: param.name,
         message: param.description || 'Build Profile',
@@ -148,7 +146,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     } else if (param.name === 'commitId') {
-      const spinner = ora('Listing commits...').start();
+      const spinner = ora('Listing Commits...').start();
       if (params.branchId && branchesList.length > 0) {
         const match = /\(([^)]+)\)$/.exec(params.branchId);
         const selectedBranchId = match ? match[1] : params.branchId;
@@ -181,8 +179,7 @@ const handleInteractiveParamsOrArguments = async (
         shortMsg = JSON.stringify(shortMsg);
         return { name: `${shortMsg} (${commit.id})`, message: `${shortMsg} (${commit.id})` };
       });
-      spinner.text = 'Commits listed';
-      spinner.succeed();
+      spinner.stop();
       if (params.commitId) {
         const match = /\(([^)]+)\)$/.exec(params.commitId);
         if (match && match[1]) {
@@ -190,7 +187,7 @@ const handleInteractiveParamsOrArguments = async (
         }
       }
     } else if (param.name === 'buildId') {
-      const spinner = ora('Listing builds...').start();
+      const spinner = ora('Listing Builds...').start();
       let commitId = params.commitId;
       const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
       if (!uuidRegex.test(commitId)) {
@@ -235,7 +232,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     } else if (param.name === 'entProfileId') {
-      const spinner = ora('Listing enterprise profiles...').start();
+      const spinner = ora('Listing Enterprise Profiles...').start();
       const profiles = await getEnterpriseProfiles();
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No enterprise profile available';
@@ -244,8 +241,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       // Use Name (ID) format for both name and message
       param.params = profiles.map((profile: any) => ({ name: `${profile.name} (${profile.id})`, message: `${profile.name} (${profile.id})` }));
-      spinner.text = 'Enterprise profiles listed';
-      spinner.succeed();
+      spinner.stop();
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
@@ -265,20 +261,19 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     } else if (param.name === 'distProfileId') {
-      const spinner = ora('Listing distribution profiles...').start();
+      const spinner = ora('Listing Distribution Profiles...').start();
       const profiles = await getDistributionProfiles();
       if (!profiles || profiles.length === 0) {
-        spinner.text = 'No distribution profile available';
+        spinner.text = 'No Distribution Profile Available';
         spinner.fail();
-        throw new AppcircleExitError('No distribution profile available', 1);
+        throw new AppcircleExitError('No Distribution Profile Available', 1);
       }
       //@ts-ignore
       param.params = profiles.map((profile: any) => {
         const display = `${profile.name} (${profile.id})`;
         return { name: display, message: display };
       });
-      spinner.text = 'Distribution profiles listed';
-      spinner.succeed();
+      spinner.stop();
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
@@ -299,16 +294,16 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     } else if (param.name === 'variableGroupId') {
-      const spinner = ora('Listing environment variable groups...').start();
+      const spinner = ora('Listing Environment Variable Groups...').start();
       const groups = await getEnvironmentVariableGroups();
       if (!groups || groups.length === 0) {
-        spinner.text = 'No environment variable groups available';
+        spinner.text = 'No Environment Variable Groups Available';
         spinner.fail();
         return;
       }
       //@ts-ignore
       param.params = groups.map((group: any) => ({ name: `${group.name} (${group.id})`, message: `${group.name} (${group.id})` }));
-      spinner.succeed();
+      spinner.stop();
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
@@ -328,7 +323,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     } else if (param.name === 'entVersionId') {
-      const spinner = ora('Listing enterprise versions...').start();
+      const spinner = ora('Listing Enterprise Versions...').start();
       const profiles = await getEnterpriseAppVersions({ entProfileId: params.entProfileId, publishType: '' });
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No version available';
@@ -341,8 +336,7 @@ const handleInteractiveParamsOrArguments = async (
         name: versionMap.get(profile.id), 
         message: `${profile.version} (${profile.versionCode}) (${profile.id})` 
       }));
-      spinner.text = 'Enterprise versions listed';
-      spinner.succeed();
+      spinner.stop();
       
       const selectPrompt = new AutoComplete({
         name: param.name,
@@ -360,7 +354,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     } else if (param.name === 'workflowId') {
-      const spinner = ora('Listing workflows...').start();
+      const spinner = ora('Listing Workflows...').start();
       if (params.workflowId) {
         const match = /\(([^)]+)\)$/.exec(params.workflowId);
         const selectedWorkflowId = match ? match[1] : params.workflowId;
@@ -374,10 +368,9 @@ const handleInteractiveParamsOrArguments = async (
       }
       const workflowsList: any[] = workflows;
       param.params = workflows.map((workflow: any) => ({ name: `${workflow.workflowName} (${workflow.id})`, message: `${workflow.workflowName} (${workflow.id})` }));
-      spinner.text = 'Workflows listed';
-      spinner.succeed();
+      spinner.stop();
     } else if (param.name === 'configurationId') {
-      const spinner = ora('Listing configurations...').start();
+      const spinner = ora('Listing Configurations...').start();
       if (params.branchId && branchesList.length > 0) {
         const match = /\(([^)]+)\)$/.exec(params.branchId);
         const selectedBranchId = match ? match[1] : params.branchId;
@@ -404,8 +397,7 @@ const handleInteractiveParamsOrArguments = async (
       configurationsList.push(...configurations);
       //@ts-ignore
       param.params = configurations.map((config: any) => ({ name: `${config.item1.configurationName} (${config.item1.id})`, message: `${config.item1.configurationName} (${config.item1.id})` }));
-      spinner.text = 'Configurations listed';
-      spinner.succeed();
+      spinner.stop();
       if (params.configurationId && configurationsList.length > 0) {
         const selectedConfig = configurationsList.find((c) => c.item1.configurationName === params.configurationId || c.item1.id === params.configurationId);
         if (selectedConfig) {
@@ -413,7 +405,7 @@ const handleInteractiveParamsOrArguments = async (
         }
       }
     } else if (param.name === 'organizationId') {
-      const spinner = ora('Listing organizations...').start();
+      const spinner = ora('Listing Organizations...').start();
       const isAllOrganizations = param.defaultValue === 'all';
       const userInfo = await getUserInfo();
       const organizations = await getOrganizations();
@@ -438,8 +430,7 @@ const handleInteractiveParamsOrArguments = async (
       );
       param.params = (isAllOrganizations ? [{ name: 'all', message: `All Organizations` }] : []).concat(organizationParams);
       params['currentOrganizationId'] = userInfo.currentOrganizationId;
-      spinner.text = 'Organizations listed';
-      spinner.succeed();
+      spinner.stop();
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
@@ -463,7 +454,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     } else if (param.name === 'role') {
-      const spinner = ora('Listing roles...').start();
+      const spinner = ora('Listing Roles...').start();
       const userinfo = params.userId ? await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId }): null;
       const roleList = await getRoleList();
       if (!roleList || roleList.length === 0) {
@@ -495,10 +486,9 @@ const handleInteractiveParamsOrArguments = async (
           param.params = [{ name: 'owner', message: 'Owner' }];
         }
       }
-      spinner.text = 'Roles listed';
-      spinner.succeed();
+      spinner.stop();
     } else if (param.name === 'userId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Listing users...').start();
+      const spinner = ora('Listing Users...').start();
       let userList = await getOrganizationUsers({ organizationId: params.organizationId || params.currentOrganizationId || '' });
       if (!userList || userList.length === 0) {
         spinner.text = 'No users available';
@@ -508,13 +498,12 @@ const handleInteractiveParamsOrArguments = async (
       }
       // Format user selection as email (id)
       param.params = userList.map((user: any) => ({ name: `${user.email} (${user.id})`, message: `${user.email} (${user.id})` }));
-      spinner.text = 'Users listed';
       if(!param.params?.length){
         spinner.text = "No users in this organization";
         spinner.fail();
         return { isError: true };
       }
-      spinner.succeed();
+      spinner.stop();
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
@@ -534,7 +523,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     }else if(param.name === 'publishProfileId' && param.type === CommandParameterTypes.SELECT){
-      const spinner = ora('Listing publish profiles...').start();
+      const spinner = ora('Listing Publish Profiles...').start();
       const selectedPlatform = params["platform"];
       const publishProfiles = await getPublishProfiles({ platform: selectedPlatform });
       if (!publishProfiles || publishProfiles.length === 0) {
@@ -548,8 +537,7 @@ const handleInteractiveParamsOrArguments = async (
       });
       param.params = profileParams;
       params._publishProfileParams = profileParams;
-      spinner.text = 'Publish profiles listed';
-      spinner.succeed();
+      spinner.stop();
       const selectPrompt = new AutoComplete({
         name: param.name,
         message: param.description || 'Publish Profile',
@@ -566,7 +554,7 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     }else if(param.name === 'appVersionId' && param.type === CommandParameterTypes.SELECT){
-      const spinner = ora('Listing app versions...').start();
+      const spinner = ora('Listing App Versions...').start();
       const selectedPlatform = params["platform"];
       let selectedPublishProfileId = params["publishProfileId"];
       const match = /\(([^)]+)\)/.exec(selectedPublishProfileId);
@@ -585,8 +573,7 @@ const handleInteractiveParamsOrArguments = async (
           return { name: display, message: display, _id: appVersion.id };
         });
         param.params = appVersionChoices;
-        spinner.text = 'App versions listed';
-        spinner.succeed();
+        spinner.stop();
         const selectPrompt = new AutoComplete({
           name: param.name,
           message: param.description || 'App Version',
@@ -609,7 +596,7 @@ const handleInteractiveParamsOrArguments = async (
         continue;
       }
     }else if(param.name === 'publishVariableGroupId' && param.type === CommandParameterTypes.SELECT){
-      const spinner = ora('Listing publish variable groups...').start();
+      const spinner = ora('Listing Publish Variable Groups...').start();
       const groups = await getPublishVariableGroups();
       if (!groups || groups.length === 0) {
         spinner.text = 'No groups available';
@@ -617,8 +604,7 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = groups.map((group:any) => ({name:`${group.name} (${group.id})`, message: `${group.name} (${group.id})`}));
-        spinner.text = 'Publish variable groups listed';
-        spinner.succeed();
+        spinner.stop();
         // Prompt for selection and always extract UUID
         const selectPrompt = new AutoComplete({
           name: param.name,
@@ -646,7 +632,7 @@ const handleInteractiveParamsOrArguments = async (
       }
     }
     else if (param.name === 'email' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Listing invitations...').start();
+      const spinner = ora('Listing Invitations...').start();
       const invitationsList = await getOrganizationInvitations({ organizationId: params.organizationId || params.currentOrganizationId || '' });
       if (param.required !== false && (!invitationsList || invitationsList.length === 0)) {
         spinner.text = 'No invitations available';
@@ -657,15 +643,14 @@ const handleInteractiveParamsOrArguments = async (
         invitationsList.unshift({ userEmail: UNKNOWN_PARAM_VALUE, _message: 'Skip - (No email)' });
       }
       param.params = invitationsList.map((invitation: any) => ({ name: invitation.userEmail, message: invitation._message || invitation.userEmail }));
-      spinner.text = 'Invitations listed';
-      spinner.succeed();
+      spinner.stop();
     }else if (param.name === 'value' && params.isSecret) {
       param.type = CommandParameterTypes.PASSWORD;
     }else if (param.name === 'countryCode' && param.type === CommandParameterTypes.SELECT) {
       const countries = await getCountries();
       param.params = countries.map((country) => ({ name: country.alpha2, message: `${country.name}` }));
     }else if (param.name === 'certificateBundleId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Listing certificate bundles...').start();
+      const spinner = ora('Listing Certificate Bundles...').start();
       const p12Certs = await getiOSP12Certificates();
       const certificates = [...p12Certs];
       if (!certificates || certificates.length === 0) {
@@ -681,8 +666,7 @@ const handleInteractiveParamsOrArguments = async (
           let display = `${certName}${teamId}${appleTeam} (${certificate.id})`;
           return { name: display, message: display };
         });
-        spinner.text = 'Certificate bundles listed';
-        spinner.succeed();
+        spinner.stop();
         // Prompt for selection and always extract UUID
         const selectPrompt = new AutoComplete({
           name: param.name,
@@ -704,7 +688,7 @@ const handleInteractiveParamsOrArguments = async (
         continue;
       }
     }else if (param.name === 'certificateId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Listing certificates...').start();
+      const spinner = ora('Listing Certificates...').start();
       const p12Certs = await getiOSP12Certificates();
       const csrCerts = await getiOSCSRCertificates();
       const certificates = [...p12Certs, ...csrCerts];
@@ -729,8 +713,7 @@ const handleInteractiveParamsOrArguments = async (
             return { name: display, message: display };
           }
         });
-        spinner.text = 'Certificates listed';
-        spinner.succeed();
+        spinner.stop();
         // Prompt for selection and always extract UUID
         const selectPrompt = new AutoComplete({
           name: param.name,
@@ -752,7 +735,7 @@ const handleInteractiveParamsOrArguments = async (
         continue;
       }
     }else if (param.name === 'keystoreId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Listing keystores...').start();
+      const spinner = ora('Listing Keystores...').start();
       const keystores = await getAndroidKeystores();
       if (!keystores || keystores.length === 0) {
         spinner.text = 'No keystore available';
@@ -764,8 +747,7 @@ const handleInteractiveParamsOrArguments = async (
           const display = `${keystore.name} (${keystore.id})`;
           return { name: display, message: display };
         });
-        spinner.text = 'Keystores listed';
-        spinner.succeed();
+        spinner.stop();
         // Prompt for selection and always extract UUID
         const selectPrompt = new AutoComplete({
           name: param.name,
@@ -787,7 +769,7 @@ const handleInteractiveParamsOrArguments = async (
         continue;
       }
     }else if (param.name === 'provisioningProfileId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Listing provisioning profiles...').start();
+      const spinner = ora('Listing Provisioning Profiles...').start();
       const profiles = await getProvisioningProfiles();
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No provisioning profile available';
@@ -799,8 +781,7 @@ const handleInteractiveParamsOrArguments = async (
           const display = `${profile.name} (${profile.id})`;
           return { name: display, message: display };
         });
-        spinner.text = 'Provisioning profiles listed';
-        spinner.succeed();
+        spinner.stop();
         // Prompt for selection and always extract UUID
         const selectPrompt = new AutoComplete({
           name: param.name,
@@ -822,7 +803,7 @@ const handleInteractiveParamsOrArguments = async (
         continue;
       }
     }else if (param.name === 'testingGroupIds' && param.type === CommandParameterTypes.MULTIPLE_SELECT) {
-      const spinner = ora('Listing testing groups...').start();
+      const spinner = ora('Listing Testing Groups...').start();
       const groups = await getTestingGroups();
       const selectedProfile = await getDistributionProfileById(params);
       if (!groups || groups.length === 0) {
@@ -842,11 +823,10 @@ const handleInteractiveParamsOrArguments = async (
               return _index !== -1 ? _index : undefined;
             }).filter((v: any) => v !== undefined)
           : [];
-        spinner.text = 'Testing groups listed';
-        spinner.succeed();
+        spinner.stop();
       }
     }else if (param.name === 'testingGroupId' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Listing testing groups...').start();
+      const spinner = ora('Listing Testing Groups...').start();
       const groups = await getTestingGroups();
       if (!groups || groups.length === 0) {
         spinner.text = 'No testing group available';
@@ -858,8 +838,7 @@ const handleInteractiveParamsOrArguments = async (
           const display = `${group.name} (${group.id})`;
           return { name: display, message: display };
         });
-        spinner.text = 'Testing groups listed';
-        spinner.succeed();
+        spinner.stop();
         // Prompt for selection and always extract UUID
         const selectPrompt = new AutoComplete({
           name: param.name,
@@ -878,7 +857,7 @@ const handleInteractiveParamsOrArguments = async (
         continue;
       }
     }else if (param.name === 'testerEmail' && param.type === CommandParameterTypes.SELECT) {
-      const spinner = ora('Listing testers...').start();
+      const spinner = ora('Listing Testers...').start();
       const group = await getTestingGroupById(params);
       const testers = group?.testers;
       if (!testers || testers.length === 0) {
@@ -887,8 +866,7 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }else {
         param.params = testers.map((tester:any) => ({name:tester, message: tester}));
-        spinner.text = 'Testers listed';
-        spinner.succeed();
+        spinner.stop();
       }
     } else if (param.name === 'path' && param.description && param.description.includes('certificate to be downloaded')) {
       // Set default path to Downloads folder for certificate downloads
