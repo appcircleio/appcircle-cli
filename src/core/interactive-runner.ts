@@ -172,12 +172,13 @@ const handleInteractiveParamsOrArguments = async (
       commitsList.length = 0;
       commitsList.push(...commits);
       //@ts-ignore
-      param.params = commits.map((commit: any) => {
+      param.params = commits.map((commit: any, index: number) => {
         let shortMsg = commit.message && commit.message.trim().length > 0
           ? commit.message.substring(0, 20) + (commit.message.length > 20 ? '...' : '')
           : '<no message>';
         shortMsg = JSON.stringify(shortMsg);
-        return { name: `${shortMsg} (${commit.id})`, message: `${shortMsg} (${commit.id})` };
+        let editedMessage = `${shortMsg} (${commit.id}) ${index === 0 ? ' (latest)' : ''}`
+        return { name: `${shortMsg} (${commit.id})`, message: editedMessage };
       });
       spinner.stop();
       if (params.commitId) {
