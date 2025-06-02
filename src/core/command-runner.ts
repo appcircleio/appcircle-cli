@@ -665,10 +665,16 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       
       const progressSpinner = createOra(`Checking Build Status...`).start();
       let dots = "";
+      const startTime = Date.now();
       
       const interval = setInterval(() => {
         dots = dots.length >= 3 ? "" : dots + ".";
-        progressSpinner.text = chalk.yellow(`Build Running${dots}`);
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+        const elapsedText = elapsedMinutes > 0 ? 
+          `${elapsedMinutes}m ${elapsedSeconds % 60}s` : 
+          `${elapsedSeconds}s`;
+        progressSpinner.text = chalk.yellow(`Build Running${dots} (${elapsedText})`);
       }, 500);
       
       let buildCompleted = false;
@@ -705,42 +711,48 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             if (buildStatus === null || buildStatus === undefined) {
               progressSpinner.text = chalk.gray(`Build Status is pending...`);
             } else {
+              const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+              const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+              const elapsedText = elapsedMinutes > 0 ? 
+                `${elapsedMinutes}m ${elapsedSeconds % 60}s` : 
+                `${elapsedSeconds}s`;
+              
               switch (buildStatus) {
                 case 0: // SUCCESS
                   const hasWarning = queueResponse && queueResponse.hasWarning === true;
                   if (hasWarning) {
-                    progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️`);
+                    progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️ (${elapsedText})`);
                   } else {
-                    progressSpinner.text = `Build completed successfully ✅`;
+                    progressSpinner.text = `Build completed successfully ✅ (${elapsedText})`;
                   }
                   buildCompleted = true;
                   buildSuccess = true;
                   break;
                 case 1: // FAILED
-                  progressSpinner.text = chalk.red(`Build failed ❌`);
+                  progressSpinner.text = chalk.red(`Build failed ❌ (${elapsedText})`);
                   buildCompleted = true;
                   break;
                 case 2: // CANCELED
-                  progressSpinner.text = chalk.hex('#FF8C32')(`Build canceled 🚫`);
+                  progressSpinner.text = chalk.hex('#FF8C32')(`Build canceled 🚫 (${elapsedText})`);
                   buildCompleted = true;
                   // Let's specifically set a flag to indicate this was a canceled build
                   params.wasCanceled = true;
                   break;
                 case 3: // TIMEOUT
-                  progressSpinner.text = chalk.red(`Build timed out ⏱️`);
+                  progressSpinner.text = chalk.red(`Build timed out ⏱️ (${elapsedText})`);
                   buildCompleted = true;
                   break;
                 case 90: // WAITING
-                  progressSpinner.text = chalk.cyan(`Build waiting in queue ⏳`);
+                  progressSpinner.text = chalk.cyan(`Build waiting in queue ⏳ (${elapsedText})`);
                   break;
                 case 91: // RUNNING
-                  // Build is running, animation continues
+                  // Build is running, animation continues with elapsed time shown in interval
                   break;
                 case 92: // COMPLETING
-                  progressSpinner.text = chalk.blue(`Build finishing... 🔜`);
+                  progressSpinner.text = chalk.blue(`Build finishing... 🔜 (${elapsedText})`);
                   break;
                 default:
-                  progressSpinner.text = chalk.gray(`Build Status: ${buildStatus}`);
+                  progressSpinner.text = chalk.gray(`Build Status: ${buildStatus} (${elapsedText})`);
               }
             }
             
@@ -761,11 +773,16 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
           if (buildSuccess) {
             try {
               const hasWarning = finalStatusResponse && finalStatusResponse.hasWarning === true;
+              const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+              const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+              const elapsedText = elapsedMinutes > 0 ? 
+                `${elapsedMinutes}m ${elapsedSeconds % 60}s` : 
+                `${elapsedSeconds}s`;
               if (hasWarning) {
-                progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️`);
+                progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️ - Total time: ${elapsedText}`);
                 progressSpinner.succeed();
               } else {
-                progressSpinner.succeed(`Build completed successfully ✅`);
+                progressSpinner.succeed(`Build completed successfully ✅ - Total time: ${elapsedText}`);
               }
             } catch (e) {
               progressSpinner.succeed(`Build completed successfully ✅`);
@@ -2301,10 +2318,16 @@ async function monitorPublishProcess(params: any) {
   
   const progressSpinner = createOra(`Checking Publish Status...`).start();
   let dots = "";
+  const startTime = Date.now();
   
   const interval = setInterval(() => {
     dots = dots.length >= 3 ? "" : dots + ".";
-    progressSpinner.text = chalk.yellow(`Publish Running${dots}`);
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    const elapsedText = elapsedMinutes > 0 ? 
+      `${elapsedMinutes}m ${elapsedSeconds % 60}s` : 
+      `${elapsedSeconds}s`;
+    progressSpinner.text = chalk.yellow(`Publish Running${dots} (${elapsedText})`);
   }, 500);
   
   let publishCompleted = false;
@@ -2324,7 +2347,12 @@ async function monitorPublishProcess(params: any) {
         switch (status) {
           case 0: // SUCCESS
             clearInterval(interval);
-            progressSpinner.succeed(chalk.green(`Publish completed successfully ✅`));
+            const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+            const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+            const elapsedText = elapsedMinutes > 0 ? 
+              `${elapsedMinutes}m ${elapsedSeconds % 60}s` : 
+              `${elapsedSeconds}s`;
+            progressSpinner.succeed(chalk.green(`Publish completed successfully ✅ - Total time: ${elapsedText}`));
             
             // Handle log download directly here to avoid infinite loop
             try {
