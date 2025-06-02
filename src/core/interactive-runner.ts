@@ -1000,7 +1000,7 @@ const handleSelectedCommand = async (command: CommandType, __parentCommand?: any
     }
 
     const choices = availableChoices.map((cmd, index) => {
-      return { name: cmd.command, message: `${index + 1}. ${cmd.description}` };
+      return { name: `${index + 1}. ${cmd.description}`, message: `${index + 1}. ${cmd.description}` };
     });
 
     if (navigationStack.length > 0) {
@@ -1030,7 +1030,8 @@ const handleSelectedCommand = async (command: CommandType, __parentCommand?: any
       return await handleSelectedCommand(parentCommand.command, parentCommand.preparedCommand);
     }
 
-    const selectedCommand = availableChoices.find((cmd) => cmd.command === selectedActionName);
+    const commandIndex = parseInt(selectedActionName.split('.')[0]) - 1;
+    const selectedCommand = availableChoices[commandIndex];
     if (selectedCommand) {
       navigationStack.push({ command: selectedCommand, preparedCommand });
       return await handleSelectedCommand(selectedCommand, preparedCommand);
