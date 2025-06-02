@@ -247,19 +247,48 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       console.error('error: You must provide either email or userId parameter');
       throw new AppcircleExitError('You must provide either email or userId parameter', 1);
     }
-    if (params.email && params.email !== UNKNOWN_PARAM_VALUE) {
-      await removeInvitationFromOrganization({ organizationId: params.organizationId, email: params.email });
-      commandWriter(CommandTypes.ORGANIZATION, {
-        fullCommandName: command.fullCommandName,
-        data: { email: params.email },
-      });
+
+    // Stop any existing spinner
+    createOra('').stop();
+    
+    // Confirm deletion
+    const response: any = await enquirer.prompt({
+      type: 'select',
+      name: 'confirm',
+      message: `Are you sure you want to remove ${params.email || params.userId} from the Organization? This action cannot be undone. (Y/n)`,
+      choices: [
+        { name: 'yes', message: 'yes' },
+        { name: 'no', message: 'no' }
+      ],
+      initial: 1  // Default to "no" for safety
+    });
+
+    if (response.confirm === 'no') {
+      console.log(chalk.yellow('User/Invitation removal cancelled.'));
+      return;
     }
-    if (params.userId && params.userId !== UNKNOWN_PARAM_VALUE) {
-      await removeUserFromOrganization({ organizationId: params.organizationId, userId: params.userId });
-      commandWriter(CommandTypes.ORGANIZATION, {
-        fullCommandName: command.fullCommandName,
-        data: { email: params.userId },
-      });
+
+    const spinner = createOra('Removing from Organization...').start();
+    try {
+      if (params.email && params.email !== UNKNOWN_PARAM_VALUE) {
+        await removeInvitationFromOrganization({ organizationId: params.organizationId, email: params.email });
+        spinner.succeed('Invitation removed successfully.\n\n');
+        commandWriter(CommandTypes.ORGANIZATION, {
+          fullCommandName: command.fullCommandName,
+          data: { email: params.email },
+        });
+      }
+      if (params.userId && params.userId !== UNKNOWN_PARAM_VALUE) {
+        await removeUserFromOrganization({ organizationId: params.organizationId, userId: params.userId });
+        spinner.succeed('User removed from Organization successfully.\n\n');
+        commandWriter(CommandTypes.ORGANIZATION, {
+          fullCommandName: command.fullCommandName,
+          data: { email: params.userId },
+        });
+      }
+    } catch (e) {
+      spinner.fail('Failed to remove from Organization');
+      throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
     const spinner = createOra('Listing Roles...').start();
@@ -280,7 +309,30 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       data: userInfo.roles,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-remove`) {
+    // Get user info first for the confirmation message
     let userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+    
+    // Format roles to be removed for display
+    const rolesToRemove = Array.isArray(params.role) ? params.role.join(', ') : params.role;
+    
+    // Ask for confirmation
+    const response: any = await enquirer.prompt({
+      type: 'select',
+      name: 'confirm',
+      message: `Are you sure you want to remove role(s) "${rolesToRemove}" from User "${userInfo.email}"? This action cannot be undone. (Y/n)`,
+      choices: [
+        { name: 'yes', message: 'yes' },
+        { name: 'no', message: 'no' }
+      ],
+      initial: 1  // Default to "no" for safety
+    });
+
+    if (response.confirm === 'no') {
+      console.log(chalk.yellow('Role removal cancelled.'));
+      return;
+    }
+
+    // If confirmed, proceed with the operation
     let difference = userInfo.roles.filter((r: any) => !params.role.includes(r));
     await assignRolesToUserInOrganitaion({ organizationId: params.organizationId, userId: params.userId, role: difference });
     userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
@@ -289,11 +341,32 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
       data: userInfo.roles,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-clear`) {
-    await assignRolesToUserInOrganitaion({ organizationId: params.organizationId, userId: params.userId, role: [] });
+    // Get user info first for the confirmation message
     const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+    
+    // Ask for confirmation
+    const response: any = await enquirer.prompt({
+      type: 'select',
+      name: 'confirm',
+      message: `Are you sure you want to remove all roles from User "${userInfo.email}"? This action cannot be undone. (Y/n)`,
+      choices: [
+        { name: 'yes', message: 'yes' },
+        { name: 'no', message: 'no' }
+      ],
+      initial: 1  // Default to "no" for safety
+    });
+
+    if (response.confirm === 'no') {
+      console.log(chalk.yellow('Role clear operation cancelled.'));
+      return;
+    }
+
+    // If confirmed, proceed with the operation
+    await assignRolesToUserInOrganitaion({ organizationId: params.organizationId, userId: params.userId, role: [] });
+    const updatedUserInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
-      data: userInfo.roles,
+      data: updatedUserInfo.roles,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-create-sub`) {
     const spinner = createOra('Creating sub-organization...').start();
@@ -335,11 +408,40 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       data: profiles,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-delete`) {
-    const response = await deletePublishProfile(params);
-    commandWriter(CommandTypes.PUBLISH, {
-      fullCommandName: command.fullCommandName,
-      data: response,
+    // Get the profile details first to show in confirmation
+    const profile = await getPublishProfileDetailById(params);
+    
+    // Confirm deletion
+    const response: any = await enquirer.prompt({
+      type: 'select',
+      name: 'confirm',
+      message: `Are you sure you want to delete the Publish Profile "${profile.name}"? This action cannot be undone. (Y/n)`,
+      choices: [
+        { name: 'yes', message: 'yes' },
+        { name: 'no', message: 'no' }
+      ],
+      initial: 1  // Default to "no" for safety
     });
+
+    if (response.confirm === 'no') {
+      console.log(chalk.yellow('Publish Profile deletion cancelled.'));
+      return;
+    }
+
+    // Create a spinner for the deletion process
+    const spinner = createOra('Removing Publish Profile...').start();
+    try {
+      const deleteResponse = await deletePublishProfile(params);
+      spinner.text = 'Publish Profile removed successfully.\n\n';
+      spinner.succeed();
+      commandWriter(CommandTypes.PUBLISH, {
+        fullCommandName: command.fullCommandName,
+        data: deleteResponse,
+      });
+    } catch (e) {
+      spinner.fail('Failed to remove Publish Profile');
+      throw e;
+    }
   }
   else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-rename`) {
     const response = await renamePublishProfile(params);
@@ -1560,14 +1662,72 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
     const responseData = await createTestingGroup(params);
     console.info(`Testing Group named ${responseData.name} created successfully!`);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-remove`) {
-    await deleteTestingGroup(params);
-    console.info(`Selected Testing Group removed successfully!`);
+    let spinner = createOra('Try to remove the Testing Group').start();
+    try {
+      // Stop spinner temporarily for the prompt
+      spinner.stop();
+      
+      // Add confirmation prompt
+      const response: any = await enquirer.prompt({
+        type: 'select',
+        name: 'confirm',
+        message: 'Are you sure you want to delete this Testing Group? This action cannot be undone. (Y/n)',
+        choices: [
+          { name: 'yes', message: 'yes' },
+          { name: 'no', message: 'no' }
+        ],
+        initial: 1  // Default to "no" for safety
+      });
+
+      if (response.confirm === 'no') {
+        console.log(chalk.yellow('Testing Group deletion cancelled.'));
+        return;
+      }
+
+      // Create a new spinner for the deletion process
+      spinner = createOra('Removing Testing Group...').start();
+      await deleteTestingGroup(params);
+      spinner.text = `Selected Testing Group removed successfully!\n\n`;
+      spinner.succeed();
+    } catch (e: any) {
+      spinner.fail('Remove failed');
+      throw e;
+    }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-add`) {
     await addTesterToTestingGroup(params);
     console.info(`Tester has been successfully added to the selected Testing Group!`);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-remove`) {
-    await removeTesterFromTestingGroup(params);
-    console.info(`Tester has been successfully removed from the selected Testing Group!`);
+    let spinner = createOra('Try to remove the Tester from Testing Group').start();
+    try {
+      // Stop spinner temporarily for the prompt
+      spinner.stop();
+      
+      // Add confirmation prompt
+      const response: any = await enquirer.prompt({
+        type: 'select',
+        name: 'confirm',
+        message: 'Are you sure you want to remove this Tester from the Testing Group? (Y/n)',
+        choices: [
+          { name: 'yes', message: 'yes' },
+          { name: 'no', message: 'no' }
+        ],
+        initial: 1  // Default to "no" for safety
+      });
+
+      if (response.confirm === 'no') {
+        console.log(chalk.yellow('Tester removal cancelled.'));
+        return;
+      }
+
+      // Create a new spinner for the removal process
+      spinner = createOra('Removing Tester from Testing Group...').start();
+      await removeTesterFromTestingGroup(params);
+      spinner.text = `Tester has been successfully removed from the selected Testing Group!\n\n`;
+      spinner.succeed();
+    } catch (e: any) {
+      spinner.fail('Remove failed');
+      throw e;
+    }
   }
   else {
     const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
@@ -1652,8 +1812,30 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail();
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-remove`) {
-    const spinner = createOra('Try to remove the Certificate').start();
+    let spinner = createOra('Try to remove the Certificate').start();
     try {
+      // Stop spinner temporarily for the prompt
+      spinner.stop(); 
+      
+      // Add confirmation prompt
+      const response: any = await enquirer.prompt({
+        type: 'select',
+        name: 'confirm',
+        message: 'Are you sure you want to delete this Certificate? This action cannot be undone. (Y/n)',
+        choices: [
+          { name: 'yes', message: 'yes' },
+          { name: 'no', message: 'no' }
+        ],
+        initial: 1  // Default to "no" for safety
+      });
+
+      if (response.confirm === 'no') {
+        console.log(chalk.yellow('Certificate deletion cancelled.'));
+        return;
+      }
+
+      // Create a new spinner for the deletion process
+      spinner = createOra('Removing Certificate...').start();
       const csrCerts = await getiOSCSRCertificates();
       const csrCert = csrCerts?.find((certificate:any) => certificate.id === params.certificateId);
       await removeCSRorP12CertificateById(params, csrCert ? 'csr': 'p12');
@@ -1713,8 +1895,30 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       data: keystore
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-remove`) {
-    const spinner = createOra('Try to remove the Keystore').start();
+    let spinner = createOra('Try to remove the Keystore').start();
     try {
+      // Stop spinner temporarily for the prompt
+      spinner.stop();
+      
+      // Add confirmation prompt
+      const response: any = await enquirer.prompt({
+        type: 'select',
+        name: 'confirm',
+        message: 'Are you sure you want to delete this Keystore? This action cannot be undone. (Y/n)',
+        choices: [
+          { name: 'yes', message: 'yes' },
+          { name: 'no', message: 'no' }
+        ],
+        initial: 1  // Default to "no" for safety
+      });
+
+      if (response.confirm === 'no') {
+        console.log(chalk.yellow('Keystore deletion cancelled.'));
+        return;
+      }
+
+      // Create a new spinner for the deletion process
+      spinner = createOra('Removing Keystore...').start();
       await removeKeystore(params);
       spinner.text = `Keystore removed successfully.\n\n`;
       spinner.succeed();
@@ -1761,8 +1965,30 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       data: profile
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-remove`) {
-    const spinner = createOra('Try to remove the Provisioning Profile').start();
+    let spinner = createOra('Try to remove the Provisioning Profile').start();
     try {
+      // Stop spinner temporarily for the prompt
+      spinner.stop();
+      
+      // Add confirmation prompt
+      const response: any = await enquirer.prompt({
+        type: 'select',
+        name: 'confirm',
+        message: 'Are you sure you want to delete this Provisioning Profile? This action cannot be undone. (Y/n)',
+        choices: [
+          { name: 'yes', message: 'yes' },
+          { name: 'no', message: 'no' }
+        ],
+        initial: 1  // Default to "no" for safety
+      });
+
+      if (response.confirm === 'no') {
+        console.log(chalk.yellow('Provisioning Profile deletion cancelled.'));
+        return;
+      }
+
+      // Create a new spinner for the deletion process
+      spinner = createOra('Removing Provisioning Profile...').start();
       await removeProvisioningProfile(params);
       spinner.text = `Provisioning Profile removed successfully.\n\n`;
       spinner.succeed();
@@ -1803,17 +2029,42 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-remove`) {
-    const spinner = createOra('Try to delete the app version').start();
+    // Get the app version details first
+    const versions = await getEnterpriseAppVersions({ entProfileId: params.entProfileId, publishType: "0" });
+    const version = versions.find((v: any) => v.id === params.entVersionId);
+    
+    if (!version) {
+      throw new Error('App Version not found');
+    }
+
+    // Confirm deletion
+    const response: any = await enquirer.prompt({
+      type: 'select',
+      name: 'confirm',
+      message: `Are you sure you want to delete Enterprise App Version "${version.name}" (${version.version})? This action cannot be undone. (Y/n)`,
+      choices: [
+        { name: 'yes', message: 'yes' },
+        { name: 'no', message: 'no' }
+      ],
+      initial: 1  // Default to "no" for safety
+    });
+
+    if (response.confirm === 'no') {
+      console.log(chalk.yellow('Enterprise App Version deletion cancelled.'));
+      return;
+    }
+
+    const spinner = createOra('Removing Enterprise App Version...').start();
     try {
       const responseData = await removeEnterpriseAppVersion(params);
+      spinner.text = 'Enterprise App Version removed successfully.\n\nTaskId: ' + responseData.taskId;
+      spinner.succeed();
       commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
         fullCommandName: command.fullCommandName,
         data: responseData,
       });
-      spinner.text = `App version deleted successfully.\n\nTaskId: ${responseData.taskId}`;
-      spinner.succeed();
     } catch (e) {
-      spinner.fail('App version delete failed');
+      spinner.fail('Failed to remove Enterprise App Version');
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-notify`) {
