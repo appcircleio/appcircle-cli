@@ -1013,7 +1013,7 @@ const handleSelectedCommand = async (command: CommandType, __parentCommand?: any
     const commandSelect = new AutoComplete({
       name: 'action',
       limit: 10,
-      message: `Which sub-command of "${command.command}" do you want to run? (${choices.length} Options)`,
+      message: `Which sub-command of "${command.command}" do you want to run?`,
       choices: choices,
     });
 
@@ -1106,7 +1106,7 @@ const runCommandsInteractivelyInner = async () => {
 
     const commandSelect = new AutoComplete({
       name: 'command',
-      message: `What do you want to do?${` (${Commands.length} Options)`}`,
+      message: `What do you want to do?`,
       limit: 10,
       choices,
       initial: previousSelections.get('main'),
