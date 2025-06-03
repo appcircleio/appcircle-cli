@@ -131,7 +131,7 @@ export async function downloadArtifact(options: OptionsType<{ buildId?: string; 
       }
     );
     if (response.status === 200) {
-      const fileName = artifactFileName || `artifact-${Date.now()}.zip`;
+      const fileName = artifactFileName || `artifacts-${Date.now()}.zip`;
       const artifactPath = path.join(downloadPath, fileName);
       fs.writeFileSync(artifactPath, response.data);
     } else {

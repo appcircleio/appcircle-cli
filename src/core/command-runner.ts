@@ -917,7 +917,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                   const artifactSpinner = createOra('Downloading artifacts...').start();
                   try {
                     const timestamp = Date.now();
-                    const artifactFileName = `artifact-${timestamp}.zip`;
+                    const artifactFileName = `artifacts-${timestamp}.zip`;
                     await downloadArtifact({ 
                       commitId: commitIdForArtifact, 
                       buildId: buildIdForArtifact,
@@ -1164,7 +1164,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     }
     
     const timestamp = Date.now();
-    const artifactFileName = `artifact-${timestamp}.zip`;
+    const artifactFileName = `artifacts-${timestamp}.zip`;
     const spinner = createOra(`Downloading`).start();
     
     try {
