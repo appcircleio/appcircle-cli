@@ -78,16 +78,57 @@ export const createProgram = () => {
   let actionCb = (cmd: ProgramCommand) => {};
   
   const version = require("../package.json").version;
+  const cliDescription = `Appcircle CLI is a command-line interface to interact with the Appcircle platform, enabling you to manage your CI/CD workflows, builds, testing distribution, and more, directly from your terminal.`;
   
   program.version(`v${version}`, "-v, --version", "output the version number");
   
-  program.addHelpText(
-    'before',
-    `Appcircle CLI\n\nVersion: v${version}\n`
-  );
-  
   program.option("-i, --interactive", "interactive mode (AppCircle GUI)");
   program.option("-o, --output <type>", "output type (json, plain)", "plain");
+  
+  program.helpInformation = () => {
+    let helpString = `Appcircle CLI\n\nVersion: v${version}\n\n${cliDescription}\n\n`;
+    helpString += `USAGE\n  ${PROGRAM_NAME} [options] [command]\n\n`;
+
+    helpString += "GLOBAL OPTIONS\n";
+    // Commander stores its default help option description, let's ensure it's included.
+    // We'll reconstruct the options list to ensure consistent formatting and inclusion of help.
+    const optionsToShow = [...program.options];
+    if (!optionsToShow.find(opt => opt.flags.includes('-h, --help'))) {
+        // Manually add help option details if not already captured in a customizable way
+        // This depends on how commander exposes the default help option.
+        // For now, assuming program.options includes it or that Commander adds it separately.
+        // A safer bet for consistent display is to define it explicitly if needed.
+        // However, Commander usually handles displaying its own help option.
+        // The user wants to *mimic* the subcommand style. Let's list explicit options.
+    }
+
+    // Explicitly list known global options for consistent formatting
+    const formattedOptions = [
+      { flags: "-v, --version", description: "output the version number" },
+      { flags: "-i, --interactive", description: "interactive mode (AppCircle GUI)" },
+      { flags: "-o, --output <type>", description: "output type (json, plain) (default: \"plain\")" },
+      { flags: "-h, --help", description: "display help for command" } // Assuming this is the standard help option
+    ];
+
+    formattedOptions.forEach(opt => {
+      helpString += `  ${opt.flags.padEnd(28)} ${opt.description}\n`;
+    });
+    helpString += "\n";
+
+    helpString += "AVAILABLE COMMANDS\n";
+    Commands.filter(cmd => !cmd.ignore) 
+      .forEach(command => {
+        helpString += `  ${command.command.padEnd(28)} ${command.description}\n`;
+    });
+    helpString += "\n";
+
+    helpString += "LEARN MORE\n";
+    helpString += `  Use '${PROGRAM_NAME} <command> --help' for more information on a specific command.\n`;
+    helpString += `  Run '${PROGRAM_NAME} --interactive' for a guided experience.\n`;
+    helpString += `  Visit Appcircle documentation at https://docs.appcircle.io\n`; 
+
+    return helpString;
+  };
   
   createCommands(program, Commands, actionCb);
 
