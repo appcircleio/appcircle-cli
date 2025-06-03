@@ -415,7 +415,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
     const response: any = await enquirer.prompt({
       type: 'select',
       name: 'confirm',
-      message: `Are you sure you want to delete the Publish Profile "${profile.name}"? This action cannot be undone. (Y/n)`,
+      message: `Are you sure you want to delete the "${profile.name}" Publish Profile? This action cannot be undone. (Y/n)`,
       choices: [
         { name: 'yes', message: 'yes' },
         { name: 'no', message: 'no' }
@@ -1667,11 +1667,25 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       // Stop spinner temporarily for the prompt
       spinner.stop();
       
+      // Get testing group details to display its name in the confirmation
+      let testingGroupName = params.testingGroupId; // Default to ID if name fetch fails
+      if (params.testingGroupId) {
+        try {
+          const groupDetails = await getTestingGroupById({ testingGroupId: params.testingGroupId });
+          if (groupDetails && groupDetails.name) {
+            testingGroupName = groupDetails.name;
+          }
+        } catch (fetchError) {
+          // If fetching name fails, we'll use the ID. No need to stop the process.
+          console.warn(chalk.yellow(`\nWarning: Could not fetch testing group name. Using ID instead.`));
+        }
+      }
+      
       // Add confirmation prompt
       const response: any = await enquirer.prompt({
         type: 'select',
         name: 'confirm',
-        message: 'Are you sure you want to delete this Testing Group? This action cannot be undone. (Y/n)',
+        message: `Are you sure you want to delete the "${testingGroupName}" Testing Group? This action cannot be undone. (Y/n)`,
         choices: [
           { name: 'yes', message: 'yes' },
           { name: 'no', message: 'no' }
@@ -1703,10 +1717,11 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       spinner.stop();
       
       // Add confirmation prompt
+      const testerIdentifier = params.email || 'this Tester'; // Use email if available
       const response: any = await enquirer.prompt({
         type: 'select',
         name: 'confirm',
-        message: 'Are you sure you want to remove this Tester from the Testing Group? (Y/n)',
+        message: `Are you sure you want to remove ${testerIdentifier} from the Testing Group? This action cannot be undone. (Y/n)`,
         choices: [
           { name: 'yes', message: 'yes' },
           { name: 'no', message: 'no' }
@@ -1817,11 +1832,21 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       // Stop spinner temporarily for the prompt
       spinner.stop(); 
       
+      let certificateIdentifier = params.certificateId; // Default to ID
+      try {
+        const certDetail = await getCertificateDetailById(params);
+        if (certDetail) {
+          certificateIdentifier = certDetail.name || certDetail.id; // Prefer name, fallback to ID
+        }
+      } catch (fetchError) {
+        console.warn(chalk.yellow(`\nWarning: Could not fetch certificate details. Using ID in confirmation.`));
+      }
+
       // Add confirmation prompt
       const response: any = await enquirer.prompt({
         type: 'select',
         name: 'confirm',
-        message: 'Are you sure you want to delete this Certificate? This action cannot be undone. (Y/n)',
+        message: `Are you sure you want to delete the Certificate "${certificateIdentifier}"? This action cannot be undone. (Y/n)`,
         choices: [
           { name: 'yes', message: 'yes' },
           { name: 'no', message: 'no' }
@@ -1900,11 +1925,21 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       // Stop spinner temporarily for the prompt
       spinner.stop();
       
+      let keystoreIdentifier = params.keystoreId; // Default to ID
+      try {
+        const keystoreDetails = await getKeystoreDetailById(params);
+        if (keystoreDetails) {
+          keystoreIdentifier = keystoreDetails.name || keystoreDetails.fileName || keystoreDetails.id; // Prefer name or filename
+        }
+      } catch (fetchError) {
+        console.warn(chalk.yellow(`\nWarning: Could not fetch keystore details. Using ID in confirmation.`));
+      }
+      
       // Add confirmation prompt
       const response: any = await enquirer.prompt({
         type: 'select',
         name: 'confirm',
-        message: 'Are you sure you want to delete this Keystore? This action cannot be undone. (Y/n)',
+        message: `Are you sure you want to delete the Keystore "${keystoreIdentifier}"? This action cannot be undone. (Y/n)`,
         choices: [
           { name: 'yes', message: 'yes' },
           { name: 'no', message: 'no' }
@@ -1970,11 +2005,21 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       // Stop spinner temporarily for the prompt
       spinner.stop();
       
+      let profileIdentifier = params.provisioningProfileId; // Default to ID
+      try {
+        const profileDetails = await getProvisioningProfileDetailById(params);
+        if (profileDetails) {
+          profileIdentifier = profileDetails.name || profileDetails.filename || profileDetails.id; // Prefer name or filename
+        }
+      } catch (fetchError) {
+        console.warn(chalk.yellow(`\nWarning: Could not fetch provisioning profile details. Using ID in confirmation.`));
+      }
+      
       // Add confirmation prompt
       const response: any = await enquirer.prompt({
         type: 'select',
         name: 'confirm',
-        message: 'Are you sure you want to delete this Provisioning Profile? This action cannot be undone. (Y/n)',
+        message: `Are you sure you want to delete the Provisioning Profile "${profileIdentifier}"? This action cannot be undone. (Y/n)`,
         choices: [
           { name: 'yes', message: 'yes' },
           { name: 'no', message: 'no' }
