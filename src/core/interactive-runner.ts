@@ -178,7 +178,7 @@ const handleInteractiveParamsOrArguments = async (
           : '<no message>';
         shortMsg = JSON.stringify(shortMsg);
         let editedMessage = `${shortMsg} (${commit.id}) ${index === 0 ? ' (latest)' : ''}`
-        return { name: `${shortMsg} (${commit.id})`, message: editedMessage };
+        return { name: editedMessage, message: editedMessage };
       });
       spinner.stop();
       if (params.commitId) {
@@ -368,7 +368,10 @@ const handleInteractiveParamsOrArguments = async (
         return;
       }
       const workflowsList: any[] = workflows;
-      param.params = workflows.map((workflow: any) => ({ name: `${workflow.workflowName} (${workflow.id})`, message: `${workflow.workflowName} (${workflow.id})` }));
+      param.params = workflows.map((workflow: any, index: number) => ({ 
+        name: `${workflow.workflowName} (${workflow.id})${index === 0 ? ' (latest)' : ''}`, 
+        message: `${workflow.workflowName} (${workflow.id})${index === 0 ? ' (latest)' : ''}` 
+      }));
       spinner.stop();
     } else if (param.name === 'configurationId') {
       const spinner = ora('Listing Configurations...').start();
@@ -397,7 +400,10 @@ const handleInteractiveParamsOrArguments = async (
       configurationsList.length = 0;
       configurationsList.push(...configurations);
       //@ts-ignore
-      param.params = configurations.map((config: any) => ({ name: `${config.item1.configurationName} (${config.item1.id})`, message: `${config.item1.configurationName} (${config.item1.id})` }));
+      param.params = configurations.map((config: any, index: number) => ({ 
+        name: `${config.item1.configurationName} (${config.item1.id})${index === 0 ? ' (latest)' : ''}`, 
+        message: `${config.item1.configurationName} (${config.item1.id})${index === 0 ? ' (latest)' : ''}` 
+      }));
       spinner.stop();
       if (params.configurationId && configurationsList.length > 0) {
         const selectedConfig = configurationsList.find((c) => c.item1.configurationName === params.configurationId || c.item1.id === params.configurationId);
