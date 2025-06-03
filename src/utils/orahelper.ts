@@ -6,10 +6,12 @@ export const createOra = (message: string) => {
     return {
       fail: () => {},
       succeed: () => {},
+      stop: () => {},
       text: "",
       start: () => ({
         fail: () => {},
         succeed: () => {},
+        stop: () => {},
         text: "",
       }),
     };

@@ -11,7 +11,7 @@ appcircle build download [options]
 
 ## Artifact Filename
 
-By default, the downloaded artifact will be saved as `artifact-{timestamp}.zip`, where `{timestamp}` is the current date and time in `YYYYMMDD-HHMMSS` format. This ensures each download has a unique filename.
+By default, the downloaded artifact will be saved as `artifacts-{timestamp}.zip`, where `{timestamp}` is the current date and time in `YYYYMMDD-HHMMSS` format. This ensures each download has a unique filename.
 
 ## Download Path
 
