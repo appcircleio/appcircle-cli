@@ -2132,6 +2132,10 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-version-remove`) {
+    if (!params.entVersionId) {
+      return;
+    }
+
     // Get the app version details first
     const versions = await getEnterpriseAppVersions({ entProfileId: params.entProfileId, publishType: "0" });
     const version = versions.find((v: any) => v.id === params.entVersionId);
