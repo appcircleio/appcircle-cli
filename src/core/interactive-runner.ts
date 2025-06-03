@@ -1226,37 +1226,38 @@ const runCommandsInteractivelyInner = async () => {
     navigationStack.push({ command: selectedCommand, preparedCommand: undefined });
 
     const preparedProgramCommand = await handleSelectedCommand(selectedCommand, {});
+
     if (preparedProgramCommand) {
-      // Check if this is a signal to return to main menu
       if ((preparedProgramCommand as any).isBackToMainMenu) {
-        // Clear navigation stack and return signal to show main menu again
         navigationStack.length = 0;
         return { shouldShowMainMenuAgain: true };
       }
       
       try {
         await runCommand(preparedProgramCommand);
-        // For successful completion without error, check if we should return to main menu
         if (isExplicitInteractiveMode) {
+          navigationStack.length = 0;
           return { shouldShowMainMenuAgain: true };
         }
-        // For default interactive mode, just exit after running the command
       } catch (commandError) {
         if (commandError instanceof AppcircleExitError) {
           if (commandError.code === 0) {
-            // Successful completion, only show main menu again if in explicit interactive mode
             if (isExplicitInteractiveMode) {
+              navigationStack.length = 0;
               return { shouldShowMainMenuAgain: true };
             }
             return;
           } else {
-            // Command failed, re-throw to be handled by outer catch
             throw commandError;
           }
         } else {
-          // Non-AppcircleExitError, re-throw
           throw commandError;
         }
+      }
+    } else {
+      if (isExplicitInteractiveMode) {
+        navigationStack.length = 0;
+        return { shouldShowMainMenuAgain: true };
       }
     }
   };

@@ -312,6 +312,12 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
     // Get user info first for the confirmation message
     let userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
     
+    // Ensure roles are provided and not empty
+    if (!params.role || (Array.isArray(params.role) && params.role.length === 0)) {
+      console.log(chalk.yellow('No roles selected for removal.'));
+      return;
+    }
+    
     // Format roles to be removed for display
     const rolesToRemove = Array.isArray(params.role) ? params.role.join(', ') : params.role;
     
