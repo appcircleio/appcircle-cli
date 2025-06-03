@@ -49,55 +49,81 @@ export async function getActiveBuilds() {
 }
 
 export async function startBuild(
-  options: OptionsType<{ profileId: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string, commitHash?: string}>
+  options: OptionsType<{ profileId: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string, commitHash?: string, configurationId?: string }>
 ) {
   let branchId = options.branchId || '';
   let workflowId = options.workflowId || '';
   let commitId = options.commitId || '';
   let configurationId = options.configurationId || '';
+  const profileId = options.profileId;
+
+  if (!profileId) {
+    throw new ProgramError("Profile ID is required to start a build.");
+  }
 
   if (!branchId && options.branch) {
-    const branchesRes = await getBranches({ profileId: options.profileId || '' });
-    const branchIndex = branchesRes.branches.findIndex((element: { [key: string]: any }) => element.name === options.branch);
-    branchId = branchesRes.branches[branchIndex].id;
+    const branchesRes = await getBranches({ profileId });
+    const branch = branchesRes.branches.find((b: any) => b.name === options.branch);
+    if (branch) {
+      branchId = branch.id;
+    } else {
+      throw new ProgramError(`Branch with name "${options.branch}" not found for profile ID "${profileId}".`);
+    }
   }
+  if (!branchId) {
+    throw new ProgramError("Branch ID or Branch Name is required and could not be resolved.");
+  }
+
   if (!workflowId && options.workflow) {
-    const workflowsRes = await getWorkflows({ profileId: options.profileId || '' });
-    const workflowIndex = workflowsRes.findIndex((element: { [key: string]: any }) => element.workflowName === options.workflow);
-    workflowId = workflowsRes[workflowIndex].id;
+    const workflowsRes = await getWorkflows({ profileId });
+    const workflow = workflowsRes.find((w: any) => w.workflowName === options.workflow);
+    if (workflow) {
+      workflowId = workflow.id;
+    } else {
+      throw new ProgramError(`Workflow with name "${options.workflow}" not found for profile ID "${profileId}".`);
+    }
   }
 
-  if (!commitId) {
+  if (!commitId && !options.commitHash) {
     const allCommitsByBranchId = await getCommits({ branchId });
-    if(options.commitHash)
-    {
-      commitId = allCommitsByBranchId?.find((commit:any) => commit?.hash == options.commitHash)?.id;
-    }
-    else 
-    {
+    if (allCommitsByBranchId && allCommitsByBranchId.length > 0) {
       commitId = allCommitsByBranchId[0].id;
+    } else {
+      throw new ProgramError(`No commits found for branch ID "${branchId}".`);
     }
-
-    if(!commitId)
-    {
-      throw new ProgramError("Git commit not found.");
+  } else if (!commitId && options.commitHash) {
+    const allCommitsByBranchId = await getCommits({ branchId });
+    const foundCommit = allCommitsByBranchId?.find((c:any) => c.hash == options.commitHash);
+    if (foundCommit) {
+      commitId = foundCommit.id;
+    } else {
+      throw new ProgramError(`Commit with hash "${options.commitHash}" not found for branch ID "${branchId}".`);
     }
   }
 
   if (!configurationId) {
-    const allConfigurations = await getConfigurations({ profileId: options.profileId || '' });
-    configurationId = allConfigurations[0].item1.id;
-  }
-  const buildResponse = await appcircleApi.post(
-    `build/v2/commits/${commitId}?${qs.stringify({ action: 'build', workflowId, configurationId })}`,
-    '{}',
-    {
-      headers: {
-        ...getHeaders(),
-        accept: '*/*',
-        'content-type': 'application/x-www-form-urlencoded',
-      },
+    const allConfigurations = await getConfigurations({ profileId });
+    if (allConfigurations && allConfigurations.length > 0 && allConfigurations[0].item1 && allConfigurations[0].item1.id) {
+      configurationId = allConfigurations[0].item1.id;
+    } else {
+      throw new ProgramError(`No configurations found for profile ID "${profileId}".`);
     }
+  }
+  
+  const postUrl = `build/v2/commits/${commitId}?${qs.stringify({ action: 'build', workflowId, configurationId })}`;
+  const postBody = '{}';
+  const postHeaders = {
+    headers: {
+      ...getHeaders(),
+      accept: '*/*',
+      'content-type': 'application/x-www-form-urlencoded',
+    },
+  };
+
+  const buildResponse = await appcircleApi.post(
+    postUrl,
+    postBody,
+    postHeaders
   );
   return buildResponse.data;
 }
@@ -149,7 +175,6 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
   let buildId = options.buildId;
   
   try {
-    // If branchId and profileId are provided, get the latest build ID from API
     if (options.branchId && options.profileId) {
       console.log(`Getting latest build ID with Branch and Profile ID...`);
       const latestBuildId = await getLatestBuildId({ 
@@ -164,7 +189,6 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
         console.log(`Could not get build ID from API, trying alternative method.`);
       }
     }
-    // If buildId is still missing or invalid, try to find it from commit
     else if (!buildId || buildId === '00000000-0000-0000-0000-000000000000') {
       console.log(`Invalid build ID, searching for build ID from commit...`);
       const buildsResponse = await getBuildsOfCommit({ commitId: options.commitId });
@@ -177,11 +201,9 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
       }
     }
   } catch (apiError: any) {
-    // If we can't get build ID from API and buildId is missing, throw error
     if (!buildId) {
       throw new Error(`Could not get build ID: ${apiError.message}`);
     }
-    // Continue with existing buildId if available
     console.log(`API error: ${apiError.message}. Continuing with existing build ID: ${buildId}`);
   }
   
@@ -190,7 +212,6 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
   data.append('Build Id', buildId);
   data.append('Commit Id', options.commitId);
   
-  // Endpoint formatını kullan
   const endpoint = `build/v1/commits/${options.commitId}/builds/${buildId}/logs`;
   
   try {
@@ -202,14 +223,12 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
       },
     });
 
-    // "No Logs Available" içeriyorsa veya boşsa hata ver
     if (downloadResponse.data && 
         (downloadResponse.data.includes('No Logs Available') || 
          downloadResponse.data.trim() === '')) {
       throw new Error('No Logs Available');
     }
     
-    // Geçerli log içeriğimiz varsa dosyaya yazdır
     const writer = fs.createWriteStream(`${downloadPath}/${fileName || `${buildId}-log.txt`}`);
     writer.write(downloadResponse.data);
     writer.end();
@@ -561,7 +580,6 @@ export async function getLatestBuildId(options: OptionsType<{ branchId: string; 
     );
 
     if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-      // Sort by date in descending order (most recent first)
       const sortedBuilds = response.data.sort((a: any, b: any) => {
         return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
       });

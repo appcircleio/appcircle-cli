@@ -1128,11 +1128,9 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                   }
                 }
               } else {
-                console.log(chalk.gray('Build failed, skipping log download.'));
                 throw new AppcircleExitError('Build failed', 1);
               }
             } catch (err) {
-              console.log(chalk.gray('Skipping log download.'));
               throw new AppcircleExitError('Build failed, user chose to exit', 1);
             }
           }

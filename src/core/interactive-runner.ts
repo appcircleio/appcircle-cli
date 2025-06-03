@@ -195,11 +195,15 @@ const handleInteractiveParamsOrArguments = async (
           choices: Array.isArray(param.params) ? param.params : [],
         });
         const selected = await selectPrompt.run();
-        const match = /\(([^)]+)\)$/.exec(selected);
-        if (match && match[1]) {
-          params.commitId = match[1].trim();
+        const uuidRegex = /\(([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\)/;
+        const idMatch = uuidRegex.exec(selected);
+
+        if (idMatch && idMatch[1]) {
+          params.commitId = idMatch[1].trim();
+        } else if (param.required === false) {
+          params.commitId = '';
         } else {
-          params.commitId = selected; 
+          params.commitId = selected;
         }
       }
       continue;
@@ -406,9 +410,11 @@ const handleInteractiveParamsOrArguments = async (
         choices: Array.isArray(param.params) ? param.params : [],
       });
       const selected = await selectPrompt.run();
-      const match = /\(([^()]+)\)\s*$/.exec(selected);
-      if (match && match[1]) {
-        params.workflowId = match[1].trim();
+      const uuidRegex = /\(([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\)/;
+      const idMatch = uuidRegex.exec(selected);
+
+      if (idMatch && idMatch[1]) {
+        params.workflowId = idMatch[1].trim();
       } else {
         params.workflowId = selected;
       }
@@ -455,9 +461,13 @@ const handleInteractiveParamsOrArguments = async (
         choices: Array.isArray(param.params) ? param.params : [],
       });
       const selected = await selectPrompt.run();
-      const match = /\(([^)]+)\)$/.exec(selected);
-      if (match && match[1]) {
-        params.configurationId = match[1].trim();
+      const uuidRegex = /\(([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\)/;
+      const idMatch = uuidRegex.exec(selected);
+
+      if (idMatch && idMatch[1]) {
+        params.configurationId = idMatch[1].trim();
+      } else if (param.required === false) {
+        params.configurationId = '';
       } else {
         params.configurationId = selected;
       }
