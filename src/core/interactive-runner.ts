@@ -1020,7 +1020,7 @@ const handleSelectedCommand = async (command: CommandType, __parentCommand?: any
     const commandSelect = new AutoComplete({
       name: 'action',
       limit: 10,
-      message: `Which sub-command of "${command.command}" do you want to run?`,
+      message: `Which sub-command of "${command.description}" do you want to run?`,
       choices: choices,
     });
 
