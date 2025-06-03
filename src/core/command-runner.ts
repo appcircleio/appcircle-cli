@@ -252,10 +252,27 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
     createOra('').stop();
     
     // Confirm deletion
+    let removalIdentifier = params.userId || params.email; // Default identifier
+    let itemType = 'User'; // Default to User, will be changed if it's an invitation
+
+    if (params.userId && params.userId !== UNKNOWN_PARAM_VALUE) {
+      itemType = 'User';
+      try {
+        const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
+        removalIdentifier = userInfo.email || params.userId; // Prefer email, fallback to ID
+      } catch (e) {
+        // If fetching user info fails, removalIdentifier remains params.userId (already set or from default)
+        // itemType is already 'User'
+      }
+    } else if (params.email && params.email !== UNKNOWN_PARAM_VALUE) {
+      itemType = 'Invitation';
+      removalIdentifier = params.email;
+    }
+
     const response: any = await enquirer.prompt({
       type: 'select',
       name: 'confirm',
-      message: `Are you sure you want to remove ${params.email || params.userId} from the Organization? This action cannot be undone. (Y/n)`,
+      message: `Are you sure you want to delete the ${itemType} "${removalIdentifier}"? This action cannot be undone. (Y/n)`,
       choices: [
         { name: 'yes', message: 'yes' },
         { name: 'no', message: 'no' }
@@ -421,7 +438,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
     const response: any = await enquirer.prompt({
       type: 'select',
       name: 'confirm',
-      message: `Are you sure you want to delete the "${profile.name}" Publish Profile? This action cannot be undone. (Y/n)`,
+      message: `Are you sure you want to delete the Publish Profile "${profile.name}"? This action cannot be undone. (Y/n)`,
       choices: [
         { name: 'yes', message: 'yes' },
         { name: 'no', message: 'no' }
@@ -1747,7 +1764,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       const response: any = await enquirer.prompt({
         type: 'select',
         name: 'confirm',
-        message: `Are you sure you want to delete the "${testingGroupName}" Testing Group? This action cannot be undone. (Y/n)`,
+        message: `Are you sure you want to delete the Testing Group "${testingGroupName}"? This action cannot be undone. (Y/n)`,
         choices: [
           { name: 'yes', message: 'yes' },
           { name: 'no', message: 'no' }
@@ -2152,7 +2169,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
     const response: any = await enquirer.prompt({
       type: 'select',
       name: 'confirm',
-      message: `Are you sure you want to delete Enterprise App Version "${version.name}" (${version.version})? This action cannot be undone. (Y/n)`,
+      message: `Are you sure you want to delete the Enterprise App Version "${version.name} (${version.version})"? This action cannot be undone. (Y/n)`,
       choices: [
         { name: 'yes', message: 'yes' },
         { name: 'no', message: 'no' }
