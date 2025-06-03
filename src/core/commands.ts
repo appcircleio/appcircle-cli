@@ -48,10 +48,10 @@ export type CommandType = {
 
 const platformParam = {
   name: 'platform',
-  description: 'Platform (ios/android)',
+  description: 'Platform (iOS/Android)',
   type: CommandParameterTypes.SELECT,
-  params: [{ name: 'ios' , message: 'iOS' }, { name: 'android', message: 'Android' }],
-  defaultValue: 'ios',
+  params: [{ name: 'iOS', message: 'iOS' }, { name: 'Android', message: 'Android' }],
+  defaultValue: 'iOS',
   valueType: 'string',
   required: true,
 };
@@ -872,7 +872,7 @@ LEARN MORE
             subCommands:[
               {
                 command: "list",
-                description: 'List groups',
+                description: 'List Groups',
                 longDescription: `
 USAGE
   appcircle build variable group list
@@ -3138,7 +3138,7 @@ LEARN MORE
             subCommands:[
               {
                 command: "list",
-                description: 'List groups',
+                description: 'List Groups',
                 longDescription: `
 USAGE
   appcircle publish variable group list

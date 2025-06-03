@@ -390,7 +390,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
 };
 
 const handlePublishCommand = async (command: ProgramCommand, params: any) => {
-  if (params.platform && !['ios', 'android'].includes(params.platform)) {
+  if (params.platform && !['ios', 'android'].includes(params.platform.toLowerCase())) {
     throw new ProgramError(`Invalid platform(${params.platform}). Supported platforms: ios, android`);
   }
   if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-create`) {
@@ -593,7 +593,19 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
   }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-download`) {
       let spinner = createOra('Getting app version download link...').start();
       try {
-        let downloadPath = path.resolve((params.path || '').replace('~', `${os.homedir}`));
+        const homeDir = os.homedir();
+        const defaultDownloadDir = path.join(homeDir, 'Downloads');
+        let targetDirectory = params.path ? params.path.replace('~', homeDir) : defaultDownloadDir;
+        targetDirectory = path.resolve(targetDirectory);
+
+        // Ensure the target directory exists
+        if (!fs.existsSync(targetDirectory)) {
+          fs.mkdirSync(targetDirectory, { recursive: true });
+        } else if (!fs.statSync(targetDirectory).isDirectory()) {
+          spinner.fail(`Target path ${targetDirectory} exists but is not a directory.`);
+          throw new AppcircleExitError(`Target path ${targetDirectory} exists but is not a directory.`, 1);
+        }
+
         const responseData = await getAppVersionDownloadLink(params);
         const appVersions = await getAppVersions(params);
         const appVersion = appVersions.find((appVersion: any) => appVersion.id === params.appVersionId);
@@ -603,9 +615,11 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         }
         spinner.text = `App version download link retrieved successfully.`;
         spinner.text = `Try to download the app version.`;
-        downloadPath = path.join(downloadPath, appVersion.fileName);
-        await downloadAppVersion({ url: responseData, path:downloadPath });
-        spinner.text = `App version downloaded successfully.\n\nDownload Path: ${downloadPath}`; 
+        
+        const finalDownloadPath = path.join(targetDirectory, appVersion.fileName);
+        
+        await downloadAppVersion({ url: responseData, path:finalDownloadPath });
+        spinner.text = `App version downloaded successfully.\n\nDownload Path: ${finalDownloadPath}`; 
         spinner.succeed();
       } catch (e: any) {
         spinner.fail('Process failed');
