@@ -31,11 +31,32 @@ const createCommands = (program: any, commands: typeof Commands, actionCb: any) 
   });
 };
 
-const prepareFullCommandName = (command: Command): string => {
-  if (command.parent) {
-    return prepareFullCommandName(command.parent) + "-" + command.name();
+const prepareFullCommandName = (command: Command | any): string => {
+  if (!command || typeof command.name !== 'function') {
+    return PROGRAM_NAME;
   }
-  return PROGRAM_NAME;
+
+  const commandNameString = command.name();
+
+  let parentFullName = PROGRAM_NAME;
+
+  if (command.parent && typeof command.parent === 'object') {
+      parentFullName = prepareFullCommandName(command.parent);
+  }
+
+  if (parentFullName === PROGRAM_NAME) {
+    if (commandNameString && commandNameString !== PROGRAM_NAME) {
+      return PROGRAM_NAME + "-" + commandNameString;
+    } else {
+      return PROGRAM_NAME;
+    }
+  } else {
+    if (commandNameString) {
+      return parentFullName + "-" + commandNameString;
+    } else {
+      return parentFullName;
+    }
+  }
 };
 
 export const createCommandActionCallback = (actionCommand: any, thisCommand?: any): ProgramCommand => {

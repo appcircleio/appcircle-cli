@@ -1929,7 +1929,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-list`) {
     const spinner = createOra('Listing Provisioning Profiles...').start();
     const profiles = await getProvisioningProfiles();
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: profiles
