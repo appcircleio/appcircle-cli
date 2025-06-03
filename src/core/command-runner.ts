@@ -517,8 +517,52 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-delete`) {
-    const spinner = createOra('Try to remove the app version').start();
+    let spinner = createOra('Try to remove the app version').start();
     try {
+      // Stop spinner temporarily for the prompt
+      spinner.stop();
+
+      let appVersionIdentifier = params.appVersionId; // Default to ID
+      let appVersionDetailsString = `(ID: ${params.appVersionId})`;
+      try {
+        // Attempt to get more details about the app version
+        const appVersion = await getAppVersionDetail(params);
+        if (appVersion) {
+          appVersionIdentifier = appVersion.fileName ? `${appVersion.fileName} (v${appVersion.version})` : `Version ${appVersion.version}`;
+          appVersionDetailsString = `"${appVersionIdentifier}" (ID: ${params.appVersionId})`;
+        } else {
+          // Fallback if specific details aren't found, try to get from list for filename
+          const appVersions = await getAppVersions(params);
+          const foundVersion = appVersions.find((v: any) => v.id === params.appVersionId);
+          if (foundVersion) {
+            appVersionIdentifier = foundVersion.fileName ? `${foundVersion.fileName} (v${foundVersion.version})` : `Version ${foundVersion.version}`;
+            appVersionDetailsString = `"${appVersionIdentifier}" (ID: ${params.appVersionId})`;
+          }
+        }
+      } catch (fetchError) {
+        console.warn(chalk.yellow(`\nWarning: Could not fetch app version details. Using ID in confirmation.`));
+      }
+
+      const response: any = await enquirer.prompt({
+        type: 'select',
+        name: 'confirm',
+        message: `Are you sure you want to delete the App Version ${appVersionDetailsString}? This action cannot be undone. (Y/n)`,
+        choices: [
+          { name: 'yes', message: 'yes' },
+          { name: 'no', message: 'no' }
+        ],
+        initial: 1 // Default to "no" for safety
+      });
+
+      if (response.confirm === 'no') {
+        console.log(chalk.yellow('App Version deletion cancelled.'));
+        // Spinner was already stopped for the prompt. If it needs to be running for some reason before this, ensure it's stopped.
+        spinner.stop(); // Ensure spinner is stopped if it was restarted or was never stopped
+        return;
+      }
+      
+      // Re-start spinner for the actual deletion
+      spinner = createOra('Removing the app version...').start();
       const responseData = await deleteAppVersion(params);
       commandWriter(CommandTypes.PUBLISH, responseData);
       spinner.text = `App Version removed successfully.\n\nTaskId: ${responseData.taskId}`;
