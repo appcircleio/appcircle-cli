@@ -293,7 +293,7 @@ const handleOrganizationCommand = async (command: ProgramCommand, params: any) =
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-role-view`) {
     const spinner = createOra('Listing Roles...').start();
     const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
-    spinner.succeed();
+    spinner.stop();
     commandWriter(CommandTypes.ORGANIZATION, {
       fullCommandName: command.fullCommandName,
       data: { roles: userInfo.roles, inheritedRoles: userInfo.inheritedRoles },

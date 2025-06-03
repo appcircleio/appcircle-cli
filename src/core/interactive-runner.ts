@@ -67,6 +67,7 @@ const handleInteractiveParamsOrArguments = async (
   const branchesList: any[] = [];
   const commitsList: any[] = [];
   const configurationsList: any[] = [];
+  const workflowsList: any[] = [];
   for (let param of commandParams) {
     if (param.name === 'branchId') {
       const spinner = ora('Listing Branches...').start();
@@ -97,10 +98,11 @@ const handleInteractiveParamsOrArguments = async (
       //@ts-ignore
       param.params = branches.map((branch: any) => ({ name: `${branch.name} (${branch.id})`, message: `${branch.name} (${branch.id})` }));
       spinner.stop();
-      // Prompt for selection and always extract UUID
+
+      const messageText = param.description || 'Branch';
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'Branch',
+        message: `${messageText} (${branches.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: Array.isArray(param.params) ? param.params : [],
@@ -128,9 +130,11 @@ const handleInteractiveParamsOrArguments = async (
       //@ts-ignore
       param.params = profiles.map((profile: any) => ({ name: `${profile.name} (${profile.id})`, message: `${profile.name} (${profile.id})` }));
       spinner.stop();
+
+      const messageText = param.description || 'Build Profile';
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'Build Profile',
+        message: `${messageText} (${profiles.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: Array.isArray(param.params) ? param.params : [],
@@ -181,12 +185,24 @@ const handleInteractiveParamsOrArguments = async (
         return { name: editedMessage, message: editedMessage };
       });
       spinner.stop();
-      if (params.commitId) {
-        const match = /\(([^)]+)\)$/.exec(params.commitId);
+      if (!params.commitId || (param.name === 'commitId' && !commitsList.find(c => c.id === params.commitId))) {
+        const messageText = param.description || 'Commit Message (ID)';
+        const selectPrompt = new AutoComplete({
+          name: param.name,
+          message: `${messageText} (${commits.length} options)`,
+          initial: params.commitId || param.defaultValue,
+          limit: 10,
+          choices: Array.isArray(param.params) ? param.params : [],
+        });
+        const selected = await selectPrompt.run();
+        const match = /\(([^)]+)\)$/.exec(selected);
         if (match && match[1]) {
-          params.commitId = match[1];
+          params.commitId = match[1].trim();
+        } else {
+          params.commitId = selected; 
         }
       }
+      continue;
     } else if (param.name === 'buildId') {
       const spinner = ora('Listing Builds...').start();
       let commitId = params.commitId;
@@ -217,9 +233,10 @@ const handleInteractiveParamsOrArguments = async (
         const dateStr = build.startDate ? moment(build.startDate).format('YYYY-MM-DD HH:mm') : '-';
         return { name: `${build.id} (${dateStr})`, message: `${build.id} (${dateStr})` };
       });
+      const messageText = param.description || 'Build ID';
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'Build ID',
+        message: `${messageText} (${builds.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: Array.isArray(param.params) ? param.params : [],
@@ -243,10 +260,12 @@ const handleInteractiveParamsOrArguments = async (
       // Use Name (ID) format for both name and message
       param.params = profiles.map((profile: any) => ({ name: `${profile.name} (${profile.id})`, message: `${profile.name} (${profile.id})` }));
       spinner.stop();
+
+      const messageText = param.description || 'Enterprise Profile';
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'Enterprise Profile',
+        message: `${messageText} (${profiles.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: Array.isArray(param.params) ? param.params : [],
@@ -275,10 +294,12 @@ const handleInteractiveParamsOrArguments = async (
         return { name: display, message: display };
       });
       spinner.stop();
+
+      const messageText = param.description || 'Distribution Profile';
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'Distribution Profile',
+        message: `${messageText} (${profiles.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: Array.isArray(param.params) ? param.params : [],
@@ -305,10 +326,12 @@ const handleInteractiveParamsOrArguments = async (
       //@ts-ignore
       param.params = groups.map((group: any) => ({ name: `${group.name} (${group.id})`, message: `${group.name} (${group.id})` }));
       spinner.stop();
+
+      const messageText = param.description || 'Variable Group';
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'Variable Group',
+        message: `${messageText} (${groups.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: Array.isArray(param.params) ? param.params : [],
@@ -339,9 +362,10 @@ const handleInteractiveParamsOrArguments = async (
       }));
       spinner.stop();
       
+      const messageText = param.description || 'App Version ID';
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'App Version ID',
+        message: `${messageText} (${profiles.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: Array.isArray(param.params) ? param.params : [],
@@ -367,12 +391,28 @@ const handleInteractiveParamsOrArguments = async (
         spinner.fail();
         return;
       }
-      const workflowsList: any[] = workflows;
-      param.params = workflows.map((workflow: any, index: number) => ({ 
-        name: `${workflow.workflowName} (${workflow.id})${index === 0 ? ' (latest)' : ''}`, 
-        message: `${workflow.workflowName} (${workflow.id})${index === 0 ? ' (latest)' : ''}` 
-      }));
+      workflowsList.length = 0;
+      workflowsList.push(...workflows);
+      //@ts-ignore
+      param.params = workflows.map((workflow: any, index: number) => ({ name: `${workflow.workflowName} (${workflow.id}) ${index === 0 ? ' (latest)' : ''}`, message: `${workflow.workflowName} (${workflow.id}) ${index === 0 ? ' (latest)' : ''}`}));
       spinner.stop();
+
+      const messageText = param.description || 'Workflow Name (ID)';
+      const selectPrompt = new AutoComplete({
+        name: param.name,
+        message: `${messageText} (${workflows.length} options)`,
+        initial: param.defaultValue,
+        limit: 10,
+        choices: Array.isArray(param.params) ? param.params : [],
+      });
+      const selected = await selectPrompt.run();
+      const match = /\(([^()]+)\)\s*$/.exec(selected);
+      if (match && match[1]) {
+        params.workflowId = match[1].trim();
+      } else {
+        params.workflowId = selected;
+      }
+      continue;
     } else if (param.name === 'configurationId') {
       const spinner = ora('Listing Configurations...').start();
       if (params.branchId && branchesList.length > 0) {
@@ -384,11 +424,14 @@ const handleInteractiveParamsOrArguments = async (
         }
       }
       if (params.configurationId && configurationsList.length > 0) {
-        const match = /\(([^)]+)\)$/.exec(params.configurationId);
-        const selectedConfigId = match ? match[1] : params.configurationId;
-        const selectedConfig = configurationsList.find((c) => c.item1.id === selectedConfigId);
-        if (selectedConfig) {
-          params.configurationId = selectedConfig.item1.id;
+        const selectedConfigWrapper = configurationsList.find(
+          (cWrapper) =>
+            cWrapper.item1.id === params.configurationId ||
+            cWrapper.item1.configurationName === params.configurationId ||
+            `${cWrapper.item1.configurationName} (${cWrapper.item1.id})` === params.configurationId
+        );
+        if (selectedConfigWrapper) {
+          params.configurationId = selectedConfigWrapper.item1.id;
         }
       }
       const configurations = await getConfigurations({ profileId: params.profileId || '' });
@@ -400,17 +443,25 @@ const handleInteractiveParamsOrArguments = async (
       configurationsList.length = 0;
       configurationsList.push(...configurations);
       //@ts-ignore
-      param.params = configurations.map((config: any, index: number) => ({ 
-        name: `${config.item1.configurationName} (${config.item1.id})${index === 0 ? ' (latest)' : ''}`, 
-        message: `${config.item1.configurationName} (${config.item1.id})${index === 0 ? ' (latest)' : ''}` 
-      }));
+      param.params = configurations.map((configWrapper: any, index: number) => ({ name: `${configWrapper.item1.configurationName} (${configWrapper.item1.id}) ${index === 0 ? ' (latest)' : ''}`, message: `${configWrapper.item1.configurationName} (${configWrapper.item1.id}) ${index === 0 ? ' (latest)' : ''}` }));
       spinner.stop();
-      if (params.configurationId && configurationsList.length > 0) {
-        const selectedConfig = configurationsList.find((c) => c.item1.configurationName === params.configurationId || c.item1.id === params.configurationId);
-        if (selectedConfig) {
-          params.configurationId = selectedConfig.item1.id;
-        }
+
+      const messageText = param.description || 'Configuration Name (ID)';
+      const selectPrompt = new AutoComplete({
+        name: param.name,
+        message: `${messageText} (${configurations.length} options)`,
+        initial: param.defaultValue,
+        limit: 10,
+        choices: Array.isArray(param.params) ? param.params : [],
+      });
+      const selected = await selectPrompt.run();
+      const match = /\(([^)]+)\)$/.exec(selected);
+      if (match && match[1]) {
+        params.configurationId = match[1].trim();
+      } else {
+        params.configurationId = selected;
       }
+      continue;
     } else if (param.name === 'organizationId') {
       const spinner = ora('Listing Organizations...').start();
       const isAllOrganizations = param.defaultValue === 'all';
@@ -426,7 +477,7 @@ const handleInteractiveParamsOrArguments = async (
       const organizationParams = (
         isAllOrganizations
           ? []
-          : [{ name: `${currentOrganization.name} (${userInfo.currentOrganizationId})`, message: `${currentOrganization.name} (${userInfo.currentOrganizationId})  ❮❮❮ ` }]
+          : [{ name: `${currentOrganization.name} (${userInfo.currentOrganizationId})`, message: `${currentOrganization.name} (${userInfo.currentOrganizationId})` }]
       ).concat(
         organizations
           .filter((org: any) => isAllOrganizations || org.rootOrganizationId === currentOrganization.id)
@@ -438,10 +489,12 @@ const handleInteractiveParamsOrArguments = async (
       param.params = (isAllOrganizations ? [{ name: 'all', message: `All Organizations` }] : []).concat(organizationParams);
       params['currentOrganizationId'] = userInfo.currentOrganizationId;
       spinner.stop();
+
+      const messageText = param.description || 'Organization';
       // Prompt for selection and always extract UUID
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'Organization',
+        message: `${messageText} (${param.params.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: Array.isArray(param.params) ? param.params : [],
@@ -511,10 +564,12 @@ const handleInteractiveParamsOrArguments = async (
         return { isError: true };
       }
       spinner.stop();
+
       // Prompt for selection and always extract UUID
+      const messageText = param.description || 'User';
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'User',
+        message: `${messageText} (${userList.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: Array.isArray(param.params) ? param.params : [],
@@ -545,9 +600,11 @@ const handleInteractiveParamsOrArguments = async (
       param.params = profileParams;
       params._publishProfileParams = profileParams;
       spinner.stop();
+
+      const messageText = param.description || 'Publish Profile';
       const selectPrompt = new AutoComplete({
         name: param.name,
-        message: param.description || 'Publish Profile',
+        message: `${messageText} (${profileParams.length} options)`,
         initial: param.defaultValue,
         limit: 10,
         choices: [...profileParams],
@@ -581,9 +638,11 @@ const handleInteractiveParamsOrArguments = async (
         });
         param.params = appVersionChoices;
         spinner.stop();
+
+        const messageText = param.description || 'App Version';
         const selectPrompt = new AutoComplete({
           name: param.name,
-          message: param.description || 'App Version',
+          message: `${messageText} (${appVersionChoices.length} options)`,
           initial: param.defaultValue,
           limit: 10,
           choices: [...appVersionChoices],
@@ -612,10 +671,12 @@ const handleInteractiveParamsOrArguments = async (
       }else {
         param.params = groups.map((group:any) => ({name:`${group.name} (${group.id})`, message: `${group.name} (${group.id})`}));
         spinner.stop();
+
+        const messageText = param.description || 'Publish Variable Group';
         // Prompt for selection and always extract UUID
         const selectPrompt = new AutoComplete({
           name: param.name,
-          message: param.description || 'Publish Variable Group',
+          message: `${messageText} (${groups.length} options)`,
           initial: param.defaultValue,
           limit: 10,
           choices: Array.isArray(param.params) ? param.params : [],
@@ -637,26 +698,26 @@ const handleInteractiveParamsOrArguments = async (
         params.variableGroupId = undefined;
         continue;
       }
-    }
-    else if (param.name === 'email' && param.type === CommandParameterTypes.SELECT) {
+    } else if (param.name === 'email' && param.type === CommandParameterTypes.SELECT) {
       const spinner = ora('Listing Invitations...').start();
       const invitationsList = await getOrganizationInvitations({ organizationId: params.organizationId || params.currentOrganizationId || '' });
       if (param.required !== false && (!invitationsList || invitationsList.length === 0)) {
         spinner.text = 'No invitations available';
         spinner.fail();
-        return;
+        return { _AC_INTERACTIVE_HALT_: true };
       }
       if (param.required === false) {
         invitationsList.unshift({ userEmail: UNKNOWN_PARAM_VALUE, _message: 'Skip - (No email)' });
       }
       param.params = invitationsList.map((invitation: any) => ({ name: invitation.userEmail, message: invitation._message || invitation.userEmail }));
       spinner.stop();
-    }else if (param.name === 'value' && params.isSecret) {
+
+    } else if (param.name === 'value' && params.isSecret) {
       param.type = CommandParameterTypes.PASSWORD;
-    }else if (param.name === 'countryCode' && param.type === CommandParameterTypes.SELECT) {
+    } else if (param.name === 'countryCode' && param.type === CommandParameterTypes.SELECT) {
       const countries = await getCountries();
       param.params = countries.map((country) => ({ name: country.alpha2, message: `${country.name}` }));
-    }else if (param.name === 'certificateBundleId' && param.type === CommandParameterTypes.SELECT) {
+    } else if (param.name === 'certificateBundleId' && param.type === CommandParameterTypes.SELECT) {
       const spinner = ora('Listing Certificate Bundles...').start();
       const p12Certs = await getiOSP12Certificates();
       const certificates = [...p12Certs];
@@ -675,9 +736,10 @@ const handleInteractiveParamsOrArguments = async (
         });
         spinner.stop();
         // Prompt for selection and always extract UUID
+        const messageText = param.description || 'Certificate Bundle';
         const selectPrompt = new AutoComplete({
           name: param.name,
-          message: param.description || 'Certificate Bundle',
+          message: `${messageText} (${certificates.length} options)`,
           initial: param.defaultValue,
           limit: 10,
           choices: Array.isArray(param.params) ? param.params : [],
@@ -694,7 +756,7 @@ const handleInteractiveParamsOrArguments = async (
         }
         continue;
       }
-    }else if (param.name === 'certificateId' && param.type === CommandParameterTypes.SELECT) {
+    } else if (param.name === 'certificateId' && param.type === CommandParameterTypes.SELECT) {
       const spinner = ora('Listing Certificates...').start();
       const p12Certs = await getiOSP12Certificates();
       const csrCerts = await getiOSCSRCertificates();
@@ -722,9 +784,10 @@ const handleInteractiveParamsOrArguments = async (
         });
         spinner.stop();
         // Prompt for selection and always extract UUID
+        const messageText = param.description || 'Certificate';
         const selectPrompt = new AutoComplete({
           name: param.name,
-          message: param.description || 'Certificate',
+          message: `${messageText} (${certificates.length} options)`,
           initial: param.defaultValue,
           limit: 10,
           choices: Array.isArray(param.params) ? param.params : [],
@@ -741,7 +804,7 @@ const handleInteractiveParamsOrArguments = async (
         }
         continue;
       }
-    }else if (param.name === 'keystoreId' && param.type === CommandParameterTypes.SELECT) {
+    } else if (param.name === 'keystoreId' && param.type === CommandParameterTypes.SELECT) {
       const spinner = ora('Listing Keystores...').start();
       const keystores = await getAndroidKeystores();
       if (!keystores || keystores.length === 0) {
@@ -756,9 +819,10 @@ const handleInteractiveParamsOrArguments = async (
         });
         spinner.stop();
         // Prompt for selection and always extract UUID
+        const messageText = param.description || 'Keystore';
         const selectPrompt = new AutoComplete({
           name: param.name,
-          message: param.description || 'Keystore',
+          message: `${messageText} (${keystores.length} options)`,
           initial: param.defaultValue,
           limit: 10,
           choices: Array.isArray(param.params) ? param.params : [],
@@ -775,7 +839,7 @@ const handleInteractiveParamsOrArguments = async (
         }
         continue;
       }
-    }else if (param.name === 'provisioningProfileId' && param.type === CommandParameterTypes.SELECT) {
+    } else if (param.name === 'provisioningProfileId' && param.type === CommandParameterTypes.SELECT) {
       const spinner = ora('Listing Provisioning Profiles...').start();
       const profiles = await getProvisioningProfiles();
       if (!profiles || profiles.length === 0) {
@@ -790,9 +854,10 @@ const handleInteractiveParamsOrArguments = async (
         });
         spinner.stop();
         // Prompt for selection and always extract UUID
+        const messageText = param.description || 'Provisioning Profile';
         const selectPrompt = new AutoComplete({
           name: param.name,
-          message: param.description || 'Provisioning Profile',
+          message: `${messageText} (${profiles.length} options)`,
           initial: param.defaultValue,
           limit: 10,
           choices: Array.isArray(param.params) ? param.params : [],
@@ -809,7 +874,7 @@ const handleInteractiveParamsOrArguments = async (
         }
         continue;
       }
-    }else if (param.name === 'testingGroupIds' && param.type === CommandParameterTypes.MULTIPLE_SELECT) {
+    } else if (param.name === 'testingGroupIds' && param.type === CommandParameterTypes.MULTIPLE_SELECT) {
       const spinner = ora('Listing Testing Groups...').start();
       const groups = await getTestingGroups();
       const selectedProfile = await getDistributionProfileById(params);
@@ -832,7 +897,7 @@ const handleInteractiveParamsOrArguments = async (
           : [];
         spinner.stop();
       }
-    }else if (param.name === 'testingGroupId' && param.type === CommandParameterTypes.SELECT) {
+    } else if (param.name === 'testingGroupId' && param.type === CommandParameterTypes.SELECT) {
       const spinner = ora('Listing Testing Groups...').start();
       const groups = await getTestingGroups();
       if (!groups || groups.length === 0) {
@@ -847,9 +912,10 @@ const handleInteractiveParamsOrArguments = async (
         });
         spinner.stop();
         // Prompt for selection and always extract UUID
+        const messageText = param.description || 'Testing Group';
         const selectPrompt = new AutoComplete({
           name: param.name,
-          message: param.description || 'Testing Group',
+          message: `${messageText} (${groups.length} options)`,
           initial: param.defaultValue,
           limit: 10,
           choices: Array.isArray(param.params) ? param.params : [],
@@ -863,7 +929,7 @@ const handleInteractiveParamsOrArguments = async (
         }
         continue;
       }
-    }else if (param.name === 'testerEmail' && param.type === CommandParameterTypes.SELECT) {
+    } else if (param.name === 'testerEmail' && param.type === CommandParameterTypes.SELECT) {
       const spinner = ora('Listing Testers...').start();
       const group = await getTestingGroupById(params);
       const testers = group?.testers;
@@ -921,7 +987,7 @@ const handleInteractiveParamsOrArguments = async (
       } else if (param.type === CommandParameterTypes.SELECT && param.params) {
         const selectPrompt = new AutoComplete({
           name: param.name,
-          message: `${param.description}${param?.params?.length > 10 ? ` (${param.params.length} Options)` : ''}`,
+          message: `${param.description} (${param.params.length} options)`,
           initial: param.defaultValue,
           limit: 10,
           choices: [
@@ -934,7 +1000,7 @@ const handleInteractiveParamsOrArguments = async (
       } else if (param.type === CommandParameterTypes.MULTIPLE_SELECT && param.params) {
         const selectPrompt = new AutoComplete({
           name: param.name,
-          message: `${param.description}${param?.params?.length > 10 ? ` (${param.params.length} Options)` : ''} (Multiple selection with 'space')`,
+          message: `${param.description} (${param.params.length} options) (Multiple selection with 'space')`,
           initial: param.defaultValue,
           limit: 10,
           multiple: true,
@@ -969,9 +1035,14 @@ const handleInteractiveParamsOrArguments = async (
     }
   }
   if (params.configurationId && configurationsList.length > 0) {
-    const selectedConfig = configurationsList.find((c) => c.item1.configurationName === params.configurationId || c.item1.id === params.configurationId || `${c.item1.configurationName} (${c.item1.id})` === params.configurationId);
-    if (selectedConfig) {
-      params.configurationId = selectedConfig.item1.id;
+    const selectedConfigWrapper = configurationsList.find(
+      (cWrapper) =>
+        cWrapper.item1.id === params.configurationId ||
+        cWrapper.item1.configurationName === params.configurationId ||
+        `${cWrapper.item1.configurationName} (${cWrapper.item1.id})` === params.configurationId
+    );
+    if (selectedConfigWrapper) {
+      params.configurationId = selectedConfigWrapper.item1.id;
     }
   }
   if (params.workflowId && Array.isArray(params.workflowId) === false) {
@@ -985,8 +1056,18 @@ const handleInteractiveParamsOrArguments = async (
 };
 
 const handleCommandParamsAndArguments = async (selectedCommand: CommandType, parentCommand: any): Promise<ProgramCommand | undefined> => {
-  const params = (await handleInteractiveParamsOrArguments(selectedCommand.params || [])) || {};
-  const args = (await handleInteractiveParamsOrArguments(selectedCommand.arguments || [])) || {};
+  const paramsFromInteractive = await handleInteractiveParamsOrArguments(selectedCommand.params || []);
+  if (paramsFromInteractive && (paramsFromInteractive._AC_INTERACTIVE_HALT_ || paramsFromInteractive.isError)) {
+    return undefined; // Halt command execution if interactive part signaled to stop or errored
+  }
+  const params = paramsFromInteractive || {};
+
+  const argsFromInteractive = await handleInteractiveParamsOrArguments(selectedCommand.arguments || []);
+  if (argsFromInteractive && (argsFromInteractive._AC_INTERACTIVE_HALT_ || argsFromInteractive.isError)) {
+    return undefined; // Halt command execution if interactive part signaled to stop or errored
+  }
+  const args = argsFromInteractive || {};
+
   return createCommandActionCallback({
     parent: parentCommand || null,
     name: () => selectedCommand.command,
