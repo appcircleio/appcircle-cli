@@ -839,18 +839,26 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
     const spinner = createOra(`Starting Build...`).start();
     try {
       const responseData = await startBuild(params);
-      commandWriter(CommandTypes.BUILD, {
-        fullCommandName: command.fullCommandName,
-        data: responseData,
-      });
       
-      spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
+      // Only write initial output if not in JSON mode
+      if (getConsoleOutputType() !== 'json') {
+        commandWriter(CommandTypes.BUILD, {
+          fullCommandName: command.fullCommandName,
+          data: responseData,
+        });
+        spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
+      } else {
+        // For JSON mode, just stop the spinner silently
+        spinner.stop();
+      }
       
-      const progressSpinner = createOra(`Checking Build Status...`).start();
+      const progressSpinner = getConsoleOutputType() === 'json' ? 
+        { text: '', succeed: () => {}, fail: () => {}, stop: () => {} } : 
+        createOra(`Checking Build Status...`).start();
       let dots = "";
       const startTime = Date.now();
       
-      const interval = setInterval(() => {
+      const interval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
         dots = dots.length >= 3 ? "" : dots + ".";
         const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
         const elapsedMinutes = Math.floor(elapsedSeconds / 60);
@@ -950,7 +958,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
           }
         }
         
-        clearInterval(interval);
+        if (interval) clearInterval(interval);
         
         if (buildCompleted) {
           if (buildSuccess) {
@@ -973,6 +981,18 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             
             const homeDir = os.homedir();
             const defaultDownloadDir = path.join(homeDir, 'Downloads');
+                
+            // Skip interactive prompt for JSON output mode
+            if (getConsoleOutputType() === 'json') {
+              const jsonOutput = {
+                taskId: responseData.taskId,
+                queueItemId: responseData.queueItemId,
+                status: 'success',
+                message: 'Build completed successfully'
+              };
+              console.log(JSON.stringify(jsonOutput));
+              throw new AppcircleExitError('', 0);
+            }
                 
             console.log(chalk.cyan('\nWhat would you like to do next?'));
              
@@ -1091,6 +1111,19 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             } catch (e) {
               progressSpinner.fail(chalk.red(`Build completed unsuccessfully.`));
             }
+            
+            // Skip interactive prompt for JSON output mode
+            if (getConsoleOutputType() === 'json') {
+              const jsonOutput = {
+                taskId: responseData.taskId,
+                queueItemId: responseData.queueItemId,
+                status: 'failed',
+                message: 'Build failed'
+              };
+              console.log(JSON.stringify(jsonOutput));
+              throw new AppcircleExitError('Build failed', 1);
+            }
+            
             // Offer to download logs even on failure using enquirer
             console.log(chalk.cyan('\nBuild failed. Would you like to download the logs?'));
             
@@ -1162,7 +1195,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
           throw new AppcircleExitError('Build monitoring timed out', 1);
         }
       } catch (e) {
-        clearInterval(interval);
+        if (interval) clearInterval(interval);
         if (e instanceof AppcircleExitError) {
           if (e.code === 0) {
             throw e;

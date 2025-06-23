@@ -30,12 +30,21 @@ const config = new Conf<ConfigData>({
 export type ConsoleOutputType = "json" | "plain";
 
 let output_type = (process.env.CONSOLE_OUTPUT_TYPE || "plain") as ConsoleOutputType;
+let is_interactive_mode = false;
 
 export const setConsoleOutputType = (type: ConsoleOutputType) => {
   output_type = type;
 };
 export const getConsoleOutputType = () => {
-  return output_type;
+  // In interactive mode, always return 'plain' to ignore JSON output
+  return is_interactive_mode ? "plain" : output_type;
+};
+
+export const setInteractiveMode = (isInteractive: boolean) => {
+  is_interactive_mode = isInteractive;
+};
+export const getInteractiveMode = () => {
+  return is_interactive_mode;
 };
 
 export function getConfigStore(): any {

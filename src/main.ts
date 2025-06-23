@@ -5,7 +5,7 @@ import { createProgram } from './program.js';
 import axios from 'axios';
 import { runCommand } from './core/command-runner.js';
 import { runCommandsInteractively } from './core/interactive-runner.js';
-import { getConsoleOutputType, setConsoleOutputType } from './config.js';
+import { getConsoleOutputType, setConsoleOutputType, setInteractiveMode } from './config.js';
 import { ProgramError } from './core/ProgramError.js';
 import { AppcircleExitError } from "./core/AppcircleExitError.js";
 import { PROGRAM_NAME } from './constant.js';
@@ -111,8 +111,10 @@ const main = async () => {
   try {
     setConsoleOutputType(argv.output || argv.o || 'plain');
     if (process.argv.length === 2 || argv.i || argv.interactive || isFallbackToInteractive) {
+      setInteractiveMode(true);
       runCommandsInteractively();
     } else {
+      setInteractiveMode(false);
       program.onCommandRun(runCommand);
       await program.parseAsync();
     }
