@@ -595,22 +595,38 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-start`) {
-    const spinner = createOra('Starting Publish flow...').start();
+    const spinner = getConsoleOutputType() === 'json' ? 
+      { succeed: () => {}, fail: () => {}, stop: () => {} } : 
+      createOra('Starting Publish flow...').start();
     try {
       const publish = await getPublishByAppVersion(params);
       const firstStep = publish.steps[0];
       const startResponse = await startExistingPublishFlow({ ...params, publishId: firstStep.publishId });
       
       const publishId = typeof startResponse === 'string' ? startResponse : firstStep.publishId;
-      spinner.succeed(`Publish flow started successfully.\n\nPublishId: ${publishId}`);
+      
+      if (getConsoleOutputType() !== 'json') {
+        spinner.succeed(`Publish flow started successfully.\n\nPublishId: ${publishId}`);
+      }
       
       if (params.platform && params.publishProfileId && params.appVersionId) {
-        await monitorPublishProcess(params);
+        await monitorPublishProcess({ ...params, publishId });
       } else {
-        console.log(chalk.yellow('\nInsufficient parameters to monitor Publish Status. Please provide platform, publishProfileId, and appVersionId for monitoring.'));
+        if (getConsoleOutputType() === 'json') {
+          const jsonOutput = {
+            publishId: publishId,
+            status: 'started',
+            message: 'Publish flow started successfully'
+          };
+          console.log(JSON.stringify(jsonOutput));
+        } else {
+          console.log(chalk.yellow('\nInsufficient parameters to monitor Publish Status. Please provide platform, publishProfileId, and appVersionId for monitoring.'));
+        }
       }
     } catch (error) {
-      spinner.fail('Failed to start publish');
+      if (getConsoleOutputType() !== 'json') {
+        spinner.fail('Failed to start publish');
+      }
       throw error;
     }
   }else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-download`) {
@@ -1201,7 +1217,6 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
             throw e;
           }
         }
-        progressSpinner.fail(chalk.red(`Error while monitoring Build.`));
         throw new AppcircleExitError('Build monitoring failed', 1);
       }
     } catch (e) {
@@ -2726,13 +2741,15 @@ async function checkPublishStatusDirectly(platform: string, publishProfileId: st
 }
 
 async function monitorPublishProcess(params: any) {
-  const { platform, publishProfileId, appVersionId } = params;
+  const { platform, publishProfileId, appVersionId, publishId } = params;
   
-  const progressSpinner = createOra(`Checking Publish Status...`).start();
+  const progressSpinner = getConsoleOutputType() === 'json' ? 
+    { text: '', succeed: () => {}, fail: () => {}, stop: () => {} } : 
+    createOra(`Checking Publish Status...`).start();
   let dots = "";
   const startTime = Date.now();
   
-  const interval = setInterval(() => {
+  const interval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
     dots = dots.length >= 3 ? "" : dots + ".";
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
     const elapsedMinutes = Math.floor(elapsedSeconds / 60);
@@ -2758,7 +2775,21 @@ async function monitorPublishProcess(params: any) {
         
         switch (status) {
           case 0: // SUCCESS
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
+            
+            if (getConsoleOutputType() === 'json') {
+              const jsonOutput = {
+                publishId: publishId,
+                status: 'success',
+                message: 'Publish completed successfully'
+              };
+              console.log(JSON.stringify(jsonOutput));
+              publishCompleted = true;
+              publishSuccess = true;
+              publishStatusHandled = true;
+              throw new AppcircleExitError('Publish completed successfully', 0);
+            }
+            
             const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
             const elapsedMinutes = Math.floor(elapsedSeconds / 60);
             const elapsedText = elapsedMinutes > 0 ? 
@@ -2806,7 +2837,20 @@ async function monitorPublishProcess(params: any) {
             throw new AppcircleExitError('Publish completed successfully', 0);
             
           case 1: // FAILED
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
+            
+            if (getConsoleOutputType() === 'json') {
+              const jsonOutput = {
+                publishId: publishId,
+                status: 'failed',
+                message: 'Publish failed'
+              };
+              console.log(JSON.stringify(jsonOutput));
+              publishCompleted = true;
+              publishStatusHandled = true;
+              throw new AppcircleExitError('Publish failed', 1);
+            }
+            
             progressSpinner.fail(chalk.red(`Publish failed ❌`));
             
             // Handle log download directly here to avoid infinite loop
@@ -2847,7 +2891,7 @@ async function monitorPublishProcess(params: any) {
             throw new AppcircleExitError('Publish process did not complete successfully', 1);
             
           case 2: // CANCELLED
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
             progressSpinner.fail(chalk.hex('#FF8C32')(`Publish was canceled 🚫`));
             
             // Handle log download directly here to avoid infinite loop
@@ -2888,7 +2932,7 @@ async function monitorPublishProcess(params: any) {
             throw new AppcircleExitError('Publish was canceled', 1);
             
           case 3: // TIMEOUT
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
             progressSpinner.fail(chalk.red(`Publish timed out ⏱️`));
             
             // Handle log download directly here to avoid infinite loop
@@ -2950,7 +2994,7 @@ async function monitorPublishProcess(params: any) {
             break;
             
           case 201: // STOPPED
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
             progressSpinner.fail(chalk.hex('#FF8C32')(`Publish was stopped 🛑`));
             
             // Handle log download directly here to avoid infinite loop
@@ -3011,14 +3055,14 @@ async function monitorPublishProcess(params: any) {
       }
     }
     
-    clearInterval(interval);
+    if (interval) clearInterval(interval);
     
     if (!publishCompleted) {
       progressSpinner.fail(chalk.red(`Publish monitoring timed out after ${maxRetries * 10} seconds.`));
       throw new AppcircleExitError('Publish monitoring timed out', 1);
     }
   } catch (e) {
-    clearInterval(interval);
+    if (interval) clearInterval(interval);
     // If it's an AppcircleExitError, re-throw it to exit properly
     if (e instanceof AppcircleExitError) {
       throw e;
