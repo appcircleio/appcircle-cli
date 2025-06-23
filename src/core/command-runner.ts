@@ -1040,7 +1040,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                     await downloadBuildLogs(responseData.queueItemId, buildLogPath);
                   }
                   console.log(chalk.green('Build completed successfully with logs downloaded.'));
-                  throw new AppcircleExitError('Build completed', 0);
+                  throw new AppcircleExitError('', 0);
                 } catch (error: any) {
                   if (error instanceof AppcircleExitError) {
                     throw error;
@@ -1135,7 +1135,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                     await downloadBuildLogs(responseData.queueItemId, buildLogPath);
                   }
                   console.log(chalk.green('Build completed successfully with logs downloaded.'));
-                  throw new AppcircleExitError('Build completed', 0);
+                  throw new AppcircleExitError('', 0);
                 } catch (error: any) {
                   if (error instanceof AppcircleExitError) {
                     throw error;

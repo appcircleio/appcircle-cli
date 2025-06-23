@@ -170,7 +170,7 @@ export const createProgram = () => {
     actionCb(createCommandActionCallback(actionCommand, thisCommand));
   });
   return {
-    parse: () => program.parse(process.argv),
+    parseAsync: () => program.parseAsync(process.argv),
     onCommandRun: (cb: typeof actionCb) => (actionCb = cb),
   };
 };

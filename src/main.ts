@@ -7,6 +7,7 @@ import { runCommand } from './core/command-runner.js';
 import { runCommandsInteractively } from './core/interactive-runner.js';
 import { getConsoleOutputType, setConsoleOutputType } from './config.js';
 import { ProgramError } from './core/ProgramError.js';
+import { AppcircleExitError } from "./core/AppcircleExitError.js";
 import { PROGRAM_NAME } from './constant.js';
 import chalk from 'chalk';
 import { Commands } from './core/commands.js';
@@ -19,6 +20,22 @@ const collectErrorMessageFromData = (data: any) => {
 }
 
 const handleError = (error: any) => {
+  // Handle AppcircleExitError specially
+  if (error.name === 'AppcircleExitError') {
+    if (error.code === 0 && (!error.message || error.message === '')) {
+      // Silent exit for successful completion
+      process.exit(0);
+    } else if (error.code !== 0 && error.message) {
+      // Only show error message for actual failures
+      if (getConsoleOutputType() === 'json') {
+        console.error(JSON.stringify(error));
+      } else {
+        console.error(error.message);
+      }
+    }
+    process.exit(error.code);
+  }
+
   if (getConsoleOutputType() === 'json') {
     if (axios.isAxiosError(error)) {
       console.error(JSON.stringify({ message: error.message, status: error.response?.status, statusText: error.response?.statusText, data: error.response?.data }));
@@ -97,18 +114,26 @@ const main = async () => {
       runCommandsInteractively();
     } else {
       program.onCommandRun(runCommand);
-      program.parse();
+      await program.parseAsync();
     }
   } catch (error) {
+    const err = error as any;
     if (getConsoleOutputType() === 'json') {
-      console.error(JSON.stringify(error));
+      if (!(err.name === 'AppcircleExitError' && err.code === 0)) {
+        console.error(JSON.stringify(err));
+      }
     } else {
-      if (axios.isAxiosError(error)) {
-        console.error(`${error.message} ${error.code}`);
+      if (err.name === 'AppcircleExitError') {
+        if (err.code !== 0 && err.message) {
+          console.error(err.message);
+        }
+      } else if (axios.isAxiosError(err)) {
+        console.error(`${err.message} ${err.code}`);
       } else {
-        console.error(error);
+        console.error(err);
       }
     }
+    process.exit(err.name === 'AppcircleExitError' ? err.code : 1);
   }
 };
 
