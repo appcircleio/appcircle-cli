@@ -25,6 +25,9 @@ const handleError = (error: any) => {
     if (error.code === 0 && (!error.message || error.message === '')) {
       // Silent exit for successful completion
       process.exit(0);
+    } else if (error.code !== 0 && error.message === '') {
+      // Silent exit for failed completion when message is empty (JSON mode already output)
+      process.exit(error.code);
     } else if (error.code !== 0 && error.message) {
       // Only show error message for actual failures
       if (getConsoleOutputType() === 'json') {
@@ -121,7 +124,7 @@ const main = async () => {
   } catch (error) {
     const err = error as any;
     if (getConsoleOutputType() === 'json') {
-      if (!(err.name === 'AppcircleExitError' && err.code === 0)) {
+      if (!(err.name === 'AppcircleExitError' && (err.code === 0 || err.message === ''))) {
         console.error(JSON.stringify(err));
       }
     } else {

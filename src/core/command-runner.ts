@@ -1137,7 +1137,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
                 message: 'Build failed'
               };
               console.log(JSON.stringify(jsonOutput));
-              throw new AppcircleExitError('Build failed', 1);
+              throw new AppcircleExitError('', 1);
             }
             
             // Offer to download logs even on failure using enquirer
@@ -1213,7 +1213,7 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       } catch (e) {
         if (interval) clearInterval(interval);
         if (e instanceof AppcircleExitError) {
-          if (e.code === 0) {
+          if (e.code === 0 || e.message === '') {
             throw e;
           }
         }
@@ -2839,17 +2839,17 @@ async function monitorPublishProcess(params: any) {
           case 1: // FAILED
             if (interval) clearInterval(interval);
             
-            if (getConsoleOutputType() === 'json') {
-              const jsonOutput = {
-                publishId: publishId,
-                status: 'failed',
-                message: 'Publish failed'
-              };
-              console.log(JSON.stringify(jsonOutput));
-              publishCompleted = true;
-              publishStatusHandled = true;
-              throw new AppcircleExitError('Publish failed', 1);
-            }
+                         if (getConsoleOutputType() === 'json') {
+               const jsonOutput = {
+                 publishId: publishId,
+                 status: 'failed',
+                 message: 'Publish failed'
+               };
+               console.log(JSON.stringify(jsonOutput));
+               publishCompleted = true;
+               publishStatusHandled = true;
+               throw new AppcircleExitError('', 1);
+             }
             
             progressSpinner.fail(chalk.red(`Publish failed ❌`));
             
