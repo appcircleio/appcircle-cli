@@ -351,8 +351,7 @@ EXAMPLES
 LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
-  Use 'appcircle build profile workflows --profileId <uuid>' to get available workflows.
-  Use 'appcircle build start' without options for interactive mode.`,
+  Use 'appcircle build profile workflows --profileId <uuid>' to get available workflows.`,
         params: [
           {
             name: 'profileId',
@@ -462,8 +461,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to see builds for a specific commit.
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
-  Use 'appcircle build active-list' for interactive mode.`,
+  Use 'appcircle build profile list' to get available profiles with their UUIDs.`,
         params: [],
       },
       {
@@ -489,8 +487,7 @@ EXAMPLES
 LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
-  Use 'appcircle build profile branch commits --profileId <uuid> --branchId <uuid>' to get available commits.
-  Use 'appcircle build list' without options for interactive mode.`,
+  Use 'appcircle build profile branch commits --profileId <uuid> --branchId <uuid>' to get available commits.`,
         params: [
           {
             name: 'profileId',
@@ -562,8 +559,7 @@ LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
   Use 'appcircle build profile branch commits --profileId <uuid> --branchId <uuid>' to get available commits.
-  Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to get available builds.
-  Use 'appcircle build view' without options for interactive mode.`,
+  Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to get available builds.`,
         params: [
           {
             name: 'profileId',
@@ -646,8 +642,7 @@ LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
   Use 'appcircle build profile branch commits --profileId <uuid> --branchId <uuid>' to get available commits.
-  Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to get available builds.
-  Use 'appcircle build download' without options for interactive mode.`,
+  Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to get available builds.`,
         params: [
           {
             name: 'path',
@@ -738,8 +733,7 @@ LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
   Use 'appcircle build profile branch commits --profileId <uuid> --branchId <uuid>' to get available commits.
-  Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to get available builds.
-  Use 'appcircle build download-log' without options for interactive mode.`,
+  Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to get available builds.`,
         params: [
           {
             name: 'path',
@@ -842,8 +836,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle build profile list' to see all available profiles with their UUIDs.
-  Use the profileId from the output for other build commands.
-  Use 'appcircle build profile list' for interactive mode.`,
+  Use the profileId from the output for other build commands.`,
             params: [],
           },
           {
@@ -869,8 +862,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
-  Use the branchId from the output for other build commands.
-  Use 'appcircle build profile branch list' without options for interactive mode.`,
+  Use the branchId from the output for other build commands.`,
                 params: [
                   {
                     name: 'profileId',
@@ -913,8 +905,7 @@ EXAMPLES
 LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
-  Use the commitId from the output for other build commands.
-  Use 'appcircle build profile branch commits' without options for interactive mode.`,
+  Use the commitId from the output for other build commands.`,
                 params: [
                   {
                     name: 'profileId',
@@ -975,8 +966,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
-  Use the workflowId from the output for build start commands.
-  Use 'appcircle build profile workflows' without options for interactive mode.`,
+  Use the workflowId from the output for build start commands.`,
             params: [
               {
                 name: 'profileId',
@@ -1016,8 +1006,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
-  Use the configurationId from the output for build start commands (optional).
-  Use 'appcircle build profile configurations' without options for interactive mode.`,
+  Use the configurationId from the output for build start commands (optional).`,
             params: [
               {
                 name: 'profileId',
@@ -1065,9 +1054,7 @@ EXAMPLES
   appcircle build variable group list
 
 LEARN MORE
-  Use 'appcircle build variable group create --name <group-name>' to create new variable groups.
-  Use 'appcircle build variable group' for interactive mode.
-`,
+  Use 'appcircle build variable group create --name <group-name>' to create new variable groups.`,
                 params: [],
               },
               {
@@ -1089,7 +1076,6 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle build variable group list' to view existing groups.
-  Use 'appcircle build variable group create' without options for interactive mode.
 `,
                 params: [
                   {
@@ -1125,7 +1111,6 @@ EXAMPLES
 LEARN MORE
   Use 'appcircle build variable group list' to get available groups with their UUIDs and names.
   Use 'appcircle build variable group download --variableGroupId <uuid>' to download existing variables as template.
-  Use 'appcircle build variable group upload' without options for interactive mode.
 `,
                 params: [
                   {
@@ -1179,7 +1164,6 @@ EXAMPLES
 LEARN MORE
   Use 'appcircle build variable group list' to get available groups with their UUIDs and names.
   Use 'appcircle build variable group upload --variableGroupId <uuid> --filePath <path>' to upload variables from file.
-  Use 'appcircle build variable group download' without options for interactive mode.
 `,
                 params: [
                   {
@@ -1244,7 +1228,6 @@ EXAMPLES
 LEARN MORE
   Use 'appcircle build variable group list' to get available groups with their UUIDs and names.
   Use 'appcircle build variable view --variableGroupId <uuid>' to see existing variables.
-  Use 'appcircle build variable create' without options for interactive mode.
 `,
             params: [
               {
@@ -1335,7 +1318,6 @@ EXAMPLES
 LEARN MORE
   Use 'appcircle build variable group list' to get available groups with their UUIDs and names.
   Use 'appcircle build variable create --variableGroupId <uuid>' to add new variables.
-  Use 'appcircle build variable view' without options for interactive mode.
 `,
             params: [
               {
@@ -1437,8 +1419,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity certificate upload --path <path> --password <password>' to upload new certificates.
-  Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to view certificate details.
-  Use 'appcircle signing-identity certificate list' for interactive mode.`,
+  Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to view certificate details.`,
             params:[],
           },
           {
@@ -1463,8 +1444,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity certificate list' to view uploaded certificates.
-  Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to see certificate details.
-  Use 'appcircle signing-identity certificate upload' without options for interactive mode.`,
+  Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to see certificate details.`,
             params:[
               {
                 name: 'path',
@@ -1505,8 +1485,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity certificate upload --path <path> --password <password>' to upload the resulting certificate.
-  Use 'appcircle signing-identity certificate list' to view existing certificates.
-  Use 'appcircle signing-identity certificate create' without options for interactive mode.`,
+  Use 'appcircle signing-identity certificate list' to view existing certificates.`,
             params:[
               {
                 name: 'name',
@@ -1554,8 +1533,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity certificate list' to get available certificates with their UUIDs and names.
-  Use 'appcircle signing-identity certificate download --certificateId <uuid>' to download the certificate.
-  Use 'appcircle signing-identity certificate view' without options for interactive mode.`,
+  Use 'appcircle signing-identity certificate download --certificateId <uuid>' to download the certificate.`,
             params:[
               {
                 name: 'certificateBundleId',
@@ -1601,8 +1579,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity certificate list' to get available certificates with their UUIDs and names.
-  Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to see certificate details.
-  Use 'appcircle signing-identity certificate download' without options for interactive mode.`,
+  Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to see certificate details.`,
             params:[
               {
                 name: 'path',
@@ -1654,8 +1631,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity certificate list' to get available certificates with their UUIDs and names.
-  Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to see certificate details before removal.
-  Use 'appcircle signing-identity certificate remove' without options for interactive mode.`,
+  Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to see certificate details before removal.`,
             params:[
               {
                 name: 'certificateId',
@@ -1723,8 +1699,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity provisioning-profile upload --path <path>' to upload new profiles.
-  Use 'appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>' to view profile details.
-  Use 'appcircle signing-identity provisioning-profile list' for interactive mode.`,
+  Use 'appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>' to view profile details.`,
             params:[],
           },
           {
@@ -1747,9 +1722,7 @@ EXAMPLES
   appcircle signing-identity provisioning-profile upload --path ~/profiles/Development_Profile.mobileprovision
 
 LEARN MORE
-  Use 'appcircle signing-identity provisioning-profile list' to view uploaded profiles.
-  Use 'appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>' to see profile details.
-  Use 'appcircle signing-identity provisioning-profile upload' without options for interactive mode.`,
+  Use 'appcircle signing-identity provisioning-profile list' to view uploaded profiles.`,
             params:[{
               name: 'path',
               description: 'Provisioning Profile Path',
@@ -1783,8 +1756,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity provisioning-profile list' to get available profiles with their UUIDs and names.
-  Use 'appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>' to see profile details.
-  Use 'appcircle signing-identity provisioning-profile download' without options for interactive mode.`,
+  Use 'appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>' to see profile details.`,
             params:[
               {
                 name: 'path',
@@ -1836,8 +1808,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity provisioning-profile list' to get available profiles with their UUIDs and names.
-  Use 'appcircle signing-identity provisioning-profile download --provisioningProfileId <uuid>' to download the profile.
-  Use 'appcircle signing-identity provisioning-profile view' without options for interactive mode.`,
+  Use 'appcircle signing-identity provisioning-profile download --provisioningProfileId <uuid>' to download the profile.`,
             params:[
               {
                 name: 'provisioningProfileId',
@@ -1881,8 +1852,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity provisioning-profile list' to get available profiles with their UUIDs and names.
-  Use 'appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>' to see profile details before removal.
-  Use 'appcircle signing-identity provisioning-profile remove' without options for interactive mode.`,
+  Use 'appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>' to see profile details before removal.`,
             params:[
               {
                 name: 'provisioningProfileId',
@@ -1951,8 +1921,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity keystore upload --path <path> --password <password> --aliasPassword <password>' to upload new keystores.
-  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to view keystore details.
-  Use 'appcircle signing-identity keystore list' for interactive mode.`,
+  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to view keystore details.`,
             params: [],
           },
           {
@@ -1980,8 +1949,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity keystore list' to view generated keystores.
-  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details.
-  Use 'appcircle signing-identity keystore create' without options for interactive mode.`,
+  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details.`,
                 params: [
                   {
               name: 'name',
@@ -2038,8 +2006,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity keystore list' to view uploaded keystores.
-  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details.
-  Use 'appcircle signing-identity keystore upload' without options for interactive mode.`,
+  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details.`,
             params: [
               {
                 name: 'path',
@@ -2089,8 +2056,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity keystore list' to get available keystores with their UUIDs and names.
-  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details.
-  Use 'appcircle signing-identity keystore download' without options for interactive mode.`,
+  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details.`,
             params: [
               {
                 name: 'path',
@@ -2142,8 +2108,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity keystore list' to get available keystores with their UUIDs and names.
-  Use 'appcircle signing-identity keystore download --keystoreId <uuid>' to download the keystore.
-  Use 'appcircle signing-identity keystore view' without options for interactive mode.`,
+  Use 'appcircle signing-identity keystore download --keystoreId <uuid>' to download the keystore.`,
             params:[
               {
                 name: 'keystoreId',
@@ -2187,8 +2152,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle signing-identity keystore list' to get available keystores with their UUIDs and names.
-  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details before removal.
-  Use 'appcircle signing-identity keystore remove' without options for interactive mode.`,
+  Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details before removal.`,
             params:[
               {
                 name: 'keystoreId',
@@ -2267,8 +2231,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle testing-distribution profile list' to get available distribution profiles with their UUIDs and names.
-  Use 'appcircle testing-distribution profile settings auto-send' to configure automated distribution.
-  Use 'appcircle testing-distribution upload' without options for interactive mode.`,
+  Use 'appcircle testing-distribution profile settings auto-send' to configure automated distribution.`,
         params: [
           {
             name: 'distProfileId',
@@ -2342,8 +2305,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle testing-distribution profile create --name <name>' to create a new distribution profile.
-  Use 'appcircle testing-distribution profile settings auto-send --distProfileId <uuid>' to configure automated distribution.
-  Use 'appcircle testing-distribution profile list' for interactive mode.`,
+  Use 'appcircle testing-distribution profile settings auto-send --distProfileId <uuid>' to configure automated distribution.`,
             params: [],
           },
           {
@@ -2365,8 +2327,7 @@ EXAMPLES
   appcircle testing-distribution profile create --name "Staging Distribution"
 
 LEARN MORE
-  Use 'appcircle testing-distribution profile list' to see all available distribution profiles.
-  Use 'appcircle testing-distribution profile create' without options for interactive mode.`,
+  Use 'appcircle testing-distribution profile list' to see all available distribution profiles.`,
             params: [
               {
                 name: 'name',
@@ -2440,8 +2401,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle testing-distribution testing-group list' to get available testing groups.
-  Use 'appcircle testing-distribution profile list' to get available distribution profiles with their UUIDs and names.
-  Use 'appcircle testing-distribution profile settings auto-send' without options for interactive mode.`,
+  Use 'appcircle testing-distribution profile list' to get available distribution profiles with their UUIDs and names.`,
                 params: [
                   {
                     name: 'distProfileId',
@@ -2519,8 +2479,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle testing-distribution testing-group create --name <name>' to create new testing groups.
-  Use 'appcircle testing-distribution testing-group view --testingGroupId <uuid>' to see group details.
-  Use 'appcircle testing-distribution testing-group list' for interactive mode.`,
+  Use 'appcircle testing-distribution testing-group view --testingGroupId <uuid>' to see group details.`,
             params: [],
           },
           {
@@ -2546,8 +2505,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle testing-distribution testing-group list' to get available groups with their UUIDs and names.
-  Use 'appcircle testing-distribution testing-group tester add' to add testers.
-  Use 'appcircle testing-distribution testing-group view' without options for interactive mode.`,
+  Use 'appcircle testing-distribution testing-group tester add' to add testers.`,
             params: [
               {
                 name: 'testingGroupId',
@@ -2589,8 +2547,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle testing-distribution testing-group list' to view all testing groups.
-  Use 'appcircle testing-distribution testing-group tester add --testingGroupId <uuid>' to add testers to the group.
-  Use 'appcircle testing-distribution testing-group create' without options for interactive mode.`,
+  Use 'appcircle testing-distribution testing-group tester add --testingGroupId <uuid>' to add testers to the group.`,
             params: [
               {
                 name: 'name',
@@ -2623,8 +2580,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle testing-distribution testing-group list' to get available groups with their UUIDs and names.
-  Use 'appcircle testing-distribution testing-group view' to see group details before removal.
-  Use 'appcircle testing-distribution testing-group remove' without options for interactive mode.`,
+  Use 'appcircle testing-distribution testing-group view' to see group details before removal.`,
             params: [
               {
                 name: 'testingGroupId',
@@ -2693,8 +2649,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle testing-distribution testing-group list' to get available testing groups with their UUIDs and names.
-  Use 'appcircle testing-distribution testing-group view' to see current testers.
-  Use 'appcircle testing-distribution testing-group tester add' without options for interactive mode.`,
+  Use 'appcircle testing-distribution testing-group view' to see current testers.`,
                 params: [
                   {
                     name: 'testingGroupId',
@@ -2744,8 +2699,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle testing-distribution testing-group list' to get available testing groups with their UUIDs and names.
-  Use 'appcircle testing-distribution testing-group view' to see current testers.
-  Use 'appcircle testing-distribution testing-group tester remove' without options for interactive mode.`,
+  Use 'appcircle testing-distribution testing-group view' to see current testers.`,
                 params: [
                   {
                     name: 'testingGroupId',
@@ -2814,11 +2768,14 @@ LEARN MORE
 
 USAGE
   appcircle publish start --platform <platform> --publishProfileId <uuid> --appVersionId <uuid>
+  appcircle publish start --platform <platform> --profile <string> --appVersion <string>
 
 REQUIRED OPTIONS
   --platform <platform>           Platform (ios or android)
   --publishProfileId <uuid>       Publish profile ID (UUID format)
+  --profile <string>              Publish profile name (alternative to --publishProfileId)
   --appVersionId <uuid>           App version ID (UUID format)
+  --appVersion <string>           App version name (alternative to --appVersionId)
 
 DESCRIPTION
   Start a new publishing process to distribute your mobile application to app stores or other platforms.
@@ -2826,12 +2783,11 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish start --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --appVersionId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-  appcircle publish start --platform android --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --appVersionId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+  appcircle publish start --platform android --profile "Google Play Production" --appVersion "MyApp v2.1.0"
 
 LEARN MORE
-  Use 'appcircle publish profile list --platform <platform>' to get available publish profiles.
-  Use 'appcircle publish profile version list --platform <platform> --publishProfileId <uuid>' to get available app versions.
-  Use 'appcircle publish start' without options for interactive mode.`,
+  Use 'appcircle publish profile list --platform <platform>' to get available publish profiles with their UUIDs and names.
+  Use 'appcircle publish profile version list --platform <platform>' to get available app versions with their UUIDs and names.`,
         params: [
           platformParam,
           {
@@ -2839,14 +2795,34 @@ LEARN MORE
             description: 'Publish Profile Name',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
-            required: true
+            required: false
+          },
+          {
+            name: 'profile',
+            description: "Publish Profile Name instead of 'publishProfileId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           },
           {
             name: 'appVersionId',
             description: 'App Version',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
-            required: true
+            required: false
+          },
+          {
+            name: 'appVersion',
+            description: "App Version Name instead of 'appVersionId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           }
         ],
       },
@@ -2866,8 +2842,7 @@ EXAMPLES
   appcircle publish active-list
 
 LEARN MORE
-  Use 'appcircle publish view --platform <platform> --publishProfileId <uuid> --appVersionId <uuid>' to see details of a specific publishing process.
-  Use 'appcircle publish active-list' for interactive mode.`,
+  Use 'appcircle publish view --platform <platform> --publishProfileId <uuid> --appVersionId <uuid>' to see details of a specific publishing process.`,
         params: [],
       },
       {
@@ -2877,11 +2852,14 @@ LEARN MORE
 
 USAGE
   appcircle publish view --platform <platform> --publishProfileId <uuid> --appVersionId <uuid>
+  appcircle publish view --platform <platform> --profile <string> --appVersion <string>
 
 REQUIRED OPTIONS
   --platform <platform>           Platform (ios or android)
   --publishProfileId <uuid>       Publish profile ID (UUID format)
+  --profile <string>              Publish profile name (alternative to --publishProfileId)
   --appVersionId <uuid>           App version ID (UUID format)
+  --appVersion <string>           App version name (alternative to --appVersionId)
 
 DESCRIPTION
   View comprehensive details about a publishing process for a specific app version,
@@ -2889,12 +2867,11 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish view --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --appVersionId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-  appcircle publish view --platform android --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --appVersionId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+  appcircle publish view --platform android --profile "Google Play Production" --appVersion "MyApp v2.1.0"
 
 LEARN MORE
-  Use 'appcircle publish profile list --platform <platform>' to get available publish profiles.
-  Use 'appcircle publish profile version list --platform <platform> --publishProfileId <uuid>' to get available app versions.
-  Use 'appcircle publish view' without options for interactive mode.`,
+  Use 'appcircle publish profile list --platform <platform>' to get available publish profiles with their UUIDs and names.
+  Use 'appcircle publish profile version list --platform <platform>' to get available app versions with their UUIDs and names.`,
         params: [
           platformParam,
           {
@@ -2902,14 +2879,34 @@ LEARN MORE
             description: 'Publish Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
-            required: true
+            required: false
+          },
+          {
+            name: 'profile',
+            description: "Publish Profile Name instead of 'publishProfileId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           },
           {
             name: 'appVersionId',
             description: 'App Version',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
-            required: true
+            required: false
+          },
+          {
+            name: 'appVersion',
+            description: "App Version Name instead of 'appVersionId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           }
         ],
       },
@@ -2963,8 +2960,7 @@ EXAMPLES
 
 LEARN MORE
   Use 'appcircle publish profile create --platform <platform> --name <name>' to create new profiles.
-  Use 'appcircle publish profile version list --platform <platform> --publishProfileId <uuid>' to see app versions.
-  Use 'appcircle publish profile list' without options for interactive mode.`,
+  Use 'appcircle publish profile version list --platform <platform> --publishProfileId <uuid>' to see app versions.`,
             params: [platformParam],
           },
           {
@@ -3020,7 +3016,17 @@ LEARN MORE
                 description: 'Publish Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true
+                required: false
+              },
+              {
+                name: 'profile',
+                description: "Publish Profile Name instead of 'publishProfileId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
               },
               {
                 name: 'name',
@@ -3043,20 +3049,31 @@ DESCRIPTION
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --profile <string>         Publish profile name (alternative to --publishProfileId)
 
 EXAMPLES
   appcircle publish profile delete --platform ios --publishProfileId <uuid>
-  appcircle publish profile delete --platform android --publishProfileId <uuid>
+  appcircle publish profile delete --platform android --profile "Google Play Production"
 
 LEARN MORE
-  Use 'appcircle publish profile list --platform <platform>' to get profile IDs.`,
+  Use 'appcircle publish profile list --platform <platform>' to get profile IDs and names.`,
             params: [platformParam,
               {
                 name: 'publishProfileId',
                 description: 'Publish Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true
+                required: false
+              },
+              {
+                name: 'profile',
+                description: "Publish Profile Name instead of 'publishProfileId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
               }
             ],
           },
@@ -3116,7 +3133,17 @@ LEARN MORE
                     description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'profile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   }
                 ],
               },
@@ -3147,14 +3174,34 @@ LEARN MORE
                     description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'profile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'appVersionId',
                     description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'appVersion',
+                    description: "App Version Name instead of 'appVersionId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                 ],
               },
@@ -3169,6 +3216,7 @@ USAGE
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --profile <string>         Publish profile name (alternative to --publishProfileId)
   --app <path>               Path to the app binary (ipa/apk/aab)
 
 DESCRIPTION
@@ -3176,7 +3224,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish profile version upload --platform ios --publishProfileId <uuid> --app ./MyApp.ipa
-  appcircle publish profile version upload --platform android --publishProfileId <uuid> --app ./MyApp.aab
+  appcircle publish profile version upload --platform android --profile "Google Play Production" --app ./MyApp.aab
 
 LEARN MORE
   Use 'appcircle publish profile version list' to see all versions for a profile.`,
@@ -3187,7 +3235,17 @@ LEARN MORE
                     description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'profile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'app',
@@ -3463,6 +3521,7 @@ USAGE
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --profile <string>         Publish profile name (alternative to --publishProfileId)
   --enable <true|false>      Enable or disable auto-publish
 
 DESCRIPTION
@@ -3470,10 +3529,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish profile settings autopublish --platform ios --publishProfileId <uuid> --enable true
-  appcircle publish profile settings autopublish --platform android --publishProfileId <uuid> --enable false
+  appcircle publish profile settings autopublish --platform android --profile "Google Play Production" --enable false
 
 LEARN MORE
-  Use 'appcircle publish profile list --platform <platform>' to get profile IDs.`,
+  Use 'appcircle publish profile list --platform <platform>' to get profile IDs and names.`,
                 params: [
                   platformParam,
                   {
@@ -3481,7 +3540,17 @@ LEARN MORE
                     description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'profile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'enable',
@@ -3563,8 +3632,7 @@ EXAMPLES
   appcircle publish variable group list
 
 LEARN MORE
-  Use 'appcircle publish variable group view --publishVariableGroupId <uuid>' to see variables in a group.
-  Use 'appcircle publish variable group list' for interactive mode.`,
+  Use 'appcircle publish variable group view --publishVariableGroupId <uuid>' to see variables in a group.`,
                 params: [],
               },
               {
@@ -3592,7 +3660,17 @@ LEARN MORE
                     description: 'Variable Group ID',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'variableGroup',
+                    description: "Variable Group Name instead of 'publishVariableGroupId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   }
                 ],
               },
@@ -3622,7 +3700,17 @@ LEARN MORE
                     description: 'Variable Group Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'variableGroup',
+                    description: "Variable Group Name instead of 'publishVariableGroupId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'filePath',
@@ -3659,7 +3747,17 @@ LEARN MORE
                     description: 'Variable Groups Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'variableGroup',
+                    description: "Variable Group Name instead of 'publishVariableGroupId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'path',

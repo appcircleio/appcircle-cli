@@ -416,6 +416,105 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
   if (params.platform && !['ios', 'android'].includes(params.platform.toLowerCase())) {
     throw new ProgramError(`Invalid platform(${params.platform}). Supported platforms: ios, android`);
   }
+
+  // Publish Profile ID or Profile Name validation
+  const profileRequiredCommands = [
+    `${PROGRAM_NAME}-publish-start`,
+    `${PROGRAM_NAME}-publish-view`,
+    `${PROGRAM_NAME}-publish-profile-rename`,
+    `${PROGRAM_NAME}-publish-profile-delete`,
+    `${PROGRAM_NAME}-publish-profile-settings-autopublish`,
+    `${PROGRAM_NAME}-publish-profile-version-list`,
+    `${PROGRAM_NAME}-publish-profile-version-view`,
+    `${PROGRAM_NAME}-publish-profile-version-upload`,
+    `${PROGRAM_NAME}-publish-profile-version-download`,
+    `${PROGRAM_NAME}-publish-profile-version-delete`,
+    `${PROGRAM_NAME}-publish-profile-version-mark-as-rc`,
+    `${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`,
+    `${PROGRAM_NAME}-publish-profile-version-update-release-note`
+  ];
+
+  if (profileRequiredCommands.includes(command.fullCommandName)) {
+    if (!params.publishProfileId && !params.profile) {
+      const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
+      const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
+      if (longDescription) {
+        console.log('\n' + longDescription);
+      }
+      throw new ProgramError(`Either --publishProfileId or --profile parameter is required.`);
+    }
+
+    // Resolve profile name to ID if needed
+    if (params.profile && !params.publishProfileId) {
+      const profiles = await getPublishProfiles({ platform: params.platform });
+      const foundProfile = profiles.find((p: any) => p.name === params.profile);
+      if (!foundProfile) {
+        throw new ProgramError(`Publish profile with name "${params.profile}" not found.`);
+      }
+      params.publishProfileId = foundProfile.id;
+    }
+  }
+
+  // App Version ID or App Version Name validation
+  const appVersionRequiredCommands = [
+    `${PROGRAM_NAME}-publish-start`,
+    `${PROGRAM_NAME}-publish-view`,
+    `${PROGRAM_NAME}-publish-profile-version-view`,
+    `${PROGRAM_NAME}-publish-profile-version-download`,
+    `${PROGRAM_NAME}-publish-profile-version-delete`,
+    `${PROGRAM_NAME}-publish-profile-version-mark-as-rc`,
+    `${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`,
+    `${PROGRAM_NAME}-publish-profile-version-update-release-note`
+  ];
+
+  if (appVersionRequiredCommands.includes(command.fullCommandName)) {
+    if (!params.appVersionId && !params.appVersion) {
+      const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
+      const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
+      if (longDescription) {
+        console.log('\n' + longDescription);
+      }
+      throw new ProgramError(`Either --appVersionId or --appVersion parameter is required.`);
+    }
+
+    // Resolve app version name to ID if needed
+    if (params.appVersion && !params.appVersionId) {
+      const appVersions = await getAppVersions({ publishProfileId: params.publishProfileId, platform: params.platform });
+      const foundAppVersion = appVersions.find((v: any) => v.fileName === params.appVersion || v.version === params.appVersion);
+      if (!foundAppVersion) {
+        throw new ProgramError(`App version with name "${params.appVersion}" not found.`);
+      }
+      params.appVersionId = foundAppVersion.id;
+    }
+  }
+
+  // Variable Group ID or Variable Group Name validation
+  const variableGroupRequiredCommands = [
+    `${PROGRAM_NAME}-publish-variable-group-view`,
+    `${PROGRAM_NAME}-publish-variable-group-upload`,
+    `${PROGRAM_NAME}-publish-variable-group-download`
+  ];
+
+  if (variableGroupRequiredCommands.includes(command.fullCommandName)) {
+    if (!params.publishVariableGroupId && !params.variableGroup) {
+      const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
+      const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
+      if (longDescription) {
+        console.log('\n' + longDescription);
+      }
+      throw new ProgramError(`Either --publishVariableGroupId or --variableGroup parameter is required.`);
+    }
+
+    // Resolve variable group name to ID if needed
+    if (params.variableGroup && !params.publishVariableGroupId) {
+      const variableGroups = await getPublishVariableGroups();
+      const foundGroup = variableGroups.find((g: any) => g.name === params.variableGroup);
+      if (!foundGroup) {
+        throw new ProgramError(`Variable group with name "${params.variableGroup}" not found.`);
+      }
+      params.publishVariableGroupId = foundGroup.id;
+    }
+  }
   if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-create`) {
     const profileRes = await createPublishProfile({ platform: params.platform, name: params.name });
     commandWriter(CommandTypes.PUBLISH, {
@@ -3168,17 +3267,17 @@ async function monitorPublishProcess(params: any) {
           case 1: // FAILED
             if (interval) clearInterval(interval);
             
-                         if (getConsoleOutputType() === 'json') {
-               const jsonOutput = {
-                 publishId: publishId,
-                 status: 'failed',
-                 message: 'Publish failed'
-               };
-               console.log(JSON.stringify(jsonOutput));
-               publishCompleted = true;
-               publishStatusHandled = true;
-               throw new AppcircleExitError('', 1);
-             }
+            if (getConsoleOutputType() === 'json') {
+              const jsonOutput = {
+                publishId: publishId,
+                status: 'failed',
+                message: 'Publish failed'
+              };
+              console.log(JSON.stringify(jsonOutput));
+              publishCompleted = true;
+              publishStatusHandled = true;
+              throw new AppcircleExitError('', 1);
+            }
             
             progressSpinner.fail(chalk.red(`Publish failed ❌`));
             
@@ -3221,6 +3320,19 @@ async function monitorPublishProcess(params: any) {
             
           case 2: // CANCELLED
             if (interval) clearInterval(interval);
+            
+            if (getConsoleOutputType() === 'json') {
+              const jsonOutput = {
+                publishId: publishId,
+                status: 'failed',
+                message: 'Publish failed'
+              };
+              console.log(JSON.stringify(jsonOutput));
+              publishCompleted = true;
+              publishStatusHandled = true;
+              throw new AppcircleExitError('', 1);
+            }
+            
             progressSpinner.fail(chalk.hex('#FF8C32')(`Publish was canceled 🚫`));
             
             // Handle log download directly here to avoid infinite loop
@@ -3262,6 +3374,19 @@ async function monitorPublishProcess(params: any) {
             
           case 3: // TIMEOUT
             if (interval) clearInterval(interval);
+            
+            if (getConsoleOutputType() === 'json') {
+              const jsonOutput = {
+                publishId: publishId,
+                status: 'failed',
+                message: 'Publish failed'
+              };
+              console.log(JSON.stringify(jsonOutput));
+              publishCompleted = true;
+              publishStatusHandled = true;
+              throw new AppcircleExitError('', 1);
+            }
+            
             progressSpinner.fail(chalk.red(`Publish timed out ⏱️`));
             
             // Handle log download directly here to avoid infinite loop
@@ -3324,6 +3449,19 @@ async function monitorPublishProcess(params: any) {
             
           case 201: // STOPPED
             if (interval) clearInterval(interval);
+            
+            if (getConsoleOutputType() === 'json') {
+              const jsonOutput = {
+                publishId: publishId,
+                status: 'failed',
+                message: 'Publish failed'
+              };
+              console.log(JSON.stringify(jsonOutput));
+              publishCompleted = true;
+              publishStatusHandled = true;
+              throw new AppcircleExitError('', 1);
+            }
+            
             progressSpinner.fail(chalk.hex('#FF8C32')(`Publish was stopped 🛑`));
             
             // Handle log download directly here to avoid infinite loop
@@ -3387,6 +3525,15 @@ async function monitorPublishProcess(params: any) {
     if (interval) clearInterval(interval);
     
     if (!publishCompleted) {
+      if (getConsoleOutputType() === 'json') {
+        const jsonOutput = {
+          publishId: publishId,
+          status: 'failed',
+          message: 'Publish failed'
+        };
+        console.log(JSON.stringify(jsonOutput));
+        throw new AppcircleExitError('', 1);
+      }
       progressSpinner.fail(chalk.red(`Publish monitoring timed out after ${maxRetries * 10} seconds.`));
       throw new AppcircleExitError('Publish monitoring timed out', 1);
     }
@@ -3395,6 +3542,15 @@ async function monitorPublishProcess(params: any) {
     // If it's an AppcircleExitError, re-throw it to exit properly
     if (e instanceof AppcircleExitError) {
       throw e;
+    }
+    if (getConsoleOutputType() === 'json') {
+      const jsonOutput = {
+        publishId: publishId,
+        status: 'failed',
+        message: 'Publish failed'
+      };
+      console.log(JSON.stringify(jsonOutput));
+      throw new AppcircleExitError('', 1);
     }
     progressSpinner.fail(chalk.red(`Error while monitoring Publish Status.`));
     throw new AppcircleExitError('Error while monitoring Publish Status', 1);
