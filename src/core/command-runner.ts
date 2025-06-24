@@ -2600,6 +2600,68 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
 }
 
 const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: any) => {
+  // Enterprise Profile ID or Profile Name validation
+  const profileRequiredCommands = [
+    `${PROGRAM_NAME}-enterprise-app-store-version-list`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-publish`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-unpublish`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-remove`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-notify`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-upload-for-profile`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-download-link`
+  ];
+
+  if (profileRequiredCommands.includes(command.fullCommandName)) {
+    if (!params.entProfileId && !params.profile) {
+      const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
+      const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
+      if (longDescription) {
+        console.log('\n' + longDescription);
+      }
+      throw new ProgramError(`Either --entProfileId or --profile parameter is required.`);
+    }
+
+    // Resolve profile name to ID if needed
+    if (params.profile && !params.entProfileId) {
+      const profiles = await getEnterpriseProfiles();
+      const foundProfile = profiles.find((p: any) => p.name === params.profile);
+      if (!foundProfile) {
+        throw new ProgramError(`Enterprise profile with name "${params.profile}" not found.`);
+      }
+      params.entProfileId = foundProfile.id;
+    }
+  }
+
+  // App Version ID or App Version Name validation
+  const appVersionRequiredCommands = [
+    `${PROGRAM_NAME}-enterprise-app-store-version-publish`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-unpublish`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-remove`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-notify`,
+    `${PROGRAM_NAME}-enterprise-app-store-version-download-link`
+  ];
+
+  if (appVersionRequiredCommands.includes(command.fullCommandName)) {
+    if (!params.entVersionId && !params.appVersion) {
+      const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
+      const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
+      if (longDescription) {
+        console.log('\n' + longDescription);
+      }
+      throw new ProgramError(`Either --entVersionId or --appVersion parameter is required.`);
+    }
+
+    // Resolve app version name to ID if needed
+    if (params.appVersion && !params.entVersionId) {
+      const appVersions = await getEnterpriseAppVersions({ entProfileId: params.entProfileId, publishType: "0" });
+      const foundAppVersion = appVersions.find((v: any) => v.name === params.appVersion || v.version === params.appVersion);
+      if (!foundAppVersion) {
+        throw new ProgramError(`App version with name "${params.appVersion}" not found.`);
+      }
+      params.entVersionId = foundAppVersion.id;
+    }
+  }
+  
   if (command.fullCommandName === `${PROGRAM_NAME}-enterprise-app-store-profile-list`) {
     const spinner = createOra('Listing Enterprise Profiles...').start();
     const responseData = await getEnterpriseProfiles();
