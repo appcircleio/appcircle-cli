@@ -80,6 +80,7 @@ export const createProgram = () => {
   const version = require("../package.json").version;
   const cliDescription = `Appcircle CLI is a command-line interface to interact with the Appcircle platform, enabling you to manage your CI/CD workflows, builds, testing distribution, and more, directly from your terminal.`;
   
+  program.name(PROGRAM_NAME);
   program.version(`v${version}`, "-v, --version", "output the version number");
   
   program.option("-i, --interactive", "interactive mode (AppCircle GUI)");

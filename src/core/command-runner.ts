@@ -844,13 +844,26 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
 
 const handleBuildCommand = async (command: ProgramCommand, params:any) => {
   if (command.fullCommandName === `${PROGRAM_NAME}-build-start`) {
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     if (!params.branchId && !params.branch) {
-      console.error('error: You must provide either branchId or branch parameter');
-      throw new AppcircleExitError('You must provide either branchId or branch parameter', 1);
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
     }
     if (!params.workflowId && !params.workflow) {
-      console.error('error: You must provide either workflowId or workflow parameter');
-      throw new AppcircleExitError('You must provide either workflowId or workflow parameter', 1);
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
     }
     const spinner = createOra(`Starting Build...`).start();
     try {
@@ -1237,6 +1250,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`) {
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Listing...').start();
     const responseData = await getBranches(params);
     spinner.stop();
@@ -1245,6 +1265,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflows`) {
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Listing...').start();
     const responseData = await getWorkflows(params);
     spinner.stop();
@@ -1253,6 +1280,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-configurations`) {
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Listing...').start();
     const responseData = await getConfigurations(params);
     spinner.stop();
@@ -1261,6 +1295,20 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-branch-commits`) {
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+    if (!params.branchId && !params.branch) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Listing...').start();
     const responseData = await getCommits(params);
     spinner.stop();
@@ -1269,6 +1317,20 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-list`) {
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+    if (!params.branchId && !params.branch) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Listing...').start();
     const responseData = await getBuildsOfCommit(params);
     spinner.stop();
@@ -1277,6 +1339,20 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download`) {
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+    if (!params.branchId && !params.branch) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const homeDir = os.homedir();
     const defaultDownloadDir = path.join(homeDir, 'Downloads');
     let downloadPath = params.path ? path.resolve((params.path).replace('~', homeDir)) : defaultDownloadDir;
@@ -1375,6 +1451,20 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       spinner.fail(`Failed to download artifact: ${e.message || 'Unknown error'}`);
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`) {
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+    if (!params.branchId && !params.branch) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     try {
       if (params.taskId) {
         await downloadBuildLogs(params.taskId, params);
@@ -1416,6 +1506,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: { ...responseData, name: params.name },
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-upload`) {
+    if (!params.variableGroupId && !params.variableGroup) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Loading Environment Variables from JSON file...').start();
     try {
       if (!params.filePath) {
@@ -1452,6 +1549,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-group-download`) {
+    if (!params.variableGroupId && !params.variableGroup) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Downloading Environment Variables...').start();
       try {
       const variableGroups = await getEnvironmentVariableGroups();
@@ -1506,6 +1610,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-view`) {
+    if (!params.variableGroupId && !params.variableGroup) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Listing Variables...').start();
     const responseData = await getEnvironmentVariables(params);
     spinner.stop();
@@ -1514,6 +1625,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-download`) {
+    if (!params.variableGroupId && !params.variableGroup) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Downloading Environment Variables...').start();
     try {
       const variableGroups = await getEnvironmentVariableGroups();
@@ -1568,6 +1686,13 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-variable-create`) {
+    if (!params.variableGroupId && !params.variableGroup) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Creating Environment Variable').start();
     try {
       if (params.type === 'file') {
@@ -1601,6 +1726,20 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-view`) {
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+    if (!params.branchId && !params.branch) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Listing...').start();
     try {
       const responseData = await getBuildsOfCommit(params);

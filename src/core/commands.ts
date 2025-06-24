@@ -327,9 +327,11 @@ LEARN MORE
 
 USAGE
   appcircle build start --profileId <uuid> --branchId <uuid> --workflowId <uuid>
+  appcircle build start --profile <string> --branchId <uuid> --workflowId <uuid>
 
 REQUIRED OPTIONS
   --profileId <uuid>        Build profile ID (UUID format)
+  --profile <string>        Build profile name (alternative to --profileId)
   --branchId <uuid>         Branch ID (UUID format, required unless using --branch)
   --workflowId <uuid>       Workflow ID (UUID format, required unless using --workflow)
 
@@ -339,13 +341,15 @@ OPTIONAL OPTIONS
   --commitId <uuid>         Commit ID (UUID format, optional)
   --commitHash <string>     Commit hash (alternative to --commitId)
   --configurationId <uuid>  Configuration ID (UUID format, optional)
+  --configuration <string>  Configuration name (alternative to --configurationId)
 
 EXAMPLES
   appcircle build start --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --workflowId 6ba7b811-9dad-11d1-80b4-00c04fd430c8
-  appcircle build start --profileId 550e8400-e29b-41d4-a716-446655440000 --branch "main" --workflow "Default Push Workflow"
+  appcircle build start --profile "My iOS Project" --branch "main" --workflow "Default Push Workflow"
+  appcircle build start --profile "My Android App" --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --workflowId 6ba7b811-9dad-11d1-80b4-00c04fd430c8
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
   Use 'appcircle build profile workflows --profileId <uuid>' to get available workflows.
   Use 'appcircle build start' without options for interactive mode.`,
@@ -355,7 +359,17 @@ LEARN MORE
             description: 'Build Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
-            required: true,
+            required: false,
+          },
+          {
+            name: 'profile',
+            description: "Build Profile Name instead of 'profileId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           },
           {
             name: 'branchId',
@@ -389,6 +403,16 @@ LEARN MORE
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             required: false,
+            params: [],
+          },
+          {
+            name: 'configuration',
+            description: "Configuration Name instead of 'configurationId' [Optional]",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
             params: [],
           },
           {
@@ -449,17 +473,21 @@ LEARN MORE
 
 USAGE
   appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>
+  appcircle build list --profile <string> --branch <string> --commitId <uuid>
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
   --branchId <uuid>     Branch ID (UUID format)
+  --branch <string>     Branch name (alternative to --branchId)
   --commitId <uuid>     Commit ID (UUID format)
 
 EXAMPLES
   appcircle build list --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8
+  appcircle build list --profile "My iOS Project" --branch "main" --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
   Use 'appcircle build profile branch commits --profileId <uuid> --branchId <uuid>' to get available commits.
   Use 'appcircle build list' without options for interactive mode.`,
@@ -470,7 +498,17 @@ LEARN MORE
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
-            required: true,
+            required: false,
+          },
+          {
+            name: 'profile',
+            description: "Build Profile Name instead of 'profileId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           },
           {
             name: 'branchId',
@@ -478,7 +516,17 @@ LEARN MORE
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
-            required: true,
+            required: false,
+          },
+          {
+            name: 'branch',
+            description: "Branch Name instead of 'branchId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           },
           {
             name: 'commitId',
@@ -496,18 +544,22 @@ LEARN MORE
 
 USAGE
   appcircle build view --profileId <uuid> --branchId <uuid> --commitId <uuid> --buildId <uuid>
+  appcircle build view --profile <string> --branch <string> --commitId <uuid> --buildId <uuid>
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
   --branchId <uuid>     Branch ID (UUID format)
+  --branch <string>     Branch name (alternative to --branchId)
   --commitId <uuid>     Commit ID (UUID format)
   --buildId <uuid>      Build ID (UUID format)
 
 EXAMPLES
   appcircle build view --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
+  appcircle build view --profile "My iOS Project" --branch "main" --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
   Use 'appcircle build profile branch commits --profileId <uuid> --branchId <uuid>' to get available commits.
   Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to get available builds.
@@ -519,7 +571,17 @@ LEARN MORE
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
-            required: true,
+            required: false,
+          },
+          {
+            name: 'profile',
+            description: "Build Profile Name instead of 'profileId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           },
           {
             name: 'branchId',
@@ -527,7 +589,17 @@ LEARN MORE
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             requriedForInteractiveMode: true,
-            required: true,
+            required: false,
+            params: [],
+          },
+          {
+            name: 'branch',
+            description: "Branch Name instead of 'branchId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
             params: [],
           },
           {
@@ -553,10 +625,13 @@ LEARN MORE
 
 USAGE
   appcircle build download --profileId <uuid> --branchId <uuid> --commitId <uuid> --buildId <uuid> [--path <directory>]
+  appcircle build download --profile <string> --branch <string> --commitId <uuid> --buildId <uuid> [--path <directory>]
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
   --branchId <uuid>     Branch ID (UUID format)  
+  --branch <string>     Branch name (alternative to --branchId)
   --commitId <uuid>     Commit ID (UUID format)
   --buildId <uuid>      Build ID (UUID format)
 
@@ -565,10 +640,10 @@ OPTIONAL OPTIONS
 
 EXAMPLES
   appcircle build download --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
-  appcircle build download --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8 --path ./downloads
+  appcircle build download --profile "My iOS Project" --branch "main" --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8 --path ./downloads
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
   Use 'appcircle build profile branch commits --profileId <uuid> --branchId <uuid>' to get available commits.
   Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to get available builds.
@@ -588,7 +663,17 @@ LEARN MORE
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
-            required: true,
+            required: false,
+          },
+          {
+            name: 'profile',
+            description: "Build Profile Name instead of 'profileId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           },
           {
             name: 'branchId',
@@ -596,7 +681,17 @@ LEARN MORE
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             requriedForInteractiveMode: true,
-            required: true,
+            required: false,
+            params: [],
+          },
+          {
+            name: 'branch',
+            description: "Branch Name instead of 'branchId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
             params: [],
           },
           {
@@ -622,10 +717,13 @@ LEARN MORE
 
 USAGE
   appcircle build download-log --profileId <uuid> --branchId <uuid> --commitId <uuid> --buildId <uuid> [--path <directory>]
+  appcircle build download-log --profile <string> --branch <string> --commitId <uuid> --buildId <uuid> [--path <directory>]
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
   --branchId <uuid>     Branch ID (UUID format)  
+  --branch <string>     Branch name (alternative to --branchId)
   --commitId <uuid>     Commit ID (UUID format)
   --buildId <uuid>      Build ID (UUID format)
 
@@ -634,10 +732,10 @@ OPTIONAL OPTIONS
 
 EXAMPLES
   appcircle build download-log --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
-  appcircle build download-log --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8 --path ./logs
+  appcircle build download-log --profile "My iOS Project" --branch "main" --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8 --path ./logs
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
   Use 'appcircle build profile branch commits --profileId <uuid> --branchId <uuid>' to get available commits.
   Use 'appcircle build list --profileId <uuid> --branchId <uuid> --commitId <uuid>' to get available builds.
@@ -657,7 +755,17 @@ LEARN MORE
             type: CommandParameterTypes.SELECT,
             requriedForInteractiveMode: true,
             valueType: 'uuid',
-            required: true,
+            required: false,
+          },
+          {
+            name: 'profile',
+            description: "Build Profile Name instead of 'profileId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           },
           {
             name: 'branchId',
@@ -665,7 +773,17 @@ LEARN MORE
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
             requriedForInteractiveMode: true,
-            required: true,
+            required: false,
+            params: [],
+          },
+          {
+            name: 'branch',
+            description: "Branch Name instead of 'branchId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
             params: [],
           },
           {
@@ -739,15 +857,18 @@ LEARN MORE
 
 USAGE
   appcircle build profile branch list --profileId <uuid>
+  appcircle build profile branch list --profile <string>
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
 
 EXAMPLES
   appcircle build profile branch list --profileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle build profile branch list --profile "My iOS Project"
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use the branchId from the output for other build commands.
   Use 'appcircle build profile branch list' without options for interactive mode.`,
                 params: [
@@ -756,7 +877,17 @@ LEARN MORE
                     description: 'Build Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true,
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                 ],
               },
@@ -767,16 +898,20 @@ LEARN MORE
 
 USAGE
   appcircle build profile branch commits --profileId <uuid> --branchId <uuid>
+  appcircle build profile branch commits --profile <string> --branch <string>
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
   --branchId <uuid>     Branch ID (UUID format)
+  --branch <string>     Branch name (alternative to --branchId)
 
 EXAMPLES
   appcircle build profile branch commits --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+  appcircle build profile branch commits --profile "My iOS Project" --branch "main"
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
   Use the commitId from the output for other build commands.
   Use 'appcircle build profile branch commits' without options for interactive mode.`,
@@ -787,14 +922,34 @@ LEARN MORE
                     type: CommandParameterTypes.SELECT,
                     requriedForInteractiveMode: true,
                     valueType: 'uuid',
-                    required: true,
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'branchId',
                     description: 'Branch Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true,
+                    required: false,
+                  },
+                  {
+                    name: 'branch',
+                    description: "Branch Name instead of 'branchId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                 ],
               },
@@ -808,15 +963,18 @@ LEARN MORE
 
 USAGE
   appcircle build profile workflows --profileId <uuid>
+  appcircle build profile workflows --profile <string>
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
 
 EXAMPLES
   appcircle build profile workflows --profileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle build profile workflows --profile "My iOS Project"
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use the workflowId from the output for build start commands.
   Use 'appcircle build profile workflows' without options for interactive mode.`,
             params: [
@@ -825,7 +983,17 @@ LEARN MORE
                 description: 'Build Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
+                required: false,
+              },
+              {
+                name: 'profile',
+                description: "Build Profile Name instead of 'profileId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
               },
             ],
           },
@@ -836,15 +1004,18 @@ LEARN MORE
 
 USAGE
   appcircle build profile configurations --profileId <uuid>
+  appcircle build profile configurations --profile <string>
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
 
 EXAMPLES
   appcircle build profile configurations --profileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle build profile configurations --profile "My iOS Project"
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use the configurationId from the output for build start commands (optional).
   Use 'appcircle build profile configurations' without options for interactive mode.`,
             params: [
@@ -853,7 +1024,17 @@ LEARN MORE
                 description: 'Build Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
+                required: false,
+              },
+              {
+                name: 'profile',
+                description: "Build Profile Name instead of 'profileId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
               },
             ],
           },
@@ -926,9 +1107,11 @@ LEARN MORE
                 longDescription: `
 USAGE
   appcircle build variable group upload --variableGroupId <uuid> --filePath <path>
+  appcircle build variable group upload --variableGroup <string> --filePath <path>
 
 REQUIRED OPTIONS
   --variableGroupId <uuid>    Variable group ID (UUID format)
+  --variableGroup <string>    Variable group name (alternative to --variableGroupId)
   --filePath <path>           Path to JSON file containing environment variables
 
 DESCRIPTION
@@ -937,10 +1120,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle build variable group upload --variableGroupId 550e8400-e29b-41d4-a716-446655440000 --filePath ./variables.json
-  appcircle build variable group upload --variableGroupId 550e8400-e29b-41d4-a716-446655440000 --filePath ~/env-vars.json
+  appcircle build variable group upload --variableGroup "CustomScriptVariables" --filePath ~/env-vars.json
 
 LEARN MORE
-  Use 'appcircle build variable group list' to get available groups with their UUIDs.
+  Use 'appcircle build variable group list' to get available groups with their UUIDs and names.
   Use 'appcircle build variable group download --variableGroupId <uuid>' to download existing variables as template.
   Use 'appcircle build variable group upload' without options for interactive mode.
 `,
@@ -950,7 +1133,17 @@ LEARN MORE
                     description: 'Which variable group do you want to upload the JSON to?',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'variableGroup',
+                    description: "Variable Group Name instead of 'variableGroupId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'filePath',
@@ -967,9 +1160,11 @@ LEARN MORE
                 longDescription: `
 USAGE
   appcircle build variable group download --variableGroupId <uuid> [--path <directory>]
+  appcircle build variable group download --variableGroup <string> [--path <directory>]
 
 REQUIRED OPTIONS
   --variableGroupId <uuid>    Variable group ID (UUID format)
+  --variableGroup <string>    Variable group name (alternative to --variableGroupId)
 
 OPTIONAL OPTIONS
   --path <directory>          Directory path for JSON file to be downloaded (defaults to current directory)
@@ -979,10 +1174,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle build variable group download --variableGroupId 550e8400-e29b-41d4-a716-446655440000
-  appcircle build variable group download --variableGroupId 550e8400-e29b-41d4-a716-446655440000 --path ./exports
+  appcircle build variable group download --variableGroup "CustomScriptVariables" --path ./exports
 
 LEARN MORE
-  Use 'appcircle build variable group list' to get available groups with their UUIDs.
+  Use 'appcircle build variable group list' to get available groups with their UUIDs and names.
   Use 'appcircle build variable group upload --variableGroupId <uuid> --filePath <path>' to upload variables from file.
   Use 'appcircle build variable group download' without options for interactive mode.
 `,
@@ -992,7 +1187,17 @@ LEARN MORE
                     description: 'Variable Groups Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'variableGroup',
+                    description: "Variable Group Name instead of 'variableGroupId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'path',
@@ -1012,9 +1217,11 @@ LEARN MORE
             longDescription: `
 USAGE
   appcircle build variable create --variableGroupId <uuid> --type <type> --key <key> [options]
+  appcircle build variable create --variableGroup <string> --type <type> --key <key> [options]
 
 REQUIRED OPTIONS
   --variableGroupId <uuid>    Variable group ID (UUID format)
+  --variableGroup <string>    Variable group name (alternative to --variableGroupId)
   --type <type>               Variable type ('text' or 'file')
   --key <key>                 Variable key name
 
@@ -1031,11 +1238,11 @@ DESCRIPTION
 
 EXAMPLES
   appcircle build variable create --variableGroupId 550e8400-e29b-41d4-a716-446655440000 --type text --key "API_KEY" --value "secret123"
-  appcircle build variable create --variableGroupId 550e8400-e29b-41d4-a716-446655440000 --type file --key "CONFIG_FILE" --filePath ./config.json
-  appcircle build variable create --variableGroupId 550e8400-e29b-41d4-a716-446655440000 --type text --key "DB_PASSWORD" --value "password123" --isSecret
+  appcircle build variable create --variableGroup "CustomScriptVariables" --type file --key "CONFIG_FILE" --filePath ./config.json
+  appcircle build variable create --variableGroup "CustomScriptVariables" --type text --key "DB_PASSWORD" --value "password123" --isSecret
 
 LEARN MORE
-  Use 'appcircle build variable group list' to get available groups with their UUIDs.
+  Use 'appcircle build variable group list' to get available groups with their UUIDs and names.
   Use 'appcircle build variable view --variableGroupId <uuid>' to see existing variables.
   Use 'appcircle build variable create' without options for interactive mode.
 `,
@@ -1045,7 +1252,17 @@ LEARN MORE
                 description: 'Variable Group Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
+                required: false,
+              },
+              {
+                name: 'variableGroup',
+                description: "Variable Group Name instead of 'variableGroupId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
               },
               {
                 name: 'type',
@@ -1102,18 +1319,21 @@ LEARN MORE
             longDescription: `
 USAGE
   appcircle build variable view --variableGroupId <uuid>
+  appcircle build variable view --variableGroup <string>
 
 REQUIRED OPTIONS
   --variableGroupId <uuid>    Variable group ID (UUID format)
+  --variableGroup <string>    Variable group name (alternative to --variableGroupId)
 
 DESCRIPTION
   View all environment variables in a specified variable group.
 
 EXAMPLES
   appcircle build variable view --variableGroupId 550e8400-e29b-41d4-a716-446655440000
+  appcircle build variable view --variableGroup "CustomScriptVariables"
 
 LEARN MORE
-  Use 'appcircle build variable group list' to get available groups with their UUIDs.
+  Use 'appcircle build variable group list' to get available groups with their UUIDs and names.
   Use 'appcircle build variable create --variableGroupId <uuid>' to add new variables.
   Use 'appcircle build variable view' without options for interactive mode.
 `,
@@ -1123,7 +1343,17 @@ LEARN MORE
                 description: 'Variable Groups Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
+                required: false,
+              },
+              {
+                name: 'variableGroup',
+                description: "Variable Group Name instead of 'variableGroupId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
               },
             ],
           },

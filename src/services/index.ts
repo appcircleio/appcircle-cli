@@ -27,8 +27,41 @@ export async function getBuildProfiles(options: OptionsType = {}) {
   return buildProfiles.data;
 }
 
-export async function getCommits(options: OptionsType<{ branchId: string }>) {
-  const commits = await appcircleApi.get(`build/v2/commits?branchId=${options.branchId}`, {
+export async function getCommits(options: OptionsType<{ branchId?: string; branch?: string; profileId?: string; profile?: string }>) {
+  let profileId = options.profileId || '';
+  let branchId = options.branchId || '';
+
+  // Resolve profile name to profileId if provided
+  if (!profileId && options.profile) {
+    const buildProfiles = await getBuildProfiles();
+    const profile = buildProfiles.find((p: any) => p.name === options.profile);
+    if (profile) {
+      profileId = profile.id;
+    } else {
+      throw new ProgramError(`Profile with name "${options.profile}" not found.`);
+    }
+  }
+
+  if (!profileId) {
+    throw new ProgramError("Profile ID or Profile Name is required.");
+  }
+
+  // Resolve branch name to branchId if provided
+  if (!branchId && options.branch) {
+    const branchesRes = await getBranches({ profileId });
+    const branch = branchesRes.branches.find((b: any) => b.name === options.branch);
+    if (branch) {
+      branchId = branch.id;
+    } else {
+      throw new ProgramError(`Branch with name "${options.branch}" not found for profile ID "${profileId}".`);
+    }
+  }
+
+  if (!branchId) {
+    throw new ProgramError("Branch ID or Branch Name is required.");
+  }
+
+  const commits = await appcircleApi.get(`build/v2/commits?branchId=${branchId}`, {
     headers: getHeaders(),
   });
   return commits.data;
@@ -49,16 +82,27 @@ export async function getActiveBuilds() {
 }
 
 export async function startBuild(
-  options: OptionsType<{ profileId: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string, commitHash?: string, configurationId?: string }>
+  options: OptionsType<{ profileId?: string; profile?: string; branch?: string; workflow?: string; branchId?: string; workflowId?: string; commitId?: string, commitHash?: string, configurationId?: string, configuration?: string }>
 ) {
   let branchId = options.branchId || '';
   let workflowId = options.workflowId || '';
   let commitId = options.commitId || '';
   let configurationId = options.configurationId || '';
-  const profileId = options.profileId;
+  let profileId = options.profileId || '';
+
+  // Resolve profile name to profileId if provided
+  if (!profileId && options.profile) {
+    const buildProfiles = await getBuildProfiles();
+    const profile = buildProfiles.find((p: any) => p.name === options.profile);
+    if (profile) {
+      profileId = profile.id;
+    } else {
+      throw new ProgramError(`Profile with name "${options.profile}" not found.`);
+    }
+  }
 
   if (!profileId) {
-    throw new ProgramError("Profile ID is required to start a build.");
+    throw new ProgramError("Profile ID or Profile Name is required to start a build.");
   }
 
   if (!branchId && options.branch) {
@@ -98,6 +142,17 @@ export async function startBuild(
       commitId = foundCommit.id;
     } else {
       throw new ProgramError(`Commit with hash "${options.commitHash}" not found for branch ID "${branchId}".`);
+    }
+  }
+
+  // Resolve configuration name to configurationId if provided
+  if (!configurationId && options.configuration) {
+    const allConfigurations = await getConfigurations({ profileId });
+    const configuration = allConfigurations.find((c: any) => c.item1 && c.item1.configurationName === options.configuration);
+    if (configuration && configuration.item1) {
+      configurationId = configuration.item1.id;
+    } else {
+      throw new ProgramError(`Configuration with name "${options.configuration}" not found for profile ID "${profileId}".`);
     }
   }
 
@@ -334,20 +389,54 @@ export async function createEnvironmentVariableGroup(options: OptionsType<{ name
   return response.data;
 }
 
-export async function getEnvironmentVariables(options: OptionsType<{ variableGroupId: string }>) {
-  const environmentVariables = await appcircleApi.get(`build/v1/variable-groups/${options.variableGroupId}/variables`, {
+export async function getEnvironmentVariables(options: OptionsType<{ variableGroupId?: string; variableGroup?: string }>) {
+  let variableGroupId = options.variableGroupId || '';
+
+  // Resolve variableGroup name to variableGroupId if provided
+  if (!variableGroupId && options.variableGroup) {
+    const variableGroups = await getEnvironmentVariableGroups();
+    const group = variableGroups.find((g: any) => g.name === options.variableGroup);
+    if (group) {
+      variableGroupId = group.id;
+    } else {
+      throw new ProgramError(`Variable group with name "${options.variableGroup}" not found.`);
+    }
+  }
+
+  if (!variableGroupId) {
+    throw new ProgramError("Variable Group ID or Variable Group Name is required.");
+  }
+
+  const environmentVariables = await appcircleApi.get(`build/v1/variable-groups/${variableGroupId}/variables`, {
     headers: getHeaders(),
   });
   return environmentVariables.data;
 }
 
-export async function uploadEnvironmentVariablesFromFile(options: OptionsType<{ variableGroupId: string; filePath: string }>) {
+export async function uploadEnvironmentVariablesFromFile(options: OptionsType<{ variableGroupId?: string; variableGroup?: string; filePath: string }>) {
+  let variableGroupId = options.variableGroupId || '';
+
+  // Resolve variableGroup name to variableGroupId if provided
+  if (!variableGroupId && options.variableGroup) {
+    const variableGroups = await getEnvironmentVariableGroups();
+    const group = variableGroups.find((g: any) => g.name === options.variableGroup);
+    if (group) {
+      variableGroupId = group.id;
+    } else {
+      throw new ProgramError(`Variable group with name "${options.variableGroup}" not found.`);
+    }
+  }
+
+  if (!variableGroupId) {
+    throw new ProgramError("Variable Group ID or Variable Group Name is required.");
+  }
+
   const form = new FormData();
-  form.append('variableGroupId', options.variableGroupId);
+  form.append('variableGroupId', variableGroupId);
   form.append('envVariablesFile', fs.createReadStream(options.filePath));
 
   const response = await appcircleApi.post(
-    `build/v1/variable-groups/${options.variableGroupId}/upload-variables-file`,
+    `build/v1/variable-groups/${variableGroupId}/upload-variables-file`,
     form,
     {
       maxContentLength: Infinity,
@@ -361,9 +450,26 @@ export async function uploadEnvironmentVariablesFromFile(options: OptionsType<{ 
   return response.data;
 }
 
-async function createTextEnvironmentVariable(options: OptionsType<{ variableGroupId: string; value: string; isSecret: boolean; key: string }>) {
+async function createTextEnvironmentVariable(options: OptionsType<{ variableGroupId?: string; variableGroup?: string; value: string; isSecret: boolean; key: string }>) {
+  let variableGroupId = options.variableGroupId || '';
+
+  // Resolve variableGroup name to variableGroupId if provided
+  if (!variableGroupId && options.variableGroup) {
+    const variableGroups = await getEnvironmentVariableGroups();
+    const group = variableGroups.find((g: any) => g.name === options.variableGroup);
+    if (group) {
+      variableGroupId = group.id;
+    } else {
+      throw new ProgramError(`Variable group with name "${options.variableGroup}" not found.`);
+    }
+  }
+
+  if (!variableGroupId) {
+    throw new ProgramError("Variable Group ID or Variable Group Name is required.");
+  }
+
   const response = await appcircleApi.post(
-    `build/v1/variable-groups/${options.variableGroupId}/variables`,
+    `build/v1/variable-groups/${variableGroupId}/variables`,
     { Key: options.key, Value: options.value, IsSecret: options.isSecret || 'false' },
     {
       headers: getHeaders(),
@@ -372,7 +478,24 @@ async function createTextEnvironmentVariable(options: OptionsType<{ variableGrou
   return response.data;
 }
 
-async function createFileEnvironmentVariable(options: OptionsType<{ key: string; isSecret: boolean; filePath: string; variableGroupId: string }>) {
+async function createFileEnvironmentVariable(options: OptionsType<{ key: string; isSecret: boolean; filePath: string; variableGroupId?: string; variableGroup?: string }>) {
+  let variableGroupId = options.variableGroupId || '';
+
+  // Resolve variableGroup name to variableGroupId if provided
+  if (!variableGroupId && options.variableGroup) {
+    const variableGroups = await getEnvironmentVariableGroups();
+    const group = variableGroups.find((g: any) => g.name === options.variableGroup);
+    if (group) {
+      variableGroupId = group.id;
+    } else {
+      throw new ProgramError(`Variable group with name "${options.variableGroup}" not found.`);
+    }
+  }
+
+  if (!variableGroupId) {
+    throw new ProgramError("Variable Group ID or Variable Group Name is required.");
+  }
+
   const form = new FormData();
   const file = fs.createReadStream(options.filePath);
   console.log('options.filePath): ', options.filePath);
@@ -381,7 +504,7 @@ async function createFileEnvironmentVariable(options: OptionsType<{ key: string;
   form.append('IsSecret', 'false');
   form.append('Binary', file);
 
-  const uploadResponse = await appcircleApi.post(`build/v1/variable-groups/${options.variableGroupId}/variables/files`, form, {
+  const uploadResponse = await appcircleApi.post(`build/v1/variable-groups/${variableGroupId}/variables/files`, form, {
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
     headers: {
@@ -396,7 +519,8 @@ async function createFileEnvironmentVariable(options: OptionsType<{ key: string;
 export async function createEnvironmentVariable(
   options: OptionsType<{
     type: keyof typeof EnvironmentVariableTypes;
-    variableGroupId: string;
+    variableGroupId?: string;
+    variableGroup?: string;
     key: string;
     value: string;
     filePath: string;
@@ -412,8 +536,25 @@ export async function createEnvironmentVariable(
   }
 }
 
-export async function getBranches(options: OptionsType<{ profileId: string }>, showConsole: boolean = true) {
-  const branchResponse = await appcircleApi.get(`build/v2/profiles/${options.profileId}`, {
+export async function getBranches(options: OptionsType<{ profileId?: string; profile?: string }>, showConsole: boolean = true) {
+  let profileId = options.profileId || '';
+
+  // Resolve profile name to profileId if provided
+  if (!profileId && options.profile) {
+    const buildProfiles = await getBuildProfiles();
+    const profile = buildProfiles.find((p: any) => p.name === options.profile);
+    if (profile) {
+      profileId = profile.id;
+    } else {
+      throw new ProgramError(`Profile with name "${options.profile}" not found.`);
+    }
+  }
+
+  if (!profileId) {
+    throw new ProgramError("Profile ID or Profile Name is required.");
+  }
+
+  const branchResponse = await appcircleApi.get(`build/v2/profiles/${profileId}`, {
     headers: getHeaders(),
   });
   
@@ -429,15 +570,49 @@ export async function getBranches(options: OptionsType<{ profileId: string }>, s
   };
 }
 
-export async function getWorkflows(options: OptionsType<{ profileId: string }>) {
-  const workflowResponse = await appcircleApi.get(`build/v2/profiles/${options.profileId}/workflows`, {
+export async function getWorkflows(options: OptionsType<{ profileId?: string; profile?: string }>) {
+  let profileId = options.profileId || '';
+
+  // Resolve profile name to profileId if provided
+  if (!profileId && options.profile) {
+    const buildProfiles = await getBuildProfiles();
+    const profile = buildProfiles.find((p: any) => p.name === options.profile);
+    if (profile) {
+      profileId = profile.id;
+    } else {
+      throw new ProgramError(`Profile with name "${options.profile}" not found.`);
+    }
+  }
+
+  if (!profileId) {
+    throw new ProgramError("Profile ID or Profile Name is required.");
+  }
+
+  const workflowResponse = await appcircleApi.get(`build/v2/profiles/${profileId}/workflows`, {
     headers: getHeaders(),
   });
   return workflowResponse.data;
 }
 
-export async function getConfigurations(options: OptionsType<{ profileId: string }>) {
-  const configurationsResponse = await appcircleApi.get(`build/v2/profiles/${options.profileId}/configurations`, {
+export async function getConfigurations(options: OptionsType<{ profileId?: string; profile?: string }>) {
+  let profileId = options.profileId || '';
+
+  // Resolve profile name to profileId if provided
+  if (!profileId && options.profile) {
+    const buildProfiles = await getBuildProfiles();
+    const profile = buildProfiles.find((p: any) => p.name === options.profile);
+    if (profile) {
+      profileId = profile.id;
+    } else {
+      throw new ProgramError(`Profile with name "${options.profile}" not found.`);
+    }
+  }
+
+  if (!profileId) {
+    throw new ProgramError("Profile ID or Profile Name is required.");
+  }
+
+  const configurationsResponse = await appcircleApi.get(`build/v2/profiles/${profileId}/configurations`, {
     headers: getHeaders(),
   });
   return configurationsResponse.data;
