@@ -2249,9 +2249,11 @@ LEARN MORE
 
 USAGE
   appcircle testing-distribution upload --distProfileId <uuid> --app <path> --message <message>
+  appcircle testing-distribution upload --profile <string> --app <path> --message <message>
 
 REQUIRED OPTIONS
   --distProfileId <uuid>  Distribution profile ID (UUID format)
+  --profile <string>      Distribution profile name (alternative to --distProfileId)
   --app <path>           Path to the mobile app file (.ipa for iOS, .apk/.aab for Android)
   --message <message>    Release notes for this distribution
 
@@ -2261,10 +2263,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution upload --distProfileId 550e8400-e29b-41d4-a716-446655440000 --app ./MyApp.ipa --message "Fixed login bug"
-  appcircle testing-distribution upload --distProfileId 550e8400-e29b-41d4-a716-446655440000 --app ./MyApp.apk --message "New feature release"
+  appcircle testing-distribution upload --profile "Beta Testing" --app ./MyApp.apk --message "New feature release"
 
 LEARN MORE
-  Use 'appcircle testing-distribution profile list' to get available distribution profiles.
+  Use 'appcircle testing-distribution profile list' to get available distribution profiles with their UUIDs and names.
   Use 'appcircle testing-distribution profile settings auto-send' to configure automated distribution.
   Use 'appcircle testing-distribution upload' without options for interactive mode.`,
         params: [
@@ -2273,6 +2275,17 @@ LEARN MORE
             description: 'Distribution Profile Name (ID)',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
+            required: false,
+          },
+          {
+            name: 'profile',
+            description: "Distribution Profile Name instead of 'distProfileId'",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            params: [],
           },
           {
             name: 'message',
@@ -2401,32 +2414,20 @@ LEARN MORE
   Use 'appcircle testing-distribution profile settings remove-group --distProfileId <uuid> --groupName <name>' to remove testing groups.
   Use 'appcircle testing-distribution profile settings add-workflow --distProfileId <uuid> --workflowName <name>' to add distribution workflows.
   Use 'appcircle testing-distribution profile settings remove-workflow --distProfileId <uuid> --workflowName <name>' to remove distribution workflows.`,
-            params: [
+            params: [],
+            subCommands: [
               {
-                name: 'distProfileId',
-                description: 'Distribution Profile Name (ID)',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
-              },
-              {
-                name: 'testingGroupIds',
-                description: 'Testing Group Names (IDs) for Automated Distribution',
-                longDescription: 'Testing Group IDs for Automated Distribution',
-                type: CommandParameterTypes.MULTIPLE_SELECT,
-                valueType: 'string'
-              }
-            ]
-          },
-          {
-            command: 'auto-send',
-            description: 'Select the Test Groups for Automated Distribution',
-            longDescription: `Configure automated distribution to testing groups
+                command: 'auto-send',
+                description: 'Select the Test Groups for Automated Distribution',
+                longDescription: `Configure automated distribution to testing groups
 
 USAGE
   appcircle testing-distribution profile settings auto-send --distProfileId <uuid> --testingGroupIds <group-ids>
+  appcircle testing-distribution profile settings auto-send --profile <string> --testingGroupIds <group-ids>
 
 REQUIRED OPTIONS
   --distProfileId <uuid>      Distribution profile ID (UUID format)
+  --profile <string>          Distribution profile name (alternative to --distProfileId)
   --testingGroupIds <ids>     Testing group IDs for automated distribution (multiple values supported)
 
 DESCRIPTION
@@ -2435,25 +2436,38 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution profile settings auto-send --distProfileId 550e8400-e29b-41d4-a716-446655440000 --testingGroupIds "group1,group2"
-  appcircle testing-distribution profile settings auto-send --distProfileId 550e8400-e29b-41d4-a716-446655440000 --testingGroupIds "beta-testers"
+  appcircle testing-distribution profile settings auto-send --profile "Beta Testing" --testingGroupIds "QA Team,Beta Testers"
 
 LEARN MORE
   Use 'appcircle testing-distribution testing-group list' to get available testing groups.
-  Use 'appcircle testing-distribution profile list' to get available distribution profiles.
+  Use 'appcircle testing-distribution profile list' to get available distribution profiles with their UUIDs and names.
   Use 'appcircle testing-distribution profile settings auto-send' without options for interactive mode.`,
-            params: [
-              {
-                name: 'distProfileId',
-                description: 'Distribution Profile Name (ID)',
-                type: CommandParameterTypes.SELECT,
-                valueType: 'uuid',
-              },
-              {
-                name: 'testingGroupIds',
-                description: 'Testing Group Names (IDs) for automated Distribution',
-                longDescription: 'Testing Group IDs for automated Distribution',
-                type: CommandParameterTypes.MULTIPLE_SELECT,
-                valueType: 'string'
+                params: [
+                  {
+                    name: 'distProfileId',
+                    description: 'Distribution Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Distribution Profile Name instead of 'distProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'testingGroupIds',
+                    description: 'Testing Group Names (IDs) for automated Distribution',
+                    longDescription: 'Testing Group IDs for automated Distribution',
+                    type: CommandParameterTypes.MULTIPLE_SELECT,
+                    valueType: 'string'
+                  }
+                ]
               }
             ]
           },
@@ -2516,9 +2530,11 @@ LEARN MORE
 
 USAGE
   appcircle testing-distribution testing-group view --testingGroupId <uuid>
+  appcircle testing-distribution testing-group view --testingGroup <string>
 
 REQUIRED OPTIONS
   --testingGroupId <uuid>  Testing group ID (UUID format)
+  --testingGroup <string>  Testing group name (alternative to --testingGroupId)
 
 DESCRIPTION
   Display detailed information about a specific testing group,
@@ -2526,10 +2542,11 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution testing-group view --testingGroupId 550e8400-e29b-41d4-a716-446655440000
+  appcircle testing-distribution testing-group view --testingGroup "QA Team"
 
 LEARN MORE
-  Use 'appcircle testing-distribution testing-group list' to get available groups with their UUIDs.
-  Use 'appcircle testing-distribution testing-group tester add --testingGroupId <uuid>' to add testers.
+  Use 'appcircle testing-distribution testing-group list' to get available groups with their UUIDs and names.
+  Use 'appcircle testing-distribution testing-group tester add' to add testers.
   Use 'appcircle testing-distribution testing-group view' without options for interactive mode.`,
             params: [
               {
@@ -2537,6 +2554,17 @@ LEARN MORE
                 description: 'Testing group name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
+                required: false,
+              },
+              {
+                name: 'testingGroup',
+                description: "Testing Group Name instead of 'testingGroupId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
               }
             ],
           },
@@ -2579,9 +2607,11 @@ LEARN MORE
 
 USAGE
   appcircle testing-distribution testing-group remove --testingGroupId <uuid>
+  appcircle testing-distribution testing-group remove --testingGroup <string>
 
 REQUIRED OPTIONS
   --testingGroupId <uuid>  Testing group ID (UUID format)
+  --testingGroup <string>  Testing group name (alternative to --testingGroupId)
 
 DESCRIPTION
   Permanently remove a testing group from your organization.
@@ -2589,10 +2619,11 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution testing-group remove --testingGroupId 550e8400-e29b-41d4-a716-446655440000
+  appcircle testing-distribution testing-group remove --testingGroup "Old QA Team"
 
 LEARN MORE
-  Use 'appcircle testing-distribution testing-group list' to get available groups with their UUIDs.
-  Use 'appcircle testing-distribution testing-group view --testingGroupId <uuid>' to see group details before removal.
+  Use 'appcircle testing-distribution testing-group list' to get available groups with their UUIDs and names.
+  Use 'appcircle testing-distribution testing-group view' to see group details before removal.
   Use 'appcircle testing-distribution testing-group remove' without options for interactive mode.`,
             params: [
               {
@@ -2600,6 +2631,17 @@ LEARN MORE
                 description: 'Testing group name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
+                required: false,
+              },
+              {
+                name: 'testingGroup',
+                description: "Testing Group Name instead of 'testingGroupId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
               }
             ],
           },
@@ -2634,9 +2676,11 @@ LEARN MORE
 
 USAGE
   appcircle testing-distribution testing-group tester add --testingGroupId <uuid> --testerEmail <email>
+  appcircle testing-distribution testing-group tester add --testingGroup <string> --testerEmail <email>
 
 REQUIRED OPTIONS
   --testingGroupId <uuid>  Testing group ID (UUID format)
+  --testingGroup <string>  Testing group name (alternative to --testingGroupId)
   --testerEmail <email>    Email address of the tester to add
 
 DESCRIPTION
@@ -2645,11 +2689,11 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution testing-group tester add --testingGroupId 550e8400-e29b-41d4-a716-446655440000 --testerEmail "john@example.com"
-  appcircle testing-distribution testing-group tester add --testingGroupId 550e8400-e29b-41d4-a716-446655440000 --testerEmail "qa-team@company.com"
+  appcircle testing-distribution testing-group tester add --testingGroup "QA Team" --testerEmail "qa-team@company.com"
 
 LEARN MORE
-  Use 'appcircle testing-distribution testing-group list' to get available testing groups.
-  Use 'appcircle testing-distribution testing-group view --testingGroupId <uuid>' to see current testers.
+  Use 'appcircle testing-distribution testing-group list' to get available testing groups with their UUIDs and names.
+  Use 'appcircle testing-distribution testing-group view' to see current testers.
   Use 'appcircle testing-distribution testing-group tester add' without options for interactive mode.`,
                 params: [
                   {
@@ -2657,6 +2701,17 @@ LEARN MORE
                     description: 'Testing group name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'testingGroup',
+                    description: "Testing Group Name instead of 'testingGroupId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'testerEmail',
@@ -2673,9 +2728,11 @@ LEARN MORE
 
 USAGE
   appcircle testing-distribution testing-group tester remove --testingGroupId <uuid> --testerEmail <email>
+  appcircle testing-distribution testing-group tester remove --testingGroup <string> --testerEmail <email>
 
 REQUIRED OPTIONS
   --testingGroupId <uuid>  Testing group ID (UUID format)
+  --testingGroup <string>  Testing group name (alternative to --testingGroupId)
   --testerEmail <email>    Email address of the tester to remove
 
 DESCRIPTION
@@ -2683,11 +2740,11 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution testing-group tester remove --testingGroupId 550e8400-e29b-41d4-a716-446655440000 --testerEmail "john@example.com"
-  appcircle testing-distribution testing-group tester remove --testingGroupId 550e8400-e29b-41d4-a716-446655440000 --testerEmail "former-employee@company.com"
+  appcircle testing-distribution testing-group tester remove --testingGroup "QA Team" --testerEmail "former-employee@company.com"
 
 LEARN MORE
-  Use 'appcircle testing-distribution testing-group list' to get available testing groups.
-  Use 'appcircle testing-distribution testing-group view --testingGroupId <uuid>' to see current testers.
+  Use 'appcircle testing-distribution testing-group list' to get available testing groups with their UUIDs and names.
+  Use 'appcircle testing-distribution testing-group view' to see current testers.
   Use 'appcircle testing-distribution testing-group tester remove' without options for interactive mode.`,
                 params: [
                   {
@@ -2695,6 +2752,17 @@ LEARN MORE
                     description: 'Testing group name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'testingGroup',
+                    description: "Testing Group Name instead of 'testingGroupId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'testerEmail',

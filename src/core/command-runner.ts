@@ -1789,9 +1789,28 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       data: { ...responseData, name: params.name },
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-upload`) {
+    // Validate that either distProfileId or profile parameter is provided
+    if (!params.distProfileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('Either --distProfileId or --profile parameter is required', 1);
+    }
+
     const spinner = createOra('Try to upload the app').start();
     try {
       const profiles = await getDistributionProfiles(params);
+      
+      // If profile name is provided, resolve it to distProfileId
+      if (params.profile && !params.distProfileId) {
+        const foundProfile = profiles.find((p: any) => p.name === params.profile);
+        if (!foundProfile) {
+          spinner.fail(`Distribution profile with name "${params.profile}" not found`);
+          throw new AppcircleExitError(`Distribution profile with name "${params.profile}" not found`, 1);
+        }
+        params.distProfileId = foundProfile.id;
+      }
       if (!profiles || profiles.length === 0) {
         spinner.text = 'No Distribution Profile available';
         spinner.fail();
@@ -1900,8 +1919,28 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-settings-auto-send`) {
+    // Validate that either distProfileId or profile parameter is provided
+    if (!params.distProfileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('Either --distProfileId or --profile parameter is required', 1);
+    }
+
     const spinner = createOra('Testing Groups saving').start();
     try {
+      // If profile name is provided, resolve it to distProfileId
+      if (params.profile && !params.distProfileId) {
+        const profiles = await getDistributionProfiles(params);
+        const foundProfile = profiles.find((p: any) => p.name === params.profile);
+        if (!foundProfile) {
+          spinner.fail(`Distribution profile with name "${params.profile}" not found`);
+          throw new AppcircleExitError(`Distribution profile with name "${params.profile}" not found`, 1);
+        }
+        params.distProfileId = foundProfile.id;
+      }
+      
       params.testingGroupIds = Array.isArray(params.testingGroupIds) ? params.testingGroupIds : params.testingGroupIds.split(' '); 
       await updateDistributionProfileSettings(params);
       spinner.succeed('Testing Groups saved successfully.');
@@ -1917,7 +1956,28 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-view`) {
+    // Validate that either testingGroupId or testingGroup parameter is provided
+    if (!params.testingGroupId && !params.testingGroup) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('Either --testingGroupId or --testingGroup parameter is required', 1);
+    }
+
     const spinner = createOra('Listing Testing Group details...').start();
+    
+    // If testingGroup name is provided, resolve it to testingGroupId
+    if (params.testingGroup && !params.testingGroupId) {
+      const testingGroups = await getTestingGroups();
+      const foundGroup = testingGroups.find((g: any) => g.name === params.testingGroup);
+      if (!foundGroup) {
+        spinner.fail(`Testing group with name "${params.testingGroup}" not found`);
+        throw new AppcircleExitError(`Testing group with name "${params.testingGroup}" not found`, 1);
+      }
+      params.testingGroupId = foundGroup.id;
+    }
+    
     const responseData = await getTestingGroupById(params);
     spinner.stop();
     commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
@@ -1928,14 +1988,33 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
     const responseData = await createTestingGroup(params);
     console.info(`Testing Group named ${responseData.name} created successfully!`);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-remove`) {
+    // Validate that either testingGroupId or testingGroup parameter is provided
+    if (!params.testingGroupId && !params.testingGroup) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('Either --testingGroupId or --testingGroup parameter is required', 1);
+    }
+
     let spinner = createOra('Try to remove the Testing Group').start();
     try {
       // Stop spinner temporarily for the prompt
       spinner.stop();
       
+      // If testingGroup name is provided, resolve it to testingGroupId
+      if (params.testingGroup && !params.testingGroupId) {
+        const testingGroups = await getTestingGroups();
+        const foundGroup = testingGroups.find((g: any) => g.name === params.testingGroup);
+        if (!foundGroup) {
+          throw new AppcircleExitError(`Testing group with name "${params.testingGroup}" not found`, 1);
+        }
+        params.testingGroupId = foundGroup.id;
+      }
+      
       // Get testing group details to display its name in the confirmation
-      let testingGroupName = params.testingGroupId; // Default to ID if name fetch fails
-      if (params.testingGroupId) {
+      let testingGroupName = params.testingGroup || params.testingGroupId; // Use provided name or default to ID
+      if (params.testingGroupId && !params.testingGroup) {
         try {
           const groupDetails = await getTestingGroupById({ testingGroupId: params.testingGroupId });
           if (groupDetails && groupDetails.name) {
@@ -1974,13 +2053,51 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-add`) {
+    // Validate that either testingGroupId or testingGroup parameter is provided
+    if (!params.testingGroupId && !params.testingGroup) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('Either --testingGroupId or --testingGroup parameter is required', 1);
+    }
+
+    // If testingGroup name is provided, resolve it to testingGroupId
+    if (params.testingGroup && !params.testingGroupId) {
+      const testingGroups = await getTestingGroups();
+      const foundGroup = testingGroups.find((g: any) => g.name === params.testingGroup);
+      if (!foundGroup) {
+        throw new AppcircleExitError(`Testing group with name "${params.testingGroup}" not found`, 1);
+      }
+      params.testingGroupId = foundGroup.id;
+    }
+    
     await addTesterToTestingGroup(params);
     console.info(`Tester has been successfully added to the selected Testing Group!`);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-testing-group-tester-remove`) {
+    // Validate that either testingGroupId or testingGroup parameter is provided
+    if (!params.testingGroupId && !params.testingGroup) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('Either --testingGroupId or --testingGroup parameter is required', 1);
+    }
+
     let spinner = createOra('Try to remove the Tester from Testing Group').start();
     try {
       // Stop spinner temporarily for the prompt
       spinner.stop();
+      
+      // If testingGroup name is provided, resolve it to testingGroupId
+      if (params.testingGroup && !params.testingGroupId) {
+        const testingGroups = await getTestingGroups();
+        const foundGroup = testingGroups.find((g: any) => g.name === params.testingGroup);
+        if (!foundGroup) {
+          throw new AppcircleExitError(`Testing group with name "${params.testingGroup}" not found`, 1);
+        }
+        params.testingGroupId = foundGroup.id;
+      }
       
       // Add confirmation prompt
       const testerIdentifier = params.email || 'this Tester'; // Use email if available
