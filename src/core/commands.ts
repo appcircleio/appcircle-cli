@@ -1538,9 +1538,11 @@ LEARN MORE
 
 USAGE
   appcircle signing-identity certificate view --certificateBundleId <uuid>
+  appcircle signing-identity certificate view --certificate <string>
 
 REQUIRED OPTIONS
   --certificateBundleId <uuid>  Certificate bundle ID (UUID format)
+  --certificate <string>        Certificate name (alternative to --certificateBundleId)
 
 DESCRIPTION
   Display detailed information about a specific iOS certificate bundle,
@@ -1548,9 +1550,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle signing-identity certificate view --certificateBundleId 550e8400-e29b-41d4-a716-446655440000
+  appcircle signing-identity certificate view --certificate "iOS Distribution Certificate"
 
 LEARN MORE
-  Use 'appcircle signing-identity certificate list' to get available certificates with their UUIDs.
+  Use 'appcircle signing-identity certificate list' to get available certificates with their UUIDs and names.
   Use 'appcircle signing-identity certificate download --certificateId <uuid>' to download the certificate.
   Use 'appcircle signing-identity certificate view' without options for interactive mode.`,
             params:[
@@ -1559,8 +1562,18 @@ LEARN MORE
                 description: 'Certificate Name (Bundle ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
-              }
+                required: false,
+              },
+              {
+                name: 'certificate',
+                description: "Certificate Name instead of 'certificateBundleId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
+              },
             ],
           },
           {
@@ -1570,9 +1583,11 @@ LEARN MORE
 
 USAGE
   appcircle signing-identity certificate download --certificateId <uuid> [--path <directory>]
+  appcircle signing-identity certificate download --certificate <string> [--path <directory>]
 
 REQUIRED OPTIONS
   --certificateId <uuid>  Certificate ID (UUID format)
+  --certificate <string>  Certificate name (alternative to --certificateId)
 
 OPTIONAL OPTIONS
   --path <directory>      Directory path for certificate to be downloaded (defaults to current directory)
@@ -1582,10 +1597,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle signing-identity certificate download --certificateId 550e8400-e29b-41d4-a716-446655440000
-  appcircle signing-identity certificate download --certificateId 550e8400-e29b-41d4-a716-446655440000 --path ./certificates
+  appcircle signing-identity certificate download --certificate "iOS Distribution Certificate" --path ./certificates
 
 LEARN MORE
-  Use 'appcircle signing-identity certificate list' to get available certificates with their UUIDs.
+  Use 'appcircle signing-identity certificate list' to get available certificates with their UUIDs and names.
   Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to see certificate details.
   Use 'appcircle signing-identity certificate download' without options for interactive mode.`,
             params:[
@@ -1602,8 +1617,18 @@ LEARN MORE
                 description: 'Certificate Name (Bundle ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
-              }
+                required: false,
+              },
+              {
+                name: 'certificate',
+                description: "Certificate Name instead of 'certificateId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
+              },
             ],
           },
           {
@@ -1613,9 +1638,11 @@ LEARN MORE
 
 USAGE
   appcircle signing-identity certificate remove --certificateId <uuid>
+  appcircle signing-identity certificate remove --certificate <string>
 
 REQUIRED OPTIONS
   --certificateId <uuid>  Certificate ID (UUID format)
+  --certificate <string>  Certificate name (alternative to --certificateId)
 
 DESCRIPTION
   Permanently remove a specific iOS certificate from your organization.
@@ -1623,9 +1650,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle signing-identity certificate remove --certificateId 550e8400-e29b-41d4-a716-446655440000
+  appcircle signing-identity certificate remove --certificate "iOS Distribution Certificate"
 
 LEARN MORE
-  Use 'appcircle signing-identity certificate list' to get available certificates with their UUIDs.
+  Use 'appcircle signing-identity certificate list' to get available certificates with their UUIDs and names.
   Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to see certificate details before removal.
   Use 'appcircle signing-identity certificate remove' without options for interactive mode.`,
             params:[
@@ -1634,8 +1662,18 @@ LEARN MORE
                 description: 'Certificate Name (Bundle ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
-              }
+                required: false,
+              },
+              {
+                name: 'certificate',
+                description: "Certificate Name instead of 'certificateId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
+              },
             ],
           }
         ]
@@ -1727,9 +1765,11 @@ LEARN MORE
 
 USAGE
   appcircle signing-identity provisioning-profile download --provisioningProfileId <uuid> [--path <directory>]
+  appcircle signing-identity provisioning-profile download --provisioningProfile <string> [--path <directory>]
 
 REQUIRED OPTIONS
   --provisioningProfileId <uuid>  Provisioning profile ID (UUID format)
+  --provisioningProfile <string>  Provisioning profile name (alternative to --provisioningProfileId)
 
 OPTIONAL OPTIONS
   --path <directory>              Directory path for profile to be downloaded (defaults to current directory)
@@ -1739,10 +1779,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle signing-identity provisioning-profile download --provisioningProfileId 550e8400-e29b-41d4-a716-446655440000
-  appcircle signing-identity provisioning-profile download --provisioningProfileId 550e8400-e29b-41d4-a716-446655440000 --path ./profiles
+  appcircle signing-identity provisioning-profile download --provisioningProfile "iOS Team Provisioning Profile" --path ./profiles
 
 LEARN MORE
-  Use 'appcircle signing-identity provisioning-profile list' to get available profiles with their UUIDs.
+  Use 'appcircle signing-identity provisioning-profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>' to see profile details.
   Use 'appcircle signing-identity provisioning-profile download' without options for interactive mode.`,
             params:[
@@ -1759,8 +1799,18 @@ LEARN MORE
                 description: 'Provisioning Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
-              }
+                required: false,
+              },
+              {
+                name: 'provisioningProfile',
+                description: "Provisioning Profile Name instead of 'provisioningProfileId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
+              },
             ],
           },
           {
@@ -1770,9 +1820,11 @@ LEARN MORE
 
 USAGE
   appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>
+  appcircle signing-identity provisioning-profile view --provisioningProfile <string>
 
 REQUIRED OPTIONS
   --provisioningProfileId <uuid>  Provisioning profile ID (UUID format)
+  --provisioningProfile <string>  Provisioning profile name (alternative to --provisioningProfileId)
 
 DESCRIPTION
   Display detailed information about a specific iOS provisioning profile,
@@ -1780,9 +1832,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle signing-identity provisioning-profile view --provisioningProfileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle signing-identity provisioning-profile view --provisioningProfile "iOS Team Provisioning Profile"
 
 LEARN MORE
-  Use 'appcircle signing-identity provisioning-profile list' to get available profiles with their UUIDs.
+  Use 'appcircle signing-identity provisioning-profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle signing-identity provisioning-profile download --provisioningProfileId <uuid>' to download the profile.
   Use 'appcircle signing-identity provisioning-profile view' without options for interactive mode.`,
             params:[
@@ -1791,8 +1844,18 @@ LEARN MORE
                 description: 'Provisioning Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
-              }
+                required: false,
+              },
+              {
+                name: 'provisioningProfile',
+                description: "Provisioning Profile Name instead of 'provisioningProfileId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
+              },
             ],
           },
           {
@@ -1802,9 +1865,11 @@ LEARN MORE
 
 USAGE
   appcircle signing-identity provisioning-profile remove --provisioningProfileId <uuid>
+  appcircle signing-identity provisioning-profile remove --provisioningProfile <string>
 
 REQUIRED OPTIONS
   --provisioningProfileId <uuid>  Provisioning profile ID (UUID format)
+  --provisioningProfile <string>  Provisioning profile name (alternative to --provisioningProfileId)
 
 DESCRIPTION
   Permanently remove a specific iOS provisioning profile from your organization.
@@ -1812,9 +1877,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle signing-identity provisioning-profile remove --provisioningProfileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle signing-identity provisioning-profile remove --provisioningProfile "iOS Team Provisioning Profile"
 
 LEARN MORE
-  Use 'appcircle signing-identity provisioning-profile list' to get available profiles with their UUIDs.
+  Use 'appcircle signing-identity provisioning-profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle signing-identity provisioning-profile view --provisioningProfileId <uuid>' to see profile details before removal.
   Use 'appcircle signing-identity provisioning-profile remove' without options for interactive mode.`,
             params:[
@@ -1823,8 +1889,18 @@ LEARN MORE
                 description: 'Provisioning Profile Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
-              }
+                required: false,
+              },
+              {
+                name: 'provisioningProfile',
+                description: "Provisioning Profile Name instead of 'provisioningProfileId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
+              },
             ],
           },
         ],
@@ -1995,9 +2071,11 @@ LEARN MORE
 
 USAGE
   appcircle signing-identity keystore download --keystoreId <uuid> [--path <directory>]
+  appcircle signing-identity keystore download --keystore <string> [--path <directory>]
 
 REQUIRED OPTIONS
   --keystoreId <uuid>  Keystore ID (UUID format)
+  --keystore <string>  Keystore name (alternative to --keystoreId)
 
 OPTIONAL OPTIONS
   --path <directory>   Directory path for keystore to be downloaded (defaults to current directory)
@@ -2007,10 +2085,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle signing-identity keystore download --keystoreId 550e8400-e29b-41d4-a716-446655440000
-  appcircle signing-identity keystore download --keystoreId 550e8400-e29b-41d4-a716-446655440000 --path ./keystores
+  appcircle signing-identity keystore download --keystore "MyApp Release Keystore" --path ./keystores
 
 LEARN MORE
-  Use 'appcircle signing-identity keystore list' to get available keystores with their UUIDs.
+  Use 'appcircle signing-identity keystore list' to get available keystores with their UUIDs and names.
   Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details.
   Use 'appcircle signing-identity keystore download' without options for interactive mode.`,
             params: [
@@ -2027,8 +2105,18 @@ LEARN MORE
                 description: 'Keystore Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
-              }
+                required: false,
+              },
+              {
+                name: 'keystore',
+                description: "Keystore Name instead of 'keystoreId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
+              },
             ]
           },
           {
@@ -2038,9 +2126,11 @@ LEARN MORE
 
 USAGE
   appcircle signing-identity keystore view --keystoreId <uuid>
+  appcircle signing-identity keystore view --keystore <string>
 
 REQUIRED OPTIONS
   --keystoreId <uuid>  Keystore ID (UUID format)
+  --keystore <string>  Keystore name (alternative to --keystoreId)
 
 DESCRIPTION
   Display detailed information about a specific Android keystore,
@@ -2048,9 +2138,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle signing-identity keystore view --keystoreId 550e8400-e29b-41d4-a716-446655440000
+  appcircle signing-identity keystore view --keystore "MyApp Release Keystore"
 
 LEARN MORE
-  Use 'appcircle signing-identity keystore list' to get available keystores with their UUIDs.
+  Use 'appcircle signing-identity keystore list' to get available keystores with their UUIDs and names.
   Use 'appcircle signing-identity keystore download --keystoreId <uuid>' to download the keystore.
   Use 'appcircle signing-identity keystore view' without options for interactive mode.`,
             params:[
@@ -2059,8 +2150,18 @@ LEARN MORE
                 description: 'Keystore Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
-              }
+                required: false,
+              },
+              {
+                name: 'keystore',
+                description: "Keystore Name instead of 'keystoreId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
+              },
             ],
           },
           {
@@ -2070,9 +2171,11 @@ LEARN MORE
 
 USAGE
   appcircle signing-identity keystore remove --keystoreId <uuid>
+  appcircle signing-identity keystore remove --keystore <string>
 
 REQUIRED OPTIONS
   --keystoreId <uuid>  Keystore ID (UUID format)
+  --keystore <string>  Keystore name (alternative to --keystoreId)
 
 DESCRIPTION
   Permanently remove a specific Android keystore from your organization.
@@ -2080,9 +2183,10 @@ DESCRIPTION
 
 EXAMPLES
   appcircle signing-identity keystore remove --keystoreId 550e8400-e29b-41d4-a716-446655440000
+  appcircle signing-identity keystore remove --keystore "MyApp Release Keystore"
 
 LEARN MORE
-  Use 'appcircle signing-identity keystore list' to get available keystores with their UUIDs.
+  Use 'appcircle signing-identity keystore list' to get available keystores with their UUIDs and names.
   Use 'appcircle signing-identity keystore view --keystoreId <uuid>' to see keystore details before removal.
   Use 'appcircle signing-identity keystore remove' without options for interactive mode.`,
             params:[
@@ -2091,8 +2195,18 @@ LEARN MORE
                 description: 'Keystore Name (ID)',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
-                required: true,
-              }
+                required: false,
+              },
+              {
+                name: 'keystore',
+                description: "Keystore Name instead of 'keystoreId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
+              },
             ],
           }
         ]

@@ -48,24 +48,75 @@ const ROOTPATH = 'signing-identity';
     return keystores.data;
   }
 
-  export async function getCertificateDetailById(options: OptionsType<{ certificateBundleId: string }>) {
-    const certificate = await appcircleApi.get(`${ROOTPATH}/v2/certificates/${options.certificateBundleId}`, {
+  export async function getCertificateDetailById(options: OptionsType<{ certificateBundleId?: string; certificate?: string }>) {
+    let certificateBundleId = options.certificateBundleId || '';
+
+    // Resolve certificate name to certificateBundleId if provided
+    if (!certificateBundleId && options.certificate) {
+      const certificates = await getiOSP12Certificates();
+      const cert = certificates.find((c: any) => c.name === options.certificate);
+      if (cert) {
+        certificateBundleId = cert.id;
+      } else {
+        throw new ProgramError(`Certificate with name "${options.certificate}" not found.`);
+      }
+    }
+
+    if (!certificateBundleId) {
+      throw new ProgramError('Either certificateBundleId or certificate name is required.');
+    }
+
+    const certificate = await appcircleApi.get(`${ROOTPATH}/v2/certificates/${certificateBundleId}`, {
         headers: getHeaders(),
       });
       return certificate.data;
   }
-  export async function getKeystoreDetailById(options: OptionsType<{ keystoreId: string }>) {
-    const keystore = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${options.keystoreId}`, {
+  export async function getKeystoreDetailById(options: OptionsType<{ keystoreId?: string; keystore?: string }>) {
+    let keystoreId = options.keystoreId || '';
+
+    // Resolve keystore name to keystoreId if provided
+    if (!keystoreId && options.keystore) {
+      const keystores = await getAndroidKeystores();
+      const ks = keystores.find((k: any) => k.name === options.keystore);
+      if (ks) {
+        keystoreId = ks.id;
+      } else {
+        throw new ProgramError(`Keystore with name "${options.keystore}" not found.`);
+      }
+    }
+
+    if (!keystoreId) {
+      throw new ProgramError('Either keystoreId or keystore name is required.');
+    }
+
+    const keystore = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${keystoreId}`, {
         headers: getHeaders(),
       });
       return keystore.data;
   }
 
-  export async function downloadKeystoreById(options: OptionsType<{ keystoreId: string, path: string }>, downloadPath: string,fileName:string){
+  export async function downloadKeystoreById(options: OptionsType<{ keystoreId?: string; keystore?: string; path: string }>, downloadPath: string,fileName:string){
+    let keystoreId = options.keystoreId || '';
+
+    // Resolve keystore name to keystoreId if provided
+    if (!keystoreId && options.keystore) {
+      const keystores = await getAndroidKeystores();
+      const ks = keystores.find((k: any) => k.name === options.keystore);
+      if (ks) {
+        keystoreId = ks.id;
+      } else {
+        throw new ProgramError(`Keystore with name "${options.keystore}" not found.`);
+      }
+    }
+
+    if (!keystoreId) {
+      throw new ProgramError('Either keystoreId or keystore name is required.');
+    }
+
     const data = new FormData();
     data.append('Path', downloadPath);
-    data.append('Keystore Id', options.keystoreId);
-    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${options.keystoreId}`, {
+    data.append('Keystore Id', keystoreId);
+    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${keystoreId}`, {
         responseType:'stream',
         headers: {
             ...getHeaders(),
@@ -91,11 +142,28 @@ const ROOTPATH = 'signing-identity';
         });
       });
   }
-  export async function downloadCertificateById(options: OptionsType<{ certificateId: string, path: string }>,downloadPath: string,fileName: string,extension: 'p12' | 'csr') {
-    const url = extension === 'p12' ? `${ROOTPATH}/v2/certificates/${options.certificateId}` : `${ROOTPATH}/v1/csr/${options.certificateId}`
+  export async function downloadCertificateById(options: OptionsType<{ certificateId?: string; certificate?: string; path: string }>,downloadPath: string,fileName: string,extension: 'p12' | 'csr') {
+    let certificateId = options.certificateId || '';
+
+    // Resolve certificate name to certificateId if provided
+    if (!certificateId && options.certificate) {
+      const certificates = await getiOSP12Certificates();
+      const cert = certificates.find((c: any) => c.name === options.certificate);
+      if (cert) {
+        certificateId = cert.id;
+      } else {
+        throw new ProgramError(`Certificate with name "${options.certificate}" not found.`);
+      }
+    }
+
+    if (!certificateId) {
+      throw new ProgramError('Either certificateId or certificate name is required.');
+    }
+
+    const url = extension === 'p12' ? `${ROOTPATH}/v2/certificates/${certificateId}` : `${ROOTPATH}/v1/csr/${certificateId}`
     const data = new FormData();
     data.append('Path', downloadPath);
-    data.append('Certificate Id', options.certificateId);
+    data.append('Certificate Id', certificateId);
     const downloadResponse = await appcircleApi.get(url, {
         responseType:'stream',
         headers: {
@@ -123,16 +191,50 @@ const ROOTPATH = 'signing-identity';
       });
   }
 
-  export async function removeCSRorP12CertificateById(options: OptionsType<{ certificateId: string, path: string }>, extension: 'p12' | 'csr'){
-    const url = extension === 'p12' ? `${ROOTPATH}/v2/certificates/${options.certificateId}` : `${ROOTPATH}/v1/csr/${options.certificateId}`
+  export async function removeCSRorP12CertificateById(options: OptionsType<{ certificateId?: string; certificate?: string; path: string }>, extension: 'p12' | 'csr'){
+    let certificateId = options.certificateId || '';
+
+    // Resolve certificate name to certificateId if provided
+    if (!certificateId && options.certificate) {
+      const certificates = await getiOSP12Certificates();
+      const cert = certificates.find((c: any) => c.name === options.certificate);
+      if (cert) {
+        certificateId = cert.id;
+      } else {
+        throw new ProgramError(`Certificate with name "${options.certificate}" not found.`);
+      }
+    }
+
+    if (!certificateId) {
+      throw new ProgramError('Either certificateId or certificate name is required.');
+    }
+
+    const url = extension === 'p12' ? `${ROOTPATH}/v2/certificates/${certificateId}` : `${ROOTPATH}/v1/csr/${certificateId}`
     const response = await appcircleApi.delete(url, {
         headers: getHeaders(),
     });
     return response.data;
   }
 
-  export async function removeKeystore(options: OptionsType<{ keystoreId: string }>){
-    const response = await appcircleApi.delete(`${ROOTPATH}/v2/keystores/${options.keystoreId}`, {
+  export async function removeKeystore(options: OptionsType<{ keystoreId?: string; keystore?: string }>){
+    let keystoreId = options.keystoreId || '';
+
+    // Resolve keystore name to keystoreId if provided
+    if (!keystoreId && options.keystore) {
+      const keystores = await getAndroidKeystores();
+      const ks = keystores.find((k: any) => k.name === options.keystore);
+      if (ks) {
+        keystoreId = ks.id;
+      } else {
+        throw new ProgramError(`Keystore with name "${options.keystore}" not found.`);
+      }
+    }
+
+    if (!keystoreId) {
+      throw new ProgramError('Either keystoreId or keystore name is required.');
+    }
+
+    const response = await appcircleApi.delete(`${ROOTPATH}/v2/keystores/${keystoreId}`, {
         headers: getHeaders(),
     });
     return response.data;
@@ -153,11 +255,28 @@ const ROOTPATH = 'signing-identity';
     });
     return result.data;
   }
-  export async function downloadProvisioningProfileById(options: OptionsType<{ provisioningProfileId: string }>, downloadPath: string, fileName:string){
+  export async function downloadProvisioningProfileById(options: OptionsType<{ provisioningProfileId?: string; provisioningProfile?: string }>, downloadPath: string, fileName:string){
+    let provisioningProfileId = options.provisioningProfileId || '';
+
+    // Resolve provisioning profile name to provisioningProfileId if provided
+    if (!provisioningProfileId && options.provisioningProfile) {
+      const profiles = await getProvisioningProfiles();
+      const profile = profiles.find((p: any) => p.name === options.provisioningProfile);
+      if (profile) {
+        provisioningProfileId = profile.id;
+      } else {
+        throw new ProgramError(`Provisioning profile with name "${options.provisioningProfile}" not found.`);
+      }
+    }
+
+    if (!provisioningProfileId) {
+      throw new ProgramError('Either provisioningProfileId or provisioning profile name is required.');
+    }
+
     const data = new FormData();
     data.append('Path', downloadPath);
-    data.append('Profisioning Profile Id', options.provisioningProfileId);
-    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${options.provisioningProfileId}`, {
+    data.append('Profisioning Profile Id', provisioningProfileId);
+    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${provisioningProfileId}`, {
         responseType:'stream',
         headers: {
             ...getHeaders(),
@@ -183,8 +302,25 @@ const ROOTPATH = 'signing-identity';
         });
       });
   }
-  export async function getProvisioningProfileDetailById(options: OptionsType<{ provisioningProfileId: string }>){
-    const result = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${options.provisioningProfileId}`, {
+  export async function getProvisioningProfileDetailById(options: OptionsType<{ provisioningProfileId?: string; provisioningProfile?: string }>){
+    let provisioningProfileId = options.provisioningProfileId || '';
+
+    // Resolve provisioning profile name to provisioningProfileId if provided
+    if (!provisioningProfileId && options.provisioningProfile) {
+      const profiles = await getProvisioningProfiles();
+      const profile = profiles.find((p: any) => p.name === options.provisioningProfile);
+      if (profile) {
+        provisioningProfileId = profile.id;
+      } else {
+        throw new ProgramError(`Provisioning profile with name "${options.provisioningProfile}" not found.`);
+      }
+    }
+
+    if (!provisioningProfileId) {
+      throw new ProgramError('Either provisioningProfileId or provisioning profile name is required.');
+    }
+
+    const result = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${provisioningProfileId}`, {
       headers: getHeaders(),
     });
     return result.data;
@@ -202,8 +338,25 @@ const ROOTPATH = 'signing-identity';
     return uploadResponse.data;
   }
 
-  export async function removeProvisioningProfile(options: OptionsType<{ provisioningProfileId: string }>){
-    const response = await appcircleApi.delete(`${ROOTPATH}/v1/provisioning-profiles/${options.provisioningProfileId}`, {
+  export async function removeProvisioningProfile(options: OptionsType<{ provisioningProfileId?: string; provisioningProfile?: string }>){
+    let provisioningProfileId = options.provisioningProfileId || '';
+
+    // Resolve provisioning profile name to provisioningProfileId if provided
+    if (!provisioningProfileId && options.provisioningProfile) {
+      const profiles = await getProvisioningProfiles();
+      const profile = profiles.find((p: any) => p.name === options.provisioningProfile);
+      if (profile) {
+        provisioningProfileId = profile.id;
+      } else {
+        throw new ProgramError(`Provisioning profile with name "${options.provisioningProfile}" not found.`);
+      }
+    }
+
+    if (!provisioningProfileId) {
+      throw new ProgramError('Either provisioningProfileId or provisioning profile name is required.');
+    }
+
+    const response = await appcircleApi.delete(`${ROOTPATH}/v1/provisioning-profiles/${provisioningProfileId}`, {
         headers: getHeaders(),
     });
     return response.data;
