@@ -4325,8 +4325,10 @@ SUBCOMMANDS
 
 EXAMPLES
   appcircle organization view
+  appcircle organization view --organization "My Organization"
   appcircle organization create-sub --name "Subsidiary"
   appcircle organization role add --userId <uuid> --role <role>
+  appcircle organization role add --user "user@example.com" --role admin
   appcircle organization user invite --email user@example.com
 
 LEARN MORE
@@ -4339,13 +4341,19 @@ LEARN MORE
 
 USAGE
   appcircle organization view [--organizationId <uuid>]
+  appcircle organization view [--organization <name>]
+
+OPTIONAL OPTIONS
+  --organizationId <uuid>   Organization ID (UUID format)
+  --organization <name>     Organization name (alternative to --organizationId)
 
 DESCRIPTION
-  View details of your current organization. If an organizationId is provided, view details for that specific organization.
+  View details of your current organization. If an organizationId or organization name is provided, view details for that specific organization.
 
 EXAMPLES
   appcircle organization view
-  appcircle organization view --organizationId <uuid>
+  appcircle organization view --organizationId 550e8400-e29b-41d4-a716-446655440000
+  appcircle organization view --organization "My Organization"
 
 LEARN MORE
   Use 'appcircle organization create-sub' to add a sub-organization.`,
@@ -4356,6 +4364,16 @@ LEARN MORE
           defaultValue: 'all',
           valueType: 'uuid',
           required: false,
+        },
+        {
+          name: 'organization',
+          description: "Organization Name instead of 'organizationId'",
+          type: CommandParameterTypes.STRING,
+          valueType: 'string',
+          required: false,
+          requriedForInteractiveMode: false,
+          skipForInteractiveMode: true,
+          params: [],
         }],
       },
       {
@@ -4418,13 +4436,19 @@ LEARN MORE
 
 USAGE
   appcircle organization user view [--organizationId <uuid>]
+  appcircle organization user view [--organization <name>]
+
+OPTIONAL OPTIONS
+  --organizationId <uuid>   Organization ID (UUID format)
+  --organization <name>     Organization name (alternative to --organizationId)
 
 DESCRIPTION
-  View all users in your current organization or a specific organization if organizationId is provided.
+  View all users in your current organization or a specific organization if organizationId or organization name is provided.
 
 EXAMPLES
   appcircle organization user view
-  appcircle organization user view --organizationId <uuid>
+  appcircle organization user view --organizationId 550e8400-e29b-41d4-a716-446655440000
+  appcircle organization user view --organization "My Organization"
 
 LEARN MORE
   Use 'appcircle organization user invite' to add new users.`,
@@ -4435,6 +4459,16 @@ LEARN MORE
               defaultValue: 'current',
               valueType: 'uuid',
               required: false,
+            },
+            {
+              name: 'organization',
+              description: "Organization Name instead of 'organizationId'",
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+              required: false,
+              requriedForInteractiveMode: false,
+              skipForInteractiveMode: true,
+              params: [],
             }],
           },
           {
@@ -4464,6 +4498,16 @@ LEARN MORE
               defaultValue: 'current',
               valueType: 'uuid',
               required: false,
+            },
+            {
+              name: 'organization',
+              description: "Organization Name instead of 'organizationId'",
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+              required: false,
+              requriedForInteractiveMode: false,
+              skipForInteractiveMode: true,
+              params: [],
             },{
               name: 'email',
               description: 'Email',
@@ -4507,6 +4551,16 @@ LEARN MORE
                 defaultValue: CURRENT_PARAM_VALUE,
                 valueType: 'uuid',
                 required: false,
+              },
+              {
+                name: 'organization',
+                description: "Organization Name instead of 'organizationId'",
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+                required: false,
+                requriedForInteractiveMode: false,
+                skipForInteractiveMode: true,
+                params: [],
               },{
                 name: 'email',
                 description: 'Email',
@@ -4524,13 +4578,23 @@ LEARN MORE
 
 USAGE
   appcircle organization user remove [--email <email>] [--userId <uuid>] [--organizationId <uuid>]
+  appcircle organization user remove [--email <email>] [--user <email>] [--organization <name>]
+
+OPTIONAL OPTIONS
+  --organizationId <uuid>   Organization ID (UUID format)
+  --organization <name>     Organization name (alternative to --organizationId)
+  --userId <uuid>           User ID (UUID format)
+  --user <email>            User email (alternative to --userId)
+  --email <email>           Email address for invitation removal
 
 DESCRIPTION
-  Remove a user or a pending invitation from your organization. You can specify either email or userId.
+  Remove a user or a pending invitation from your organization. You can specify either email, userId, or user email.
 
 EXAMPLES
   appcircle organization user remove --email user@example.com
-  appcircle organization user remove --userId <uuid>
+  appcircle organization user remove --userId 550e8400-e29b-41d4-a716-446655440000
+  appcircle organization user remove --user "user@example.com"
+  appcircle organization user remove --user "user@example.com" --organization "My Organization"
 
 LEARN MORE
   Use 'appcircle organization user view' to see current users and invitations.`,
@@ -4541,12 +4605,32 @@ LEARN MORE
               defaultValue: CURRENT_PARAM_VALUE,
               valueType: 'uuid',
               required: false,
+            },
+            {
+              name: 'organization',
+              description: "Organization Name instead of 'organizationId'",
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+              required: false,
+              requriedForInteractiveMode: false,
+              skipForInteractiveMode: true,
+              params: [],
             },{
                 name: 'userId',
                 description: 'User ID',
                 type: CommandParameterTypes.SELECT,
                 valueType: 'uuid',
               required: false,
+            },
+            {
+              name: 'user',
+              description: "User Name/Email instead of 'userId'",
+              type: CommandParameterTypes.STRING,
+              valueType: 'string',
+              required: false,
+              requriedForInteractiveMode: false,
+              skipForInteractiveMode: true,
+              params: [],
             },{
               name: 'email',
               description: 'Email',
@@ -4578,9 +4662,13 @@ SUBCOMMANDS
 
 EXAMPLES
   appcircle organization role view --userId <uuid>
+  appcircle organization role view --user "user@example.com"
   appcircle organization role add --userId <uuid> --role admin
+  appcircle organization role add --user "user@example.com" --role admin
   appcircle organization role remove --userId <uuid> --role admin
+  appcircle organization role remove --user "user@example.com" --role admin
   appcircle organization role clear --userId <uuid>
+  appcircle organization role clear --user "user@example.com"
 
 LEARN MORE
   Use 'appcircle organization role <action> --help' for detailed command help.`,
@@ -4592,15 +4680,26 @@ LEARN MORE
 
 USAGE
   appcircle organization role view --userId <uuid> [--organizationId <uuid>]
+  appcircle organization role view --user <email> [--organization <name>]
+
+REQUIRED OPTIONS
+  --userId <uuid>           User ID (UUID format)
+  --user <email>            User email (alternative to --userId)
+
+OPTIONAL OPTIONS
+  --organizationId <uuid>   Organization ID (UUID format)
+  --organization <name>     Organization name (alternative to --organizationId)
 
 DESCRIPTION
   View all roles assigned to a specific user in your organization.
 
 EXAMPLES
-  appcircle organization role view --userId <uuid>
+  appcircle organization role view --userId 550e8400-e29b-41d4-a716-446655440000
+  appcircle organization role view --user "user@example.com"
+  appcircle organization role view --user "user@example.com" --organization "My Organization"
 
 LEARN MORE
-  Use 'appcircle organization user view' to see users and their IDs.`,
+  Use 'appcircle organization user view' to see users and their emails.`,
                 params: [
                   {
                     name: 'organizationId',
@@ -4611,12 +4710,32 @@ LEARN MORE
                     required: false,
                   },
                   {
+                    name: 'organization',
+                    description: "Organization Name instead of 'organizationId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
                     name: 'userId',
                     description: 'User Email (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true,
-          },
+                    required: false,
+                  },
+                  {
+                    name: 'user',
+                    description: "User Name/Email instead of 'userId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
         ],
       },
           {
@@ -4626,16 +4745,24 @@ LEARN MORE
 
 USAGE
   appcircle organization role add --userId <uuid> --role <role> [--organizationId <uuid>]
+  appcircle organization role add --user <email> --role <role> [--organization <name>]
 
 REQUIRED OPTIONS
-  --userId <uuid>  User ID
-  --role <role>    Role(s) to add
+  --userId <uuid>           User ID (UUID format)
+  --user <email>            User email (alternative to --userId)
+  --role <role>             Role(s) to add
+
+OPTIONAL OPTIONS
+  --organizationId <uuid>   Organization ID (UUID format)
+  --organization <name>     Organization name (alternative to --organizationId)
 
 DESCRIPTION
   Assign one or more roles to a user in your organization.
 
 EXAMPLES
-  appcircle organization role add --userId <uuid> --role admin
+  appcircle organization role add --userId 550e8400-e29b-41d4-a716-446655440000 --role admin
+  appcircle organization role add --user "user@example.com" --role admin
+  appcircle organization role add --user "user@example.com" --organization "My Organization" --role admin
 
 LEARN MORE
   Use 'appcircle organization role view' to see current roles.`,
@@ -4649,11 +4776,31 @@ LEARN MORE
                     required: false,
                   },
                   {
+                    name: 'organization',
+                    description: "Organization Name instead of 'organizationId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
                     name: 'userId',
                     description: 'User Email (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true,
+                    required: false,
+                  },
+                  {
+                    name: 'user',
+                    description: "User Name/Email instead of 'userId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'role',
@@ -4671,16 +4818,24 @@ LEARN MORE
 
 USAGE
   appcircle organization role remove --userId <uuid> --role <role> [--organizationId <uuid>]
+  appcircle organization role remove --user <email> --role <role> [--organization <name>]
 
 REQUIRED OPTIONS
-  --userId <uuid>  User ID
-  --role <role>    Role(s) to remove
+  --userId <uuid>           User ID (UUID format)
+  --user <email>            User email (alternative to --userId)
+  --role <role>             Role(s) to remove
+
+OPTIONAL OPTIONS
+  --organizationId <uuid>   Organization ID (UUID format)
+  --organization <name>     Organization name (alternative to --organizationId)
 
 DESCRIPTION
   Remove one or more roles from a user in your organization.
 
 EXAMPLES
-  appcircle organization role remove --userId <uuid> --role admin
+  appcircle organization role remove --userId 550e8400-e29b-41d4-a716-446655440000 --role admin
+  appcircle organization role remove --user "user@example.com" --role admin
+  appcircle organization role remove --user "user@example.com" --organization "My Organization" --role admin
 
 LEARN MORE
   Use 'appcircle organization role view' to see current roles.`,
@@ -4694,11 +4849,31 @@ LEARN MORE
                     required: false,
                   },
                   {
+                    name: 'organization',
+                    description: "Organization Name instead of 'organizationId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
                     name: 'userId',
                     description: 'User Email (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true,
+                    required: false,
+                  },
+                  {
+                    name: 'user',
+                    description: "User Name/Email instead of 'userId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'role',
@@ -4717,15 +4892,23 @@ LEARN MORE
 
 USAGE
   appcircle organization role clear --userId <uuid> [--organizationId <uuid>]
+  appcircle organization role clear --user <email> [--organization <name>]
 
 REQUIRED OPTIONS
-  --userId <uuid>  User ID
+  --userId <uuid>           User ID (UUID format)
+  --user <email>            User email (alternative to --userId)
+
+OPTIONAL OPTIONS
+  --organizationId <uuid>   Organization ID (UUID format)
+  --organization <name>     Organization name (alternative to --organizationId)
 
 DESCRIPTION
   Remove all roles assigned to a user in your organization.
 
 EXAMPLES
-  appcircle organization role clear --userId <uuid>
+  appcircle organization role clear --userId 550e8400-e29b-41d4-a716-446655440000
+  appcircle organization role clear --user "user@example.com"
+  appcircle organization role clear --user "user@example.com" --organization "My Organization"
 
 LEARN MORE
   Use 'appcircle organization role view' to see current roles.`,
@@ -4739,11 +4922,31 @@ LEARN MORE
                     required: false,
                   },
                   {
+                    name: 'organization',
+                    description: "Organization Name instead of 'organizationId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
                     name: 'userId',
                     description: 'User Email (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true,
+                    required: false,
+                  },
+                  {
+                    name: 'user',
+                    description: "User Name/Email instead of 'userId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   }
                 ],
               }

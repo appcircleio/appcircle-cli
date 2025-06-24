@@ -203,9 +203,61 @@ const handleConfigCommand = (command: ProgramCommand) => {
 };
 
 const handleOrganizationCommand = async (command: ProgramCommand, params: any) => {
+  // Organization validation and resolution
+  if (params.organization && (!params.organizationId || params.organizationId === 'all' || params.organizationId === 'current')) {
+    const organizations = await getOrganizations();
+    const foundOrganization = organizations.find((org: any) => org.name === params.organization);
+    if (!foundOrganization) {
+      throw new ProgramError(`Organization "${params.organization}" not found.
+        
+Available organizations:
+${organizations.map((org: any) => `  - ${org.name}`).join('\n')}`);
+    }
+    params.organizationId = foundOrganization.id;
+  }
+  
   if (!params.organizationId || params.organizationId === CURRENT_PARAM_VALUE) {
     params.organizationId = (await getUserInfo()).currentOrganizationId;
   }
+
+  // User validation and resolution for role commands
+  if (['view', 'add', 'remove', 'clear'].some(action => command.fullCommandName.includes(`organization-role-${action}`))) {
+    // Either userId or user must be provided for role commands
+    if (!params.userId && !params.user) {
+      const longDescription = getLongDescriptionForCommand(command.fullCommandName);
+      console.log(longDescription);
+      throw new ProgramError(`You must provide either --userId or --user parameter for this command.`);
+    }
+    
+    // Resolve user string to userId
+    if (params.user && !params.userId) {
+      const users = await getOrganizationUsersWithRoles({ organizationId: params.organizationId });
+      const foundUser = users.find((user: any) => user.email === params.user || user.fullName === params.user);
+      if (!foundUser) {
+        throw new ProgramError(`User "${params.user}" not found in organization.
+        
+Available users:
+${users.map((user: any) => `  - ${user.email} (${user.fullName || 'No name'})`).join('\n')}`);
+      }
+      params.userId = foundUser.id;
+    }
+  }
+
+  // User validation and resolution for organization user remove command
+  if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-remove`) {
+    if (params.user && !params.userId) {
+      const users = await getOrganizationUsersWithRoles({ organizationId: params.organizationId });
+      const foundUser = users.find((user: any) => user.email === params.user || user.fullName === params.user);
+      if (!foundUser) {
+        throw new ProgramError(`User "${params.user}" not found in organization.
+        
+Available users:
+${users.map((user: any) => `  - ${user.email} (${user.fullName || 'No name'})`).join('\n')}`);
+      }
+      params.userId = foundUser.id;
+    }
+  }
+
   params.role = Array.isArray(params.role) ? params.role : [params.role];
   if (command.fullCommandName === `${PROGRAM_NAME}-organization-view`) {
     const spinner = createOra('Listing Organizations...').start();
