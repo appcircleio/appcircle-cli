@@ -148,7 +148,10 @@ async function promptForPath(message: string, defaultPath: string): Promise<stri
       initial: defaultPath
     });
     
-    return response.path.trim() || defaultPath;
+    const userPath = response.path.trim() || defaultPath;
+    // Expand tilde (~) to home directory
+    const homeDir = os.homedir();
+    return userPath.replace(/^~/, homeDir);
   } catch (err) {
     // If user cancels, return default path
     return defaultPath;
@@ -994,6 +997,71 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
 };
 
 const handleBuildCommand = async (command: ProgramCommand, params:any) => {
+  // Build profile validation and resolution
+  if (params.profile && !params.profileId) {
+    const buildProfiles = await getBuildProfiles();
+    const foundProfile = buildProfiles.find((profile: any) => profile.name === params.profile);
+    if (!foundProfile) {
+      throw new ProgramError(`Build profile "${params.profile}" not found.
+        
+Available build profiles:
+${buildProfiles.map((profile: any) => `  - ${profile.name}`).join('\n')}`);
+    }
+    params.profileId = foundProfile.id;
+  }
+
+  // Branch validation and resolution (requires profileId)
+  if (params.branch && !params.branchId && params.profileId) {
+    const branchesResponse = await getBranches({ profileId: params.profileId });
+    const foundBranch = branchesResponse.branches?.find((branch: any) => branch.name === params.branch);
+    if (!foundBranch) {
+      throw new ProgramError(`Branch "${params.branch}" not found for build profile.
+        
+Available branches:
+${branchesResponse.branches?.map((branch: any) => `  - ${branch.name}`).join('\n') || 'No branches found'}`);
+    }
+    params.branchId = foundBranch.id;
+  }
+
+  // Workflow validation and resolution (requires profileId)
+  if (params.workflow && !params.workflowId && params.profileId) {
+    const workflows = await getWorkflows({ profileId: params.profileId });
+    const foundWorkflow = workflows.find((workflow: any) => workflow.workflowName === params.workflow);
+    if (!foundWorkflow) {
+      throw new ProgramError(`Workflow "${params.workflow}" not found for build profile.
+        
+Available workflows:
+${workflows.map((workflow: any) => `  - ${workflow.workflowName}`).join('\n')}`);
+    }
+    params.workflowId = foundWorkflow.id;
+  }
+
+  // Configuration validation and resolution (requires profileId)
+  if (params.configuration && !params.configurationId && params.profileId) {
+    const configurations = await getConfigurations({ profileId: params.profileId });
+    const foundConfiguration = configurations.find((config: any) => config.item1?.configurationName === params.configuration);
+    if (!foundConfiguration) {
+      throw new ProgramError(`Configuration "${params.configuration}" not found for build profile.
+        
+Available configurations:
+${configurations.map((config: any) => `  - ${config.item1?.configurationName || 'Unknown'}`).join('\n')}`);
+    }
+    params.configurationId = foundConfiguration.item1.id;
+  }
+
+  // Variable group validation and resolution
+  if (params.variableGroup && !params.variableGroupId) {
+    const variableGroups = await getEnvironmentVariableGroups();
+    const foundVariableGroup = variableGroups.find((group: any) => group.name === params.variableGroup);
+    if (!foundVariableGroup) {
+      throw new ProgramError(`Variable group "${params.variableGroup}" not found.
+        
+Available variable groups:
+${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
+    }
+    params.variableGroupId = foundVariableGroup.id;
+  }
+
   if (command.fullCommandName === `${PROGRAM_NAME}-build-start`) {
     if (!params.profileId && !params.profile) {
       const desc = getLongDescriptionForCommand(command.fullCommandName);
@@ -1626,7 +1694,8 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
           await downloadBuildLogs({ 
             branchId: params.branchId, 
             profileId: params.profileId,
-            commitId: params.commitId
+            commitId: params.commitId,
+            path: params.path
           }, params);
           return;
         } catch (error: any) {
@@ -1634,7 +1703,11 @@ const handleBuildCommand = async (command: ProgramCommand, params:any) => {
         }
       }
       if (params.commitId && params.buildId) {
-        await downloadBuildLogs({ commitId: params.commitId, buildId: params.buildId }, params);
+        await downloadBuildLogs({ 
+          commitId: params.commitId, 
+          buildId: params.buildId,
+          path: params.path 
+        }, params);
         return;
       }
       await downloadBuildLogs(params, params);
