@@ -3977,7 +3977,7 @@ USAGE
 
 REQUIRED OPTIONS
   --entProfileId <uuid>  Enterprise Profile ID (UUID format)
-  --profile <string>     Enterprise profile name (alternative to --entProfileId)
+  --entProfile <string>     Enterprise profile name (alternative to --entProfileId)
   --publishType <type>   (Optional) 0=All, 1=Beta, 2=Live
 
 DESCRIPTION
@@ -3985,7 +3985,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle enterprise-app-store version list --entProfileId <uuid>
-  appcircle enterprise-app-store version list --profile "Internal Apps" --publishType 2`,
+  appcircle enterprise-app-store version list --entProfile "Internal Apps" --publishType 2`,
             params: [
               {
                 name: 'entProfileId',
@@ -3995,7 +3995,7 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'profile',
+                name: 'entProfile',
                 description: "Enterprise Profile Name instead of 'entProfileId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
@@ -4038,9 +4038,9 @@ USAGE
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
-  --profile <string>      Enterprise profile name (alternative to --entProfileId)
+  --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --entVersionId <uuid>   App Version ID (UUID format)
-  --appVersion <string>   App version name (alternative to --entVersionId)
+  --entVersion <string>   App version name (alternative to --entVersionId)
   --summary <text>        (Optional) Summary text
   --releaseNotes <text>   (Optional) Release notes
   --publishType <type>    (Optional) 0=None, 1=Beta, 2=Live
@@ -4049,7 +4049,7 @@ DESCRIPTION
   Publish a specific app version to the enterprise app store profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version publish --profile "Internal Apps" --appVersion "v1.2.3" --publishType 2`,
+  appcircle enterprise-app-store version publish --entProfile "Internal Apps" --entVersion "v1.2.3" --publishType 2`,
             params: [
               {
                 name: 'entProfileId',
@@ -4059,7 +4059,7 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'profile',
+                name: 'entProfile',
                 description: "Enterprise Profile Name instead of 'entProfileId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
@@ -4076,8 +4076,8 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'appVersion',
-                description: "App Version Name instead of 'entVersionId'",
+                name: 'entVersion',
+                description: "Enterprise App Version Name instead of 'entVersionId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
                 required: false,
@@ -4130,15 +4130,15 @@ USAGE
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
-  --profile <string>      Enterprise profile name (alternative to --entProfileId)
+  --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --entVersionId <uuid>   App Version ID (UUID format)
-  --appVersion <string>   App version name (alternative to --entVersionId)
+  --entVersion <string>   App version name (alternative to --entVersionId)
 
 DESCRIPTION
   Unpublish a specific app version from the enterprise app store profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version unpublish --profile "Internal Apps" --appVersion "v1.2.3"`,
+  appcircle enterprise-app-store version unpublish --entProfile "Internal Apps" --entVersion "v1.2.3"`,
             params: [
               {
                 name: 'entProfileId',
@@ -4148,7 +4148,7 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'profile',
+                name: 'entProfile',
                 description: "Enterprise Profile Name instead of 'entProfileId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
@@ -4165,8 +4165,8 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'appVersion',
-                description: "App Version Name instead of 'entVersionId'",
+                name: 'entVersion',
+                description: "Enterprise App Version Name instead of 'entVersionId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
                 required: false,
@@ -4186,15 +4186,15 @@ USAGE
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
-  --profile <string>      Enterprise profile name (alternative to --entProfileId)
+  --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --entVersionId <uuid>   App Version ID (UUID format)
-  --appVersion <string>   App version name (alternative to --entVersionId)
+  --entVersion <string>   App version name (alternative to --entVersionId)
 
 DESCRIPTION
   Permanently delete a specific app version from the enterprise app store profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version remove --profile "Internal Apps" --appVersion "v1.2.3"`,
+  appcircle enterprise-app-store version remove --entProfile "Internal Apps" --entVersion "v1.2.3"`,
             params: [
               {
                 name: 'entProfileId',
@@ -4204,7 +4204,7 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'profile',
+                name: 'entProfile',
                 description: "Enterprise Profile Name instead of 'entProfileId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
@@ -4221,8 +4221,8 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'appVersion',
-                description: "App Version Name instead of 'entVersionId'",
+                name: 'entVersion',
+                description: "Enterprise App Version Name instead of 'entVersionId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
                 required: false,
@@ -4261,7 +4261,7 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'profile',
+                name: 'entProfile',
                 description: "Enterprise Profile Name instead of 'entProfileId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
@@ -4278,8 +4278,8 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'appVersion',
-                description: "App Version Name instead of 'entVersionId'",
+                name: 'entVersion',
+                description: "Enterprise App Version Name instead of 'entVersionId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
                 required: false,
@@ -4311,14 +4311,14 @@ USAGE
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
-  --profile <string>      Enterprise profile name (alternative to --entProfileId)
+  --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --app <path>            Path to the app binary (ipa/apk/aab)
 
 DESCRIPTION
   Upload a new app version to the specified enterprise profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version upload-for-profile --profile "Internal Apps" --app ./MyApp.ipa`,
+  appcircle enterprise-app-store version upload-for-profile --entProfile "Internal Apps" --app ./MyApp.ipa`,
             params: [
               {
                 name: 'entProfileId',
@@ -4328,7 +4328,7 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'profile',
+                name: 'entProfile',
                 description: "Enterprise Profile Name instead of 'entProfileId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
@@ -4380,15 +4380,15 @@ USAGE
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
-  --profile <string>      Enterprise profile name (alternative to --entProfileId)
+  --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --entVersionId <uuid>   App Version ID (UUID format)
-  --appVersion <string>   App version name (alternative to --entVersionId)
+  --entVersion <string>   App version name (alternative to --entVersionId)
 
 DESCRIPTION
   Retrieve the download link for a specific app version in the enterprise app store profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version download-link --profile "Internal Apps" --appVersion "v1.2.3"`,
+  appcircle enterprise-app-store version download-link --entProfile "Internal Apps" --entVersion "v1.2.3"`,
             params: [
               {
                 name: 'entProfileId',
@@ -4398,7 +4398,7 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'profile',
+                name: 'entProfile',
                 description: "Enterprise Profile Name instead of 'entProfileId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
@@ -4415,8 +4415,8 @@ EXAMPLES
                 required: false
               },
               {
-                name: 'appVersion',
-                description: "App Version Name instead of 'entVersionId'",
+                name: 'entVersion',
+                description: "Enterprise App Version Name instead of 'entVersionId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
                 required: false,

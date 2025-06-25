@@ -2804,21 +2804,21 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
   ];
 
   if (profileRequiredCommands.includes(command.fullCommandName)) {
-    if (!params.entProfileId && !params.profile) {
+    if (!params.entProfileId && !params.entProfile) {
       const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
       const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
       if (longDescription) {
         console.log('\n' + longDescription);
       }
-      throw new ProgramError(`Either --entProfileId or --profile parameter is required.`);
+      throw new ProgramError(`Either --entProfileId or --entProfile parameter is required.`);
     }
 
     // Resolve profile name to ID if needed
-    if (params.profile && !params.entProfileId) {
+    if (params.entProfile && !params.entProfileId) {
       const profiles = await getEnterpriseProfiles();
-      const foundProfile = profiles.find((p: any) => p.name === params.profile);
+      const foundProfile = profiles.find((p: any) => p.name === params.entProfile);
       if (!foundProfile) {
-        throw new ProgramError(`Enterprise profile with name "${params.profile}" not found.`);
+        throw new ProgramError(`Enterprise profile with name "${params.entProfile}" not found.`);
       }
       params.entProfileId = foundProfile.id;
     }
@@ -2833,22 +2833,22 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
     `${PROGRAM_NAME}-enterprise-app-store-version-download-link`
   ];
 
-  if (appVersionRequiredCommands.includes(command.fullCommandName)) {
-    if (!params.entVersionId && !params.appVersion) {
+    if (appVersionRequiredCommands.includes(command.fullCommandName)) {
+    if (!params.entVersionId && !params.entVersion) {
       const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
       const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
       if (longDescription) {
         console.log('\n' + longDescription);
       }
-      throw new ProgramError(`Either --entVersionId or --appVersion parameter is required.`);
+      throw new ProgramError(`Either --entVersionId or --entVersion parameter is required.`);
     }
 
     // Resolve app version name to ID if needed
-    if (params.appVersion && !params.entVersionId) {
+    if (params.entVersion && !params.entVersionId) {
       const appVersions = await getEnterpriseAppVersions({ entProfileId: params.entProfileId, publishType: "0" });
-      const foundAppVersion = appVersions.find((v: any) => v.name === params.appVersion || v.version === params.appVersion);
+      const foundAppVersion = appVersions.find((v: any) => v.name === params.entVersion || v.version === params.entVersion);
       if (!foundAppVersion) {
-        throw new ProgramError(`App version with name "${params.appVersion}" not found.`);
+        throw new ProgramError(`App version with name "${params.entVersion}" not found.`);
       }
       params.entVersionId = foundAppVersion.id;
     }
