@@ -490,21 +490,21 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
   ];
 
   if (profileRequiredCommands.includes(command.fullCommandName)) {
-    if (!params.publishProfileId && !params.profile) {
+    if (!params.publishProfileId && !params.publishProfile) {
       const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
       const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
       if (longDescription) {
         console.log('\n' + longDescription);
       }
-      throw new ProgramError(`Either --publishProfileId or --profile parameter is required.`);
+      throw new ProgramError(`Either --publishProfileId or --publishProfile parameter is required.`);
     }
 
     // Resolve profile name to ID if needed
-    if (params.profile && !params.publishProfileId) {
+    if (params.publishProfile && !params.publishProfileId) {
       const profiles = await getPublishProfiles({ platform: params.platform });
-      const foundProfile = profiles.find((p: any) => p.name === params.profile);
+      const foundProfile = profiles.find((p: any) => p.name === params.publishProfile);
       if (!foundProfile) {
-        throw new ProgramError(`Publish profile with name "${params.profile}" not found.`);
+        throw new ProgramError(`Publish profile with name "${params.publishProfile}" not found.`);
       }
       params.publishProfileId = foundProfile.id;
     }

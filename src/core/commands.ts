@@ -2764,12 +2764,12 @@ LEARN MORE
 
 USAGE
   appcircle publish start --platform <platform> --publishProfileId <uuid> --appVersionId <uuid>
-  appcircle publish start --platform <platform> --profile <string> --appVersion <string>
+  appcircle publish start --platform <platform> --publishProfile <string> --appVersion <string>
 
 REQUIRED OPTIONS
   --platform <platform>           Platform (ios or android)
   --publishProfileId <uuid>       Publish profile ID (UUID format)
-  --profile <string>              Publish profile name (alternative to --publishProfileId)
+  --publishProfile <string>       Publish profile name (alternative to --publishProfileId)
   --appVersionId <uuid>           App version ID (UUID format)
   --appVersion <string>           App version name (alternative to --appVersionId)
 
@@ -2779,7 +2779,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish start --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --appVersionId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-  appcircle publish start --platform android --profile "Google Play Production" --appVersion "MyApp v2.1.0"
+  appcircle publish start --platform android --publishProfile "Google Play Production" --appVersion "MyApp v2.1.0"
 
 LEARN MORE
   Use 'appcircle publish profile list --platform <platform>' to get available publish profiles with their UUIDs and names.
@@ -2794,7 +2794,7 @@ LEARN MORE
             required: false
           },
           {
-            name: 'profile',
+            name: 'publishProfile',
             description: "Publish Profile Name instead of 'publishProfileId'",
             type: CommandParameterTypes.STRING,
             valueType: 'string',
@@ -2848,12 +2848,12 @@ LEARN MORE
 
 USAGE
   appcircle publish view --platform <platform> --publishProfileId <uuid> --appVersionId <uuid>
-  appcircle publish view --platform <platform> --profile <string> --appVersion <string>
+  appcircle publish view --platform <platform> --publishProfile <string> --appVersion <string>
 
 REQUIRED OPTIONS
   --platform <platform>           Platform (ios or android)
   --publishProfileId <uuid>       Publish profile ID (UUID format)
-  --profile <string>              Publish profile name (alternative to --publishProfileId)
+  --publishProfile <string>       Publish profile name (alternative to --publishProfileId)
   --appVersionId <uuid>           App version ID (UUID format)
   --appVersion <string>           App version name (alternative to --appVersionId)
 
@@ -2863,7 +2863,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish view --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --appVersionId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-  appcircle publish view --platform android --profile "Google Play Production" --appVersion "MyApp v2.1.0"
+  appcircle publish view --platform android --publishProfile "Google Play Production" --appVersion "MyApp v2.1.0"
 
 LEARN MORE
   Use 'appcircle publish profile list --platform <platform>' to get available publish profiles with their UUIDs and names.
@@ -2878,7 +2878,7 @@ LEARN MORE
             required: false
           },
           {
-            name: 'profile',
+            name: 'publishProfile',
             description: "Publish Profile Name instead of 'publishProfileId'",
             type: CommandParameterTypes.STRING,
             valueType: 'string',
@@ -3015,7 +3015,7 @@ LEARN MORE
                 required: false
               },
               {
-                name: 'profile',
+                name: 'publishProfile',
                 description: "Publish Profile Name instead of 'publishProfileId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
@@ -3045,11 +3045,11 @@ DESCRIPTION
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
-  --profile <string>         Publish profile name (alternative to --publishProfileId)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
 
 EXAMPLES
   appcircle publish profile delete --platform ios --publishProfileId <uuid>
-  appcircle publish profile delete --platform android --profile "Google Play Production"
+  appcircle publish profile delete --platform android --publishProfile "Google Play Production"
 
 LEARN MORE
   Use 'appcircle publish profile list --platform <platform>' to get profile IDs and names.`,
@@ -3062,7 +3062,7 @@ LEARN MORE
                 required: false
               },
               {
-                name: 'profile',
+                name: 'publishProfile',
                 description: "Publish Profile Name instead of 'publishProfileId'",
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
@@ -3132,7 +3132,7 @@ LEARN MORE
                     required: false
                   },
                   {
-                    name: 'profile',
+                    name: 'publishProfile',
                     description: "Publish Profile Name instead of 'publishProfileId'",
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
@@ -3173,7 +3173,7 @@ LEARN MORE
                     required: false
                   },
                   {
-                    name: 'profile',
+                    name: 'publishProfile',
                     description: "Publish Profile Name instead of 'publishProfileId'",
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
@@ -3212,7 +3212,7 @@ USAGE
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
-  --profile <string>         Publish profile name (alternative to --publishProfileId)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
   --app <path>               Path to the app binary (ipa/apk/aab)
 
 DESCRIPTION
@@ -3220,7 +3220,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish profile version upload --platform ios --publishProfileId <uuid> --app ./MyApp.ipa
-  appcircle publish profile version upload --platform android --profile "Google Play Production" --app ./MyApp.aab
+  appcircle publish profile version upload --platform android --publishProfile "Google Play Production" --app ./MyApp.aab
 
 LEARN MORE
   Use 'appcircle publish profile version list' to see all versions for a profile.`,
@@ -3234,7 +3234,7 @@ LEARN MORE
                     required: false
                   },
                   {
-                    name: 'profile',
+                    name: 'publishProfile',
                     description: "Publish Profile Name instead of 'publishProfileId'",
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
@@ -3517,7 +3517,7 @@ USAGE
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
-  --profile <string>         Publish profile name (alternative to --publishProfileId)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
   --enable <true|false>      Enable or disable auto-publish
 
 DESCRIPTION
@@ -3525,7 +3525,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish profile settings autopublish --platform ios --publishProfileId <uuid> --enable true
-  appcircle publish profile settings autopublish --platform android --profile "Google Play Production" --enable false
+  appcircle publish profile settings autopublish --platform android --publishProfile "Google Play Production" --enable false
 
 LEARN MORE
   Use 'appcircle publish profile list --platform <platform>' to get profile IDs and names.`,
@@ -3539,7 +3539,7 @@ LEARN MORE
                     required: false
                   },
                   {
-                    name: 'profile',
+                    name: 'publishProfile',
                     description: "Publish Profile Name instead of 'publishProfileId'",
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
