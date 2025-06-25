@@ -21,7 +21,6 @@ const createCommands = (program: any, commands: typeof Commands, actionCb: any) 
     createCommands(comandPrg, command.subCommands || [], actionCb);
 
     command.params
-      .filter((p) => !p.skipForInteractiveMode)
       .forEach((param) => {
         param.required !== false
           ? comandPrg.requiredOption(`--${param.name} <${param.valueType}>`, param.longDescription || param.description)
