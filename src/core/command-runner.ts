@@ -2384,6 +2384,92 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
 }
 
 const handleSigningIdentityCommand = async (command: ProgramCommand, params: any) => {
+  // Certificate ID or Certificate Name validation
+  const certificateRequiredCommands = [
+    `${PROGRAM_NAME}-signing-identity-certificate-view`,
+    `${PROGRAM_NAME}-signing-identity-certificate-download`,
+    `${PROGRAM_NAME}-signing-identity-certificate-remove`
+  ];
+
+  if (certificateRequiredCommands.includes(command.fullCommandName)) {
+    if (!params.certificateBundleId && !params.certificateId && !params.certificate) {
+      const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
+      const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
+      if (longDescription) {
+        console.log('\n' + longDescription);
+      }
+      throw new ProgramError(`Either --certificateBundleId, --certificateId, or --certificate parameter is required.`);
+    }
+
+    // Resolve certificate name to ID if needed
+    if (params.certificate && !params.certificateBundleId && !params.certificateId) {
+      const certificates = await getiOSP12Certificates();
+      const foundCertificate = certificates.find((c: any) => c.name === params.certificate);
+      if (!foundCertificate) {
+        throw new ProgramError(`Certificate with name "${params.certificate}" not found.`);
+      }
+      // Set both IDs based on command requirements
+      params.certificateBundleId = foundCertificate.id;
+      params.certificateId = foundCertificate.id;
+    }
+  }
+
+  // Keystore ID or Keystore Name validation
+  const keystoreRequiredCommands = [
+    `${PROGRAM_NAME}-signing-identity-keystore-view`,
+    `${PROGRAM_NAME}-signing-identity-keystore-download`,
+    `${PROGRAM_NAME}-signing-identity-keystore-remove`
+  ];
+
+  if (keystoreRequiredCommands.includes(command.fullCommandName)) {
+    if (!params.keystoreId && !params.keystore) {
+      const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
+      const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
+      if (longDescription) {
+        console.log('\n' + longDescription);
+      }
+      throw new ProgramError(`Either --keystoreId or --keystore parameter is required.`);
+    }
+
+    // Resolve keystore name to ID if needed
+    if (params.keystore && !params.keystoreId) {
+      const keystores = await getAndroidKeystores();
+      const foundKeystore = keystores.find((k: any) => k.name === params.keystore);
+      if (!foundKeystore) {
+        throw new ProgramError(`Keystore with name "${params.keystore}" not found.`);
+      }
+      params.keystoreId = foundKeystore.id;
+    }
+  }
+
+  // Provisioning Profile ID or Provisioning Profile Name validation
+  const provisioningProfileRequiredCommands = [
+    `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`,
+    `${PROGRAM_NAME}-signing-identity-provisioning-profile-download`,
+    `${PROGRAM_NAME}-signing-identity-provisioning-profile-remove`
+  ];
+
+  if (provisioningProfileRequiredCommands.includes(command.fullCommandName)) {
+    if (!params.provisioningProfileId && !params.provisioningProfile) {
+      const commandParts = command.fullCommandName.replace(`${PROGRAM_NAME}-`, '').split('-');
+      const longDescription = getLongDescriptionForCommand(commandParts.join(' '));
+      if (longDescription) {
+        console.log('\n' + longDescription);
+      }
+      throw new ProgramError(`Either --provisioningProfileId or --provisioningProfile parameter is required.`);
+    }
+
+    // Resolve provisioning profile name to ID if needed
+    if (params.provisioningProfile && !params.provisioningProfileId) {
+      const profiles = await getProvisioningProfiles();
+      const foundProfile = profiles.find((p: any) => p.name === params.provisioningProfile);
+      if (!foundProfile) {
+        throw new ProgramError(`Provisioning profile with name "${params.provisioningProfile}" not found.`);
+      }
+      params.provisioningProfileId = foundProfile.id;
+    }
+  }
+
   if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-list`) {
     const spinner = createOra('Listing Certificates...').start();
     const p12Certs = await getiOSP12Certificates();
@@ -2422,41 +2508,17 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-view`) {
-    if (!params.certificateBundleId && !params.certificate) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
     const spinner = createOra('Getting Certificate details...').start();
-    const responseData = await getCertificateDetailById(params);
+    const responseData = await getCertificateDetailById({ certificateBundleId: params.certificateBundleId });
     spinner.stop();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: responseData
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-download`) {
-    if (!params.certificateId && !params.certificate) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
-    // Resolve certificate name to ID if needed
-    let certificateId = params.certificateId;
-    if (!certificateId && params.certificate) {
-      const p12Certs = await getiOSP12Certificates();
-      const cert = p12Certs.find((c: any) => c.name === params.certificate);
-      if (cert) {
-        certificateId = cert.id;
-      }
-    }
-
     const p12Certs = await getiOSP12Certificates();
     const p12Cert = p12Certs?.find(
-      (certificate: any) => certificate.id === certificateId
+      (certificate: any) => certificate.id === params.certificateId
     );
     const downloadPath = path.resolve(
       (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
@@ -2467,7 +2529,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
     ).start();
     try {
       await downloadCertificateById(
-        { ...params, certificateId },
+        { certificateId: params.certificateId, path: params.path },
         downloadPath,
         fileName,
         p12Cert ? 'p12' : 'csr'
@@ -2479,13 +2541,6 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail();
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-certificate-remove`) {
-    if (!params.certificateId && !params.certificate) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
     let spinner = createOra('Try to remove the Certificate').start();
     try {
       // Stop spinner temporarily for the prompt
@@ -2493,7 +2548,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       
       let certificateIdentifier = params.certificateId; // Default to ID
       try {
-        const certDetail = await getCertificateDetailById(params);
+        const certDetail = await getCertificateDetailById({ certificateBundleId: params.certificateBundleId });
         if (certDetail) {
           certificateIdentifier = certDetail.name || certDetail.id; // Prefer name, fallback to ID
         }
@@ -2522,7 +2577,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner = createOra('Removing Certificate...').start();
       const csrCerts = await getiOSCSRCertificates();
       const csrCert = csrCerts?.find((certificate:any) => certificate.id === params.certificateId);
-      await removeCSRorP12CertificateById(params, csrCert ? 'csr': 'p12');
+      await removeCSRorP12CertificateById({ certificateId: params.certificateId, path: params.path }, csrCert ? 'csr': 'p12');
       spinner.text = `Certificate removed successfully.\n\n`;
       spinner.succeed();
     } catch (e: any) {
@@ -2557,20 +2612,13 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail('Upload failed: Keystore was tampered with, or password was incorrect');
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-download`) {
-    if (!params.keystoreId && !params.keystore) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
     const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
     const spinner = createOra(`Searching file...`).start();
     try {
-      const keystoreDetail = await getKeystoreDetailById(params);
+      const keystoreDetail = await getKeystoreDetailById({ keystoreId: params.keystoreId });
       const fileName = keystoreDetail.fileName || `${keystoreDetail.id}.keystore`;
       spinner.text = `Downloading file ${fileName}`;
-      await downloadKeystoreById(params, downloadPath, fileName);
+      await downloadKeystoreById({ keystoreId: params.keystoreId, path: params.path }, downloadPath, fileName);
       spinner.text = `The file ${fileName} is downloaded successfully under path:\nfile://${downloadPath}`;
       spinner.succeed();
     } catch (e) {
@@ -2578,28 +2626,14 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       spinner.fail();
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-view`) {
-    if (!params.keystoreId && !params.keystore) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
     const spinner = createOra('Getting Keystore details...').start();
-    const keystore = await getKeystoreDetailById(params);
+    const keystore = await getKeystoreDetailById({ keystoreId: params.keystoreId });
     spinner.stop();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: keystore
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-keystore-remove`) {
-    if (!params.keystoreId && !params.keystore) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
     let spinner = createOra('Try to remove the Keystore').start();
     try {
       // Stop spinner temporarily for the prompt
@@ -2607,7 +2641,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       
       let keystoreIdentifier = params.keystoreId; // Default to ID
       try {
-        const keystoreDetails = await getKeystoreDetailById(params);
+        const keystoreDetails = await getKeystoreDetailById({ keystoreId: params.keystoreId });
         if (keystoreDetails) {
           keystoreIdentifier = keystoreDetails.name || keystoreDetails.fileName || keystoreDetails.id; // Prefer name or filename
         }
@@ -2634,7 +2668,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
 
       // Create a new spinner for the deletion process
       spinner = createOra('Removing Keystore...').start();
-      await removeKeystore(params);
+      await removeKeystore({ keystoreId: params.keystoreId });
       spinner.text = `Keystore removed successfully.\n\n`;
       spinner.succeed();
     } catch (e: any) {
@@ -2660,18 +2694,11 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-download`) {
-    if (!params.provisioningProfileId && !params.provisioningProfile) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
     const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
     const spinner = createOra('Trying to download the Provisioning Profile').start();
     try {
-      const profile = await getProvisioningProfileDetailById(params);
-      await downloadProvisioningProfileById(params, downloadPath, profile.filename);
+      const profile = await getProvisioningProfileDetailById({ provisioningProfileId: params.provisioningProfileId });
+      await downloadProvisioningProfileById({ provisioningProfileId: params.provisioningProfileId }, downloadPath, profile.filename);
       spinner.text = `The file ${profile.filename} is downloaded successfully under path:\n${downloadPath}`;
       spinner.succeed();
     } catch (e) {
@@ -2679,28 +2706,14 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-view`) {
-    if (!params.provisioningProfileId && !params.provisioningProfile) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
     const spinner = createOra('Getting Provisioning Profile details...').start();
-    const profile = await getProvisioningProfileDetailById(params);
+    const profile = await getProvisioningProfileDetailById({ provisioningProfileId: params.provisioningProfileId });
     spinner.stop();
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: profile
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-signing-identity-provisioning-profile-remove`) {
-    if (!params.provisioningProfileId && !params.provisioningProfile) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
     let spinner = createOra('Try to remove the Provisioning Profile').start();
     try {
       // Stop spinner temporarily for the prompt
@@ -2708,7 +2721,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
       
       let profileIdentifier = params.provisioningProfileId; // Default to ID
       try {
-        const profileDetails = await getProvisioningProfileDetailById(params);
+        const profileDetails = await getProvisioningProfileDetailById({ provisioningProfileId: params.provisioningProfileId });
         if (profileDetails) {
           profileIdentifier = profileDetails.name || profileDetails.filename || profileDetails.id; // Prefer name or filename
         }
@@ -2735,7 +2748,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
 
       // Create a new spinner for the deletion process
       spinner = createOra('Removing Provisioning Profile...').start();
-      await removeProvisioningProfile(params);
+      await removeProvisioningProfile({ provisioningProfileId: params.provisioningProfileId });
       spinner.text = `Provisioning Profile removed successfully.\n\n`;
       spinner.succeed();
     } catch (e: any) {
