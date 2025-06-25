@@ -831,6 +831,11 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
         data: response,
       });
     } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-settings-autopublish`) {
+      // Convert enable parameter to boolean if it's a string
+      if (typeof params.enable === 'string') {
+        params.enable = params.enable.toLowerCase() === 'true';
+      }
+      
       const publishProfileDetails = await getPublishProfileDetailById(params);
       const response = await switchPublishProfileAutoPublishSettings({ ...params, currentProfileSettings: publishProfileDetails.profileSettings });
       commandWriter(CommandTypes.PUBLISH, {
