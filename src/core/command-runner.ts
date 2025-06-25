@@ -2039,25 +2039,25 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       data: { ...responseData, name: params.name },
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-upload`) {
-    // Validate that either distProfileId or profile parameter is provided
-    if (!params.distProfileId && !params.profile) {
+    // Validate that either distProfileId or distProfile parameter is provided
+    if (!params.distProfileId && !params.distProfile) {
       const desc = getLongDescriptionForCommand(command.fullCommandName);
       if (desc) {
         console.error(`\n${desc}\n`);
       }
-      throw new AppcircleExitError('Either --distProfileId or --profile parameter is required', 1);
+      throw new AppcircleExitError('Either --distProfileId or --distProfile parameter is required', 1);
     }
 
     const spinner = createOra('Try to upload the app').start();
     try {
       const profiles = await getDistributionProfiles(params);
       
-      // If profile name is provided, resolve it to distProfileId
-      if (params.profile && !params.distProfileId) {
-        const foundProfile = profiles.find((p: any) => p.name === params.profile);
+      // If distProfile name is provided, resolve it to distProfileId
+      if (params.distProfile && !params.distProfileId) {
+        const foundProfile = profiles.find((p: any) => p.name === params.distProfile);
         if (!foundProfile) {
-          spinner.fail(`Distribution profile with name "${params.profile}" not found`);
-          throw new AppcircleExitError(`Distribution profile with name "${params.profile}" not found`, 1);
+          spinner.fail(`Distribution profile with name "${params.distProfile}" not found`);
+          throw new AppcircleExitError(`Distribution profile with name "${params.distProfile}" not found`, 1);
         }
         params.distProfileId = foundProfile.id;
       }
@@ -2169,29 +2169,57 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
       throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-settings-auto-send`) {
-    // Validate that either distProfileId or profile parameter is provided
-    if (!params.distProfileId && !params.profile) {
+    // Validate that either distProfileId or distProfile parameter is provided
+    if (!params.distProfileId && !params.distProfile) {
       const desc = getLongDescriptionForCommand(command.fullCommandName);
       if (desc) {
         console.error(`\n${desc}\n`);
       }
-      throw new AppcircleExitError('Either --distProfileId or --profile parameter is required', 1);
+      throw new AppcircleExitError('Either --distProfileId or --distProfile parameter is required', 1);
+    }
+
+    // Validate that either testingGroupIds or testingGroups parameter is provided
+    if (!params.testingGroupIds && !params.testingGroups) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('Either --testingGroupIds or --testingGroups parameter is required', 1);
     }
 
     const spinner = createOra('Testing Groups saving').start();
     try {
-      // If profile name is provided, resolve it to distProfileId
-      if (params.profile && !params.distProfileId) {
+      // If distProfile name is provided, resolve it to distProfileId
+      if (params.distProfile && !params.distProfileId) {
         const profiles = await getDistributionProfiles(params);
-        const foundProfile = profiles.find((p: any) => p.name === params.profile);
+        const foundProfile = profiles.find((p: any) => p.name === params.distProfile);
         if (!foundProfile) {
-          spinner.fail(`Distribution profile with name "${params.profile}" not found`);
-          throw new AppcircleExitError(`Distribution profile with name "${params.profile}" not found`, 1);
+          spinner.fail(`Distribution profile with name "${params.distProfile}" not found`);
+          throw new AppcircleExitError(`Distribution profile with name "${params.distProfile}" not found`, 1);
         }
         params.distProfileId = foundProfile.id;
       }
+
+      // If testingGroups names are provided, resolve them to testingGroupIds
+      if (params.testingGroups && !params.testingGroupIds) {
+        const testingGroups = await getTestingGroups();
+        const groupNames = Array.isArray(params.testingGroups) ? params.testingGroups : params.testingGroups.split(',');
+        
+        const resolvedIds: string[] = [];
+        for (const groupName of groupNames) {
+          const trimmedName = groupName.trim();
+          const foundGroup = testingGroups.find((g: any) => g.name === trimmedName);
+          if (!foundGroup) {
+            spinner.fail(`Testing group with name "${trimmedName}" not found`);
+            throw new AppcircleExitError(`Testing group with name "${trimmedName}" not found`, 1);
+          }
+          resolvedIds.push(foundGroup.id);
+        }
+        params.testingGroupIds = resolvedIds;
+      } else if (params.testingGroupIds) {
+        params.testingGroupIds = Array.isArray(params.testingGroupIds) ? params.testingGroupIds : params.testingGroupIds.split(' ');
+      }
       
-      params.testingGroupIds = Array.isArray(params.testingGroupIds) ? params.testingGroupIds : params.testingGroupIds.split(' '); 
       await updateDistributionProfileSettings(params);
       spinner.succeed('Testing Groups saved successfully.');
     } catch (e) {

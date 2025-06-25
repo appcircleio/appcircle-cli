@@ -2209,13 +2209,13 @@ LEARN MORE
 
 USAGE
   appcircle testing-distribution upload --distProfileId <uuid> --app <path> --message <message>
-  appcircle testing-distribution upload --profile <string> --app <path> --message <message>
+  appcircle testing-distribution upload --distProfile <string> --app <path> --message <message>
 
 REQUIRED OPTIONS
-  --distProfileId <uuid>  Distribution profile ID (UUID format)
-  --profile <string>      Distribution profile name (alternative to --distProfileId)
-  --app <path>           Path to the mobile app file (.ipa for iOS, .apk/.aab for Android)
-  --message <message>    Release notes for this distribution
+  --distProfileId <uuid>    Distribution profile ID (UUID format)
+  --distProfile <string>    Distribution profile name (alternative to --distProfileId)
+  --app <path>             Path to the mobile app file (.ipa for iOS, .apk/.aab for Android)
+  --message <message>      Release notes for this distribution
 
 DESCRIPTION
   Upload a mobile application binary to a specified distribution profile for testing.
@@ -2223,7 +2223,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution upload --distProfileId 550e8400-e29b-41d4-a716-446655440000 --app ./MyApp.ipa --message "Fixed login bug"
-  appcircle testing-distribution upload --profile "Beta Testing" --app ./MyApp.apk --message "New feature release"
+  appcircle testing-distribution upload --distProfile "Beta Testing" --app ./MyApp.apk --message "New feature release"
 
 LEARN MORE
   Use 'appcircle testing-distribution profile list' to get available distribution profiles with their UUIDs and names.
@@ -2237,7 +2237,7 @@ LEARN MORE
             required: false,
           },
           {
-            name: 'profile',
+            name: 'distProfile',
             description: "Distribution Profile Name instead of 'distProfileId'",
             type: CommandParameterTypes.STRING,
             valueType: 'string',
@@ -2380,12 +2380,14 @@ LEARN MORE
 
 USAGE
   appcircle testing-distribution profile settings auto-send --distProfileId <uuid> --testingGroupIds <group-ids>
-  appcircle testing-distribution profile settings auto-send --profile <string> --testingGroupIds <group-ids>
+  appcircle testing-distribution profile settings auto-send --distProfile <string> --testingGroupIds <group-ids>
+  appcircle testing-distribution profile settings auto-send --distProfile <string> --testingGroups <group-names>
 
 REQUIRED OPTIONS
-  --distProfileId <uuid>      Distribution profile ID (UUID format)
-  --profile <string>          Distribution profile name (alternative to --distProfileId)
-  --testingGroupIds <ids>     Testing group IDs for automated distribution (multiple values supported)
+  --distProfileId <uuid>        Distribution profile ID (UUID format)
+  --distProfile <string>        Distribution profile name (alternative to --distProfileId)
+  --testingGroupIds <ids>       Testing group IDs for automated distribution (multiple values supported)
+  --testingGroups <names>       Testing group names for automated distribution (alternative to --testingGroupIds)
 
 DESCRIPTION
   Configure a distribution profile to automatically send builds to specified testing groups.
@@ -2393,7 +2395,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution profile settings auto-send --distProfileId 550e8400-e29b-41d4-a716-446655440000 --testingGroupIds "group1,group2"
-  appcircle testing-distribution profile settings auto-send --profile "Beta Testing" --testingGroupIds "QA Team,Beta Testers"
+  appcircle testing-distribution profile settings auto-send --distProfile "Beta Testing" --testingGroups "QA Team,Beta Testers"
 
 LEARN MORE
   Use 'appcircle testing-distribution testing-group list' to get available testing groups.
@@ -2407,7 +2409,7 @@ LEARN MORE
                     required: false,
                   },
                   {
-                    name: 'profile',
+                    name: 'distProfile',
                     description: "Distribution Profile Name instead of 'distProfileId'",
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
@@ -2421,7 +2423,15 @@ LEARN MORE
                     description: 'Testing Group Names (IDs) for automated Distribution',
                     longDescription: 'Testing Group IDs for automated Distribution',
                     type: CommandParameterTypes.MULTIPLE_SELECT,
-                    valueType: 'string'
+                    valueType: 'string',
+                    required: false,
+                  },
+                  {
+                    name: 'testingGroups',
+                    description: 'Testing Group Names instead of testingGroupIds',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
                   }
                 ]
               }
