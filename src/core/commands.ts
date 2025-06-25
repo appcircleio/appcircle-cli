@@ -3276,11 +3276,14 @@ LEARN MORE
 
 USAGE
   appcircle publish profile version download --platform <platform> --publishProfileId <uuid> --appVersionId <uuid> [--path <path>]
+  appcircle publish profile version download --platform <platform> --publishProfile <string> --appVersion <string> [--path <path>]
 
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
   --appVersionId <uuid>      App version ID (UUID format)
+  --appVersion <string>      App version name/file name (alternative to --appVersionId)
   --path <path>              (Optional) Path to save the downloaded file (defaults to current directory)
 
 DESCRIPTION
@@ -3288,7 +3291,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish profile version download --platform ios --publishProfileId <uuid> --appVersionId <uuid>
-  appcircle publish profile version download --platform android --publishProfileId <uuid> --appVersionId <uuid> --path ./downloads
+  appcircle publish profile version download --platform android --publishProfile "Google Play Production" --appVersion "app-release.aab"
 
 LEARN MORE
   Use 'appcircle publish profile version list' to get available app versions.`,
@@ -3299,14 +3302,34 @@ LEARN MORE
                     description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'appVersionId',
                     description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'appVersion',
+                    description: "App Version Name instead of 'appVersionId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'path',
@@ -3325,17 +3348,21 @@ LEARN MORE
 
 USAGE
   appcircle publish profile version delete --platform <platform> --publishProfileId <uuid> --appVersionId <uuid>
+  appcircle publish profile version delete --platform <platform> --publishProfile <string> --appVersion <string>
 
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
   --appVersionId <uuid>      App version ID (UUID format)
+  --appVersion <string>      App version name/file name (alternative to --appVersionId)
 
 DESCRIPTION
   Permanently deletes the specified app version from the selected publish profile.
 
 EXAMPLES
   appcircle publish profile version delete --platform ios --publishProfileId <uuid> --appVersionId <uuid>
+  appcircle publish profile version delete --platform android --publishProfile "Google Play Production" --appVersion "app-release.aab"
 
 LEARN MORE
   Use 'appcircle publish profile version list' to get available app versions.`,
@@ -3346,14 +3373,34 @@ LEARN MORE
                     description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'appVersionId',
                     description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'appVersion',
+                    description: "App Version Name instead of 'appVersionId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   }
                 ],
               },
@@ -3364,17 +3411,21 @@ LEARN MORE
 
 USAGE
   appcircle publish profile version mark-as-rc --platform <platform> --publishProfileId <uuid> --appVersionId <uuid>
+  appcircle publish profile version mark-as-rc --platform <platform> --publishProfile <string> --appVersion <string>
 
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
   --appVersionId <uuid>      App version ID (UUID format)
+  --appVersion <string>      App version name/file name (alternative to --appVersionId)
 
 DESCRIPTION
   Mark the specified app version as a Release Candidate for distribution or review.
 
 EXAMPLES
   appcircle publish profile version mark-as-rc --platform ios --publishProfileId <uuid> --appVersionId <uuid>
+  appcircle publish profile version mark-as-rc --platform android --publishProfile "Google Play Production" --appVersion "app-release.aab"
 
 LEARN MORE
   Use 'appcircle publish profile version list' to get available app versions.`,
@@ -3385,14 +3436,34 @@ LEARN MORE
                     description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'appVersionId',
                     description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'appVersion',
+                    description: "App Version Name instead of 'appVersionId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   }
                 ],
               },
@@ -3403,17 +3474,21 @@ LEARN MORE
 
 USAGE
   appcircle publish profile version unmark-as-rc --platform <platform> --publishProfileId <uuid> --appVersionId <uuid>
+  appcircle publish profile version unmark-as-rc --platform <platform> --publishProfile <string> --appVersion <string>
 
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
   --appVersionId <uuid>      App version ID (UUID format)
+  --appVersion <string>      App version name/file name (alternative to --appVersionId)
 
 DESCRIPTION
   Remove the Release Candidate status from the specified app version.
 
 EXAMPLES
   appcircle publish profile version unmark-as-rc --platform ios --publishProfileId <uuid> --appVersionId <uuid>
+  appcircle publish profile version unmark-as-rc --platform android --publishProfile "Google Play Production" --appVersion "app-release.aab"
 
 LEARN MORE
   Use 'appcircle publish profile version list' to get available app versions.`,
@@ -3424,14 +3499,34 @@ LEARN MORE
                     description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'appVersionId',
                     description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'appVersion',
+                    description: "App Version Name instead of 'appVersionId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   }
                 ],
               },
@@ -3442,11 +3537,14 @@ LEARN MORE
 
 USAGE
   appcircle publish profile version update-release-note --platform <platform> --publishProfileId <uuid> --appVersionId <uuid> --summary <text>
+  appcircle publish profile version update-release-note --platform <platform> --publishProfile <string> --appVersion <string> --summary <text>
 
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
   --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
   --appVersionId <uuid>      App version ID (UUID format)
+  --appVersion <string>      App version name/file name (alternative to --appVersionId)
   --summary <text>           Release notes text
 
 DESCRIPTION
@@ -3454,6 +3552,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle publish profile version update-release-note --platform ios --publishProfileId <uuid> --appVersionId <uuid> --summary "Bug fixes and improvements"
+  appcircle publish profile version update-release-note --platform android --publishProfile "Google Play Production" --appVersion "app-release.aab" --summary "Bug fixes and improvements"
 
 LEARN MORE
   Use 'appcircle publish profile version view' to see current release notes.`,
@@ -3464,14 +3563,34 @@ LEARN MORE
                     description: 'Publish Profile Name (ID)',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'appVersionId',
                     description: 'App Version',
                     type: CommandParameterTypes.SELECT,
                     valueType: 'uuid',
-                    required: true
+                    required: false
+                  },
+                  {
+                    name: 'appVersion',
+                    description: "App Version Name instead of 'appVersionId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
                   },
                   {
                     name: 'summary',
