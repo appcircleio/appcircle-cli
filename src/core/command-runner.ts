@@ -1550,6 +1550,13 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       }
       throw new AppcircleExitError('', 1);
     }
+    if (!params.commitId) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
     const spinner = createOra('Listing...').start();
     const responseData = await getBuildsOfCommit(params);
     spinner.stop();
@@ -1958,6 +1965,20 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       throw new AppcircleExitError('', 1);
     }
     if (!params.branchId && !params.branch) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+    if (!params.commitId) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+    if (!params.buildId) {
       const desc = getLongDescriptionForCommand(command.fullCommandName);
       if (desc) {
         console.error(`\n${desc}\n`);
