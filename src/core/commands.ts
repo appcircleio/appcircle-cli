@@ -342,6 +342,7 @@ OPTIONAL OPTIONS
   --commitHash <string>     Commit hash (alternative to --commitId)
   --configurationId <uuid>  Configuration ID (UUID format, optional)
   --configuration <string>  Configuration name (alternative to --configurationId)
+  --no-wait                 Don't wait for build completion, return immediately with task info
 
 EXAMPLES
   appcircle build start --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --workflowId 6ba7b811-9dad-11d1-80b4-00c04fd430c8
@@ -440,6 +441,16 @@ LEARN MORE
             required: false,
             requriedForInteractiveMode: false,
             skipForInteractiveMode:true,
+            params: [],
+          },
+          {
+            name: 'no-wait',
+            description: "Don't wait for build completion, return immediately with task info",
+            type: CommandParameterTypes.BOOLEAN,
+            valueType: 'boolean',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
             params: [],
           },
         ],

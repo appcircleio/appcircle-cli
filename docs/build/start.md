@@ -19,6 +19,7 @@ appcircle build start [options]
   --configuration <string>  Configuration name (alternative to --configurationId) [Optional]
   --workflowId <uuid>       Workflow ID
   --workflow <string>       Workflow name (alternative to --workflowId)
+  --no-wait                 Don't wait for build completion, return immediately with task info
 ```
 ## Options inherited from parent commands
 
@@ -37,4 +38,7 @@ appcircle build start --profile "Automation Variable" --branch "develop" --workf
 
 # Mixed usage (IDs and names)
 appcircle build start --profile "Automation Variable" --branchId f416f868-5d1a-4464-8ff7-70ddb789aeba --workflow "Default Push Workflow" --configuration "Default Configuration"
+
+# Start build without waiting for completion (useful for automation)
+appcircle build start --profile "My App" --branch "main" --workflow "Default Push Workflow" --no-wait
 ```

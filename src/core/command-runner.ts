@@ -1093,7 +1093,30 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     try {
       const responseData = await startBuild(params);
       
-      // Only write initial output if not in JSON mode
+      // Check if user wants to wait for build completion
+      // Commander.js converts --no-wait to wait: false
+      const shouldWait = params.wait !== false;
+      
+      // If --no-wait is specified, return immediately with task info
+      if (!shouldWait) {
+        if (getConsoleOutputType() === 'json') {
+          spinner.stop();
+          const jsonOutput = {
+            taskId: responseData.taskId,
+            queueItemId: responseData.queueItemId
+          };
+          console.log(JSON.stringify(jsonOutput));
+          throw new AppcircleExitError('', 0);
+        } else {
+          commandWriter(CommandTypes.BUILD, {
+            fullCommandName: command.fullCommandName,
+            data: responseData,
+          });
+          spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
+          throw new AppcircleExitError('Build queued successfully', 0);
+        }
+      }
+      
       if (getConsoleOutputType() !== 'json') {
         commandWriter(CommandTypes.BUILD, {
           fullCommandName: command.fullCommandName,
@@ -1101,7 +1124,6 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         });
         spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
       } else {
-        // For JSON mode, just stop the spinner silently
         spinner.stop();
       }
       

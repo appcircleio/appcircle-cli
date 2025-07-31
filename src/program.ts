@@ -1,6 +1,6 @@
 import { Command, createCommand } from "commander";
 import { PROGRAM_NAME } from "./constant.js";
-import { CommandTypes, Commands } from "./core/commands.js";
+import { CommandTypes, Commands, CommandParameterTypes } from "./core/commands.js";
 
 export type ProgramCommand = { fullCommandName: string, isGroupCommand: (commandName: CommandTypes) => boolean,  parent:  Command | null; name: () => string; args: any; opts: () => { [key: string]: any } };
 
@@ -22,9 +22,14 @@ const createCommands = (program: any, commands: typeof Commands, actionCb: any) 
 
     command.params
       .forEach((param) => {
-        param.required !== false
-          ? comandPrg.requiredOption(`--${param.name} <${param.valueType}>`, param.longDescription || param.description)
-          : comandPrg.option(`--${param.name} <${param.valueType}>`, param.longDescription || param.description, param.defaultValue);
+        if (param.type === CommandParameterTypes.BOOLEAN) {
+          // Boolean parameters don't need value type specification
+          comandPrg.option(`--${param.name}`, param.longDescription || param.description, param.defaultValue);
+        } else {
+          param.required !== false
+            ? comandPrg.requiredOption(`--${param.name} <${param.valueType}>`, param.longDescription || param.description)
+            : comandPrg.option(`--${param.name} <${param.valueType}>`, param.longDescription || param.description, param.defaultValue);
+        }
       });
     comandPrg.action(() => actionCb);
   });
