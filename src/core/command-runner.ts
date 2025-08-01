@@ -1094,8 +1094,9 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       const responseData = await startBuild(params);
       
       // Check if user wants to wait for build completion
-      // Commander.js converts --no-wait to wait: false
-      const shouldWait = params.wait !== false;
+      // Commander.js converts kebab-case to camelCase
+      const hasNoWaitFlag = process.argv.includes('--no-wait');
+      const shouldWait = !hasNoWaitFlag;
       
       // If --no-wait is specified, return immediately with task info
       if (!shouldWait) {
@@ -1117,6 +1118,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         }
       }
       
+      // Only continue with build monitoring if shouldWait is true
       if (getConsoleOutputType() !== 'json') {
         commandWriter(CommandTypes.BUILD, {
           fullCommandName: command.fullCommandName,
@@ -1127,6 +1129,9 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         spinner.stop();
       }
       
+
+      
+
       const progressSpinner = getConsoleOutputType() === 'json' ? 
         { text: '', succeed: () => {}, fail: () => {}, stop: () => {} } : 
         createOra(`Checking Build Status...`).start();
@@ -1256,7 +1261,13 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             
             const homeDir = os.homedir();
             const defaultDownloadDir = path.join(homeDir, 'Downloads');
-                
+            const downloadPath = params.path || defaultDownloadDir;
+            
+            // Check if automatic download parameters are provided
+            // Commander.js converts kebab-case to camelCase
+            const shouldDownloadLogs = params.downloadLogs === true || params['download-logs'] === true;
+            const shouldDownloadArtifacts = params.downloadArtifacts === true || params['download-artifacts'] === true;
+            
             // Skip interactive prompt for JSON output mode
             if (getConsoleOutputType() === 'json') {
               const jsonOutput = {
@@ -1267,6 +1278,54 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
               };
               console.log(JSON.stringify(jsonOutput));
               throw new AppcircleExitError('', 0);
+            }
+            
+            // If automatic download parameters are provided, skip interactive prompt
+
+            
+            // If automatic download parameters were provided, skip interactive prompt
+            if (shouldDownloadLogs || shouldDownloadArtifacts) {
+              const commitId = finalStatusResponse?.commitId;
+              const buildId = latestBuildId || finalStatusResponse?.buildId;
+              
+              if (shouldDownloadArtifacts && commitId && buildId) {
+                const artifactSpinner = createOra('Downloading artifacts...').start();
+                try {
+                  const timestamp = Date.now();
+                  const artifactFileName = `artifacts-${timestamp}.zip`;
+                  await downloadArtifact({ 
+                    commitId: commitId, 
+                    buildId: buildId,
+                    branchId: params.branchId,
+                    profileId: params.profileId
+                  }, downloadPath, artifactFileName);
+                  artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(downloadPath, artifactFileName)}`);
+                } catch (e: any) {
+                  artifactSpinner.fail(`Failed to download artifacts: ${e.message}`);
+                }
+              }
+              
+              if (shouldDownloadLogs) {
+                const logSpinner = createOra('Downloading build logs...').start();
+                try {
+                  if (commitId && buildId && buildId !== '00000000-0000-0000-0000-000000000000') {
+                    await downloadBuildLogs({ 
+                      commitId: commitId, 
+                      buildId: buildId,
+                      branchId: params.branchId,
+                      profileId: params.profileId,
+                      path: downloadPath
+                    });
+                  } else {
+                    await downloadBuildLogs(responseData.queueItemId, { path: downloadPath });
+                  }
+                  logSpinner.succeed(`Build logs downloaded successfully to ${downloadPath}`);
+                } catch (e: any) {
+                  logSpinner.fail(`Failed to download build logs: ${e.message}`);
+                }
+              }
+              
+              throw new AppcircleExitError('Build completed', 0);
             }
                 
             console.log(chalk.cyan('\nWhat would you like to do next?'));

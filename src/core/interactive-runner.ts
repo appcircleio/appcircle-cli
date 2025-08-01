@@ -988,12 +988,17 @@ const handleInteractiveParamsOrArguments = async (
         }
         (params as any)[param.name] = value;
       } else if (param.type === CommandParameterTypes.BOOLEAN) {
-        const booleanPrompt = new BooleanPrompt({
-          name: param.name,
-          message: param.description,
-        });
-        //@ts-ignore
-        params[param.name] = await booleanPrompt.run();
+        // Skip boolean prompts for parameters that should be skipped in interactive mode
+        if (param.skipForInteractiveMode) {
+          params[param.name] = param.defaultValue || false;
+        } else {
+          const booleanPrompt = new BooleanPrompt({
+            name: param.name,
+            message: param.description,
+          });
+          //@ts-ignore
+          params[param.name] = await booleanPrompt.run();
+        }
       } else if (param.type === CommandParameterTypes.SELECT && param.params) {
         const selectPrompt = new AutoComplete({
           name: param.name,

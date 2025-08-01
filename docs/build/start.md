@@ -20,6 +20,9 @@ appcircle build start [options]
   --workflowId <uuid>       Workflow ID
   --workflow <string>       Workflow name (alternative to --workflowId)
   --no-wait                 Don't wait for build completion, return immediately with task info
+  --download-logs           Automatically download build logs after completion
+  --download-artifacts      Automatically download build artifacts after completion
+  --path <string>           Download path for logs and artifacts (default: ~/Downloads)
 ```
 ## Options inherited from parent commands
 
@@ -41,4 +44,10 @@ appcircle build start --profile "Automation Variable" --branchId f416f868-5d1a-4
 
 # Start build without waiting for completion (useful for automation)
 appcircle build start --profile "My App" --branch "main" --workflow "Default Push Workflow" --no-wait
+
+# Start build and automatically download logs and artifacts
+appcircle build start --profile "My App" --branch "main" --workflow "Default Push Workflow" --download-logs --download-artifacts
+
+# Start build and download only artifacts to custom path
+appcircle build start --profile "My App" --branch "main" --workflow "Default Push Workflow" --download-artifacts --path "/custom/download/path"
 ```
