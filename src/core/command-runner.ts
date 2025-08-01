@@ -1075,13 +1075,6 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       }
       throw new AppcircleExitError('', 1);
     }
-    if (!params.branchId && !params.branch) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
     if (!params.workflowId && !params.workflow) {
       const desc = getLongDescriptionForCommand(command.fullCommandName);
       if (desc) {

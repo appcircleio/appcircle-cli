@@ -332,10 +332,10 @@ USAGE
 REQUIRED OPTIONS
   --profileId <uuid>        Build profile ID (UUID format)
   --profile <string>        Build profile name (alternative to --profileId)
-  --branchId <uuid>         Branch ID (UUID format, required unless using --branch)
   --workflowId <uuid>       Workflow ID (UUID format, required unless using --workflow)
 
 OPTIONAL OPTIONS
+  --branchId <uuid>         Branch ID (UUID format, optional)
   --branch <string>         Branch name (alternative to --branchId)
   --workflow <string>       Workflow name (alternative to --workflowId)
   --commitId <uuid>         Commit ID (UUID format, optional)

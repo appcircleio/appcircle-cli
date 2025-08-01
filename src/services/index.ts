@@ -49,26 +49,34 @@ export async function getActiveBuilds() {
 }
 
 export async function startBuild(
-  options: OptionsType<{ profileId: string; branchId: string; workflowId?: string; commitId?: string, commitHash?: string, configurationId?: string }>
+  options: OptionsType<{ profileId: string; branchId?: string; workflowId?: string; commitId?: string, commitHash?: string, configurationId?: string }>
 ) {
   let workflowId = options.workflowId || '';
   let commitId = options.commitId || '';
   let configurationId = options.configurationId || '';
+  let branchId = options.branchId;
 
+  // branchId is only required if commitId is not provided
   if (!commitId && !options.commitHash) {
-    const allCommitsByBranchId = await getCommits({ branchId: options.branchId });
+    if (!branchId) {
+      throw new ProgramError(`Branch ID is required when commit ID is not provided. Please provide --branchId or --branch parameter.`);
+    }
+    const allCommitsByBranchId = await getCommits({ branchId: branchId! });
     if (allCommitsByBranchId && allCommitsByBranchId.length > 0) {
       commitId = allCommitsByBranchId[0].id;
     } else {
-      throw new ProgramError(`No commits found for branch ID "${options.branchId}".`);
+      throw new ProgramError(`No commits found for branch ID "${branchId}".`);
     }
   } else if (!commitId && options.commitHash) {
-    const allCommitsByBranchId = await getCommits({ branchId: options.branchId });
+    if (!branchId) {
+      throw new ProgramError(`Branch ID is required when commit hash is provided. Please provide --branchId or --branch parameter.`);
+    }
+    const allCommitsByBranchId = await getCommits({ branchId: branchId! });
     const foundCommit = allCommitsByBranchId?.find((c:any) => c.hash == options.commitHash);
     if (foundCommit) {
       commitId = foundCommit.id;
     } else {
-      throw new ProgramError(`Commit with hash "${options.commitHash}" not found for branch ID "${options.branchId}".`);
+      throw new ProgramError(`Commit with hash "${options.commitHash}" not found for branch ID "${branchId}".`);
     }
   }
 
@@ -384,7 +392,7 @@ export async function createEnvironmentVariable(
 }
 
 export async function getBranches(options: OptionsType<{ profileId: string }>, showConsole: boolean = true) {
-  const branchResponse = await appcircleApi.get(`build/v2/profiles/${options.profileId}`, {
+  const branchResponse = await appcircleApi.get(`build/v2/profiles/${options.profileId}/branches`, {
     headers: getHeaders(),
   });
   return branchResponse.data;
