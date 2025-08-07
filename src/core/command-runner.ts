@@ -1298,7 +1298,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }, downloadPath, artifactFileName);
                   artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(downloadPath, artifactFileName)}`);
                 } catch (e: any) {
-                  artifactSpinner.fail(`Failed to download artifacts: ${e.message}`);
+                  artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
                 }
               }
               
@@ -1317,7 +1317,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     await downloadBuildLogs(responseData.queueItemId, { path: downloadPath });
                   }
                 } catch (e: any) {
-                  logSpinner.fail(`Failed to download build logs: ${e.message}`);
+                  logSpinner.fail(`Cannot download logs since the build failed: ${e.message}`);
                 }
               }
               throw new AppcircleExitError('Build completed', 0);
@@ -1357,7 +1357,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(artifactDownloadPath, artifactFileName)}`);
                     console.log(chalk.green('Build completed successfully with artifacts downloaded.'));
                   } catch (e: any) {
-                    artifactSpinner.fail(`Failed to download artifacts: ${e.message}`);
+                    artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
                     console.log(chalk.yellow('Build completed successfully but artifact download failed.'));
                   }
                 } else {
@@ -1482,7 +1482,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }, downloadPath, artifactFileName);
                   artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(downloadPath, artifactFileName)}`);
                 } catch (e: any) {
-                  artifactSpinner.fail(`Failed to download artifacts: ${e.message}`);
+                  artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
                 }
               }
               
@@ -1506,7 +1506,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     await downloadBuildLogs(responseData.queueItemId, { path: downloadPath });
                   }
                 } catch (e: any) {
-                  logSpinner.fail(`Failed to download build logs: ${e.message}`);
+                  logSpinner.fail(`Cannot download logs since the build failed: ${e.message}`);
                 }
               }
               throw new AppcircleExitError('Build completed', 0);
@@ -1833,7 +1833,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           const fullPath = path.join(downloadPath, artifactFileName);
           spinner.succeed(`The file ${artifactFileName} is downloaded successfully: file://${fullPath}`);
         } catch (e: any) {
-          spinner.fail(`Failed to download artifact: ${e.message || 'Unknown error'}`);
+          spinner.fail(`Cannot download artifact since the build failed: ${e.message || 'Unknown error'}`);
           
           try {
             const buildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
@@ -1851,7 +1851,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         spinner.fail(chalk.red('CommitId or BuildId information not found.'));
       }
     } catch (e: any) {
-      spinner.fail(`Failed to download artifact: ${e.message || 'Unknown error'}`);
+      spinner.fail(`Cannot download artifact since the build failed: ${e.message || 'Unknown error'}`);
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`) {
     // Check if this is an interactive mode call
@@ -3480,10 +3480,10 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
           chalk.yellow(`Build Logs are not ready yet. Please try again later.`)
         );
       } else {
-        progressSpinner.fail(`Failed to download logs: ${lastError.message || String(lastError)}`);
+        progressSpinner.fail(`Cannot download logs since the build failed: ${lastError.message || String(lastError)}`);
       }
     } else {
-      progressSpinner.fail(`Failed to download logs after multiple attempts.`);
+      progressSpinner.fail(`Cannot download logs since the build failed after multiple attempts.`);
     }
   } catch (e: any) {
     progressSpinner.fail(chalk.red(`Error downloading Build Logs: ${e.message || String(e)}`));
