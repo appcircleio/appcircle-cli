@@ -1284,8 +1284,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
               
               if (shouldDownloadArtifacts && commitId && buildId) {
                 const artifactSpinner = createOra('Waiting for artifacts to be ready...').start();
-                // Wait for artifacts to be generated after build completion
-                await new Promise(resolve => setTimeout(resolve, 5000));
+                await new Promise(resolve => setTimeout(resolve, 10000));
                 artifactSpinner.text = 'Downloading artifacts...';
                 try {
                   const timestamp = Date.now();
@@ -1296,7 +1295,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     branchId: params.branchId,
                     profileId: params.profileId
                   }, downloadPath, artifactFileName);
-                  artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.join(downloadPath, artifactFileName)}`);
+                  artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(downloadPath, artifactFileName))}`);
                 } catch (e: any) {
                   artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
                 }
@@ -1354,7 +1353,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                       branchId: params.branchId,
                       profileId: params.profileId
                     }, artifactDownloadPath, artifactFileName);
-                    artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.join(artifactDownloadPath, artifactFileName)}`);
+                    artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(artifactDownloadPath, artifactFileName))}`);
                   } catch (e: any) {
                     artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
                   }
@@ -1466,8 +1465,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
               
               if (shouldDownloadArtifacts && commitId && buildId) {
                 const artifactSpinner = createOra('Waiting for artifacts to be ready...').start();
-                // Wait for artifacts to be generated after build completion
-                await new Promise(resolve => setTimeout(resolve, 5000));
+                // Wait for artifacts to be generated after build completion (increased to 10s)
+                await new Promise(resolve => setTimeout(resolve, 10000));
                 artifactSpinner.text = 'Downloading artifacts...';
                 try {
                   const timestamp = Date.now();
@@ -1478,7 +1477,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     branchId: params.branchId,
                     profileId: params.profileId
                   }, downloadPath, artifactFileName);
-                  artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.join(downloadPath, artifactFileName)}`);
+                  artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(downloadPath, artifactFileName))}`);
                 } catch (e: any) {
                   artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
                 }
