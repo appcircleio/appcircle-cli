@@ -138,6 +138,8 @@ export async function downloadArtifact(options: OptionsType<{ buildId?: string; 
     if (response.status === 200) {
       const fileName = artifactFileName || `artifacts-${Date.now()}.zip`;
       const artifactPath = path.join(downloadPath, fileName);
+      // Ensure directory exists before writing file
+      fs.mkdirSync(downloadPath, { recursive: true });
       fs.writeFileSync(artifactPath, response.data);
     } else {
       throw new Error('Build artifact not found');
@@ -392,7 +394,7 @@ export async function createEnvironmentVariable(
 }
 
 export async function getBranches(options: OptionsType<{ profileId: string }>, showConsole: boolean = true) {
-  const branchResponse = await appcircleApi.get(`build/v2/profiles/${options.profileId}/branches`, {
+  const branchResponse = await appcircleApi.get(`build/v1/profiles/${options.profileId}`, {
     headers: getHeaders(),
   });
   return branchResponse.data;

@@ -1282,7 +1282,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
               const buildId = latestBuildId || finalStatusResponse?.buildId;
               
               if (shouldDownloadArtifacts && commitId && buildId) {
-                const artifactSpinner = createOra('Downloading artifacts...').start();
+                const artifactSpinner = createOra('Waiting for artifacts to be ready...').start();
+                // Wait for artifacts to be generated after build completion
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                artifactSpinner.text = 'Downloading artifacts...';
                 try {
                   const timestamp = Date.now();
                   const artifactFileName = `artifacts-${timestamp}.zip`;
@@ -1317,7 +1320,6 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   logSpinner.fail(`Failed to download build logs: ${e.message}`);
                 }
               }
-              
               throw new AppcircleExitError('Build completed', 0);
             }
                 
@@ -1449,6 +1451,66 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
               };
               console.log(JSON.stringify(jsonOutput));
               throw new AppcircleExitError('', 1);
+            }
+            
+            const homeDir = os.homedir();
+            const defaultDownloadDir = path.join(homeDir, 'Downloads');
+            const downloadPath = params.path || defaultDownloadDir;
+            
+            // Check if automatic download parameters are provided
+            const shouldDownloadLogs = params.downloadLogs === true || params['download-logs'] === true;
+            const shouldDownloadArtifacts = params.downloadArtifacts === true || params['download-artifacts'] === true;
+            
+            // If automatic download parameters are provided, skip interactive prompt
+            if (shouldDownloadLogs || shouldDownloadArtifacts) {
+              const commitId = finalStatusResponse?.commitId;
+              const buildId = latestBuildId || finalStatusResponse?.buildId;
+              
+              if (shouldDownloadArtifacts && commitId && buildId) {
+                const artifactSpinner = createOra('Waiting for artifacts to be ready...').start();
+                // Wait for artifacts to be generated after build completion
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                artifactSpinner.text = 'Downloading artifacts...';
+                try {
+                  const timestamp = Date.now();
+                  const artifactFileName = `artifacts-${timestamp}.zip`;
+                  await downloadArtifact({ 
+                    commitId: commitId, 
+                    buildId: buildId,
+                    branchId: params.branchId,
+                    profileId: params.profileId
+                  }, downloadPath, artifactFileName);
+                  artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(downloadPath, artifactFileName)}`);
+                } catch (e: any) {
+                  artifactSpinner.fail(`Failed to download artifacts: ${e.message}`);
+                }
+              }
+              
+              if (shouldDownloadLogs) {
+                const logSpinner = createOra('Downloading build logs...').start();
+                try {
+                  if (finalStatusResponse && finalStatusResponse.buildStatus === 2) {
+                    console.log(chalk.yellow('Note: Logs for canceled builds might not be immediately available.'));
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                  
+                  if (commitId && buildId && buildId !== '00000000-0000-0000-0000-000000000000') {
+                    await downloadBuildLogs({ 
+                      commitId: commitId, 
+                      buildId: buildId,
+                      branchId: params.branchId,
+                      profileId: params.profileId,
+                      path: downloadPath
+                    });
+                  } else {
+                    await downloadBuildLogs(responseData.queueItemId, { path: downloadPath });
+                  }
+                  logSpinner.succeed(`Build logs downloaded successfully to ${downloadPath}`);
+                } catch (e: any) {
+                  logSpinner.fail(`Failed to download build logs: ${e.message}`);
+                }
+              }
+              throw new AppcircleExitError('Build completed', 0);
             }
             
             // Offer to download logs even on failure using enquirer
