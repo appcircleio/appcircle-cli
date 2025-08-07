@@ -18,10 +18,10 @@ appcircle build start [options]
 
 ### Conditional Parameters
 ```plaintext
-  --branchId <uuid>         Branch ID (required when --commitId is not provided)
-  --branch <string>         Branch name (alternative to --branchId)
-  --commitId <uuid>         Commit ID (required when --branchId is not provided)
-  --commitHash <string>     Commit hash (alternative to --commitId)
+  --branchId <uuid>        Appcircle branch ID,. Required when --commitId is not provided
+  --branch <string>         Git branch name (alternative to --branchId). Required when --commitId is not provided
+  --commitId <uuid>         Appcircle commit ID . Required when --branchId is not provided
+  --commitHash <string>     Git commit hash (alternative to --commitId). Required when --branchId is not provided
 ```
 
 ### Optional Parameters
