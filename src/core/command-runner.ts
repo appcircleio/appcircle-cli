@@ -1316,7 +1316,6 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   } else {
                     await downloadBuildLogs(responseData.queueItemId, { path: downloadPath });
                   }
-                  logSpinner.succeed(`Build logs downloaded successfully to ${downloadPath}`);
                 } catch (e: any) {
                   logSpinner.fail(`Failed to download build logs: ${e.message}`);
                 }
@@ -1506,7 +1505,6 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   } else {
                     await downloadBuildLogs(responseData.queueItemId, { path: downloadPath });
                   }
-                  logSpinner.succeed(`Build logs downloaded successfully to ${downloadPath}`);
                 } catch (e: any) {
                   logSpinner.fail(`Failed to download build logs: ${e.message}`);
                 }
@@ -3428,7 +3426,7 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
 
     const timestamp = Date.now();
     const fileName = fileNameFromParams || 
-                    `${branchName}-${profileName}-build-${buildId}-logs-${timestamp}.txt`;
+                    `${sanitizeForFileName(branchName)}-${sanitizeForFileName(profileName)}-build-${buildId}-logs-${timestamp}.txt`;
     
     if (wasCanceled) {
       progressSpinner.text = "Waiting for canceled Build Logs to be prepared...";
@@ -3533,7 +3531,7 @@ async function downloadPublishLogs(publishDetail: any, platform: string, publish
     }
     
     const timestamp = Date.now();
-    const fileName = `${profileName}-${timestamp}.txt`;
+    const fileName = `${sanitizeForFileName(profileName)}-${timestamp}.txt`;
     const filePath = path.join(finalDownloadPath, fileName);
     
     const MAX_WAIT_TIME = 120000; // 2 minutes timeout
@@ -4153,3 +4151,27 @@ export const runCommand = async (command: ProgramCommand) => {
     }
   }
 };
+
+/**
+ * Sanitizes a string to be safe for use in file names
+ * Replaces or removes characters that are not safe for file names across different operating systems
+ */
+function sanitizeForFileName(input: string): string {
+  if (!input || typeof input !== 'string') {
+    return 'unknown';
+  }
+  
+  return input
+    // Replace path separators with hyphens
+    .replace(/[\/\\]/g, '-')
+    // Replace other unsafe characters with hyphens  
+    .replace(/[<>:"|?*]/g, '-')
+    // Replace spaces with hyphens for better compatibility
+    .replace(/\s+/g, '-')
+    // Remove any consecutive hyphens
+    .replace(/-+/g, '-')
+    // Remove leading/trailing hyphens
+    .replace(/^-+|-+$/g, '')
+    // Fallback if string becomes empty
+    || 'unknown';
+}
