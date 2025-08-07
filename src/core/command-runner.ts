@@ -1296,7 +1296,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     branchId: params.branchId,
                     profileId: params.profileId
                   }, downloadPath, artifactFileName);
-                  artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(downloadPath, artifactFileName)}`);
+                  artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.join(downloadPath, artifactFileName)}`);
                 } catch (e: any) {
                   artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
                 }
@@ -1354,11 +1354,9 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                       branchId: params.branchId,
                       profileId: params.profileId
                     }, artifactDownloadPath, artifactFileName);
-                    artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(artifactDownloadPath, artifactFileName)}`);
-                    console.log(chalk.green('Build completed successfully with artifacts downloaded.'));
+                    artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.join(artifactDownloadPath, artifactFileName)}`);
                   } catch (e: any) {
                     artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
-                    console.log(chalk.yellow('Build completed successfully but artifact download failed.'));
                   }
                 } else {
                   console.log(chalk.yellow('Build completed successfully but could not get artifact information.'));
@@ -1480,7 +1478,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     branchId: params.branchId,
                     profileId: params.profileId
                   }, downloadPath, artifactFileName);
-                  artifactSpinner.succeed(`Artifacts downloaded successfully to ${path.join(downloadPath, artifactFileName)}`);
+                  artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.join(downloadPath, artifactFileName)}`);
                 } catch (e: any) {
                   artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
                 }
