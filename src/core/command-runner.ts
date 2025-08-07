@@ -12,6 +12,7 @@ import {
   getConsoleOutputType,
   getCurrentConfigVariable,
   getEnviromentsConfigToWriting,
+  getInteractiveMode,
   readEnviromentConfigVariable,
   setCurrentConfigVariable,
   writeEnviromentConfigVariable,
@@ -1706,19 +1707,56 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       data: responseData,
     });
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download`) {
+    // Check if this is an interactive mode call
+    const isInteractiveMode = getInteractiveMode();
+    
     if (!params.profileId && !params.profile) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
+      if (isInteractiveMode) {
+        console.error(chalk.red('Error: Missing Build Profile. Please ensure a valid build profile is selected.'));
+        throw new AppcircleExitError('', 1);
+      } else {
+        const desc = getLongDescriptionForCommand(command.fullCommandName);
+        if (desc) {
+          console.error(`\n${desc}\n`);
+        }
+        throw new AppcircleExitError('', 1);
       }
-      throw new AppcircleExitError('', 1);
     }
     if (!params.branchId && !params.branch) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
+      if (isInteractiveMode) {
+        console.error(chalk.red('Error: Missing Branch. Please ensure a valid branch is selected.'));
+        throw new AppcircleExitError('', 1);
+      } else {
+        const desc = getLongDescriptionForCommand(command.fullCommandName);
+        if (desc) {
+          console.error(`\n${desc}\n`);
+        }
+        throw new AppcircleExitError('', 1);
       }
-      throw new AppcircleExitError('', 1);
+    }
+    if (!params.commitId) {
+      if (isInteractiveMode) {
+        console.error(chalk.red('Error: Missing Commit ID. Please ensure a valid commit is selected.'));
+        throw new AppcircleExitError('', 1);
+      } else {
+        const desc = getLongDescriptionForCommand(command.fullCommandName);
+        if (desc) {
+          console.error(`\n${desc}\n`);
+        }
+        throw new AppcircleExitError('', 1);
+      }
+    }
+    if (!params.buildId) {
+      if (isInteractiveMode) {
+        console.error(chalk.red('Error: Missing Build ID. Please ensure a valid build is selected.'));
+        throw new AppcircleExitError('', 1);
+      } else {
+        const desc = getLongDescriptionForCommand(command.fullCommandName);
+        if (desc) {
+          console.error(`\n${desc}\n`);
+        }
+        throw new AppcircleExitError('', 1);
+      }
     }
     const homeDir = os.homedir();
     const defaultDownloadDir = path.join(homeDir, 'Downloads');
@@ -1818,19 +1856,32 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       spinner.fail(`Failed to download artifact: ${e.message || 'Unknown error'}`);
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`) {
+    // Check if this is an interactive mode call
+    const isInteractiveMode = getInteractiveMode();
+    
     if (!params.profileId && !params.profile) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
+      if (isInteractiveMode) {
+        console.error(chalk.red('Error: Missing Build Profile. Please ensure a valid build profile is selected.'));
+        throw new AppcircleExitError('', 1);
+      } else {
+        const desc = getLongDescriptionForCommand(command.fullCommandName);
+        if (desc) {
+          console.error(`\n${desc}\n`);
+        }
+        throw new AppcircleExitError('', 1);
       }
-      throw new AppcircleExitError('', 1);
     }
     if (!params.branchId && !params.branch) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
+      if (isInteractiveMode) {
+        console.error(chalk.red('Error: Missing Branch. Please ensure a valid branch is selected.'));
+        throw new AppcircleExitError('', 1);
+      } else {
+        const desc = getLongDescriptionForCommand(command.fullCommandName);
+        if (desc) {
+          console.error(`\n${desc}\n`);
+        }
+        throw new AppcircleExitError('', 1);
       }
-      throw new AppcircleExitError('', 1);
     }
     try {
       if (params.taskId) {

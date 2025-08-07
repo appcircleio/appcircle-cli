@@ -89,9 +89,8 @@ const handleInteractiveParamsOrArguments = async (
       }
       const branches = (await getBranches({ profileId: params.profileId || '' })).branches;
       if (!branches || branches.length === 0) {
-        spinner.text = 'No branches available';
-        spinner.fail();
-        return;
+        spinner.fail('No branches found for the selected profile');
+        return { isError: true };
       }
       branchesList.length = 0;
       branchesList.push(...branches);
@@ -121,9 +120,8 @@ const handleInteractiveParamsOrArguments = async (
       const spinner = ora('Listing Build Profiles...').start();
       const profiles = await getBuildProfiles();
       if (!profiles || profiles.length === 0) {
-        spinner.text = 'No build profile available';
-        spinner.fail();
-        return;
+        spinner.fail('No build profiles found');
+        return { isError: true };
       }
       buildProfilesList.length = 0;
       buildProfilesList.push(...profiles);
@@ -169,9 +167,8 @@ const handleInteractiveParamsOrArguments = async (
       }
       const commits = await getCommits({ profileId: params.profileId || '', branchId: params.branchId || '' });
       if (!commits || commits.length === 0) {
-        spinner.text = 'No commits available';
-        spinner.fail();
-        return;
+        spinner.fail('No commits found for the selected branch');
+        return { isError: true };
       }
       commitsList.length = 0;
       commitsList.push(...commits);
@@ -222,14 +219,12 @@ const handleInteractiveParamsOrArguments = async (
         buildsResponse = await getBuildsOfCommit({ commitId });
         builds = buildsResponse.builds;
       } catch (err) {
-        spinner.stop();
-        // Suppress all further error output
-        return;
+        spinner.fail('Failed to fetch builds for the selected commit');
+        return { isError: true };
       }
       if (!builds || builds.length === 0) {
-        spinner.stop();
-        // Suppress all further error output
-        return;
+        spinner.fail('No builds found for the selected commit');
+        return { isError: true };
       }
       spinner.stop();
       //@ts-ignore
