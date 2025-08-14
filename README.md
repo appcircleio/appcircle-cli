@@ -145,7 +145,7 @@ CURL_LOGGING= appcircle
 ### Connecting Your Appcircle Account via CLI
 
 - [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#generatingmanaging-the-personal-api-tokens)
-- Using the Appcircle CLI, create a full access API token using the following command with the personal access token specified as "pat": `appcircle login --pat="YOUR PERSONAL ACCESS TOKEN"`.
+- Using the Appcircle CLI, create a full access API token using the following command with the personal access token: `appcircle login pat --token="YOUR PERSONAL ACCESS TOKEN"`.
 
 > Your token will be stored internally. You should always revoke your access token if you do not plan to use it in the future.
 

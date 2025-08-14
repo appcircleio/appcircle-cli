@@ -21,6 +21,7 @@ import { createOra } from '../utils/orahelper';
 import { ProgramCommand } from '../program';
 import {
   getToken,
+  getTokenFromApiKey,
   getBuildProfiles,
   getBranches,
   getWorkflows,
@@ -158,6 +159,26 @@ async function promptForPath(message: string, defaultPath: string): Promise<stri
     return defaultPath;
   }
 }
+
+const handleLoginCommand = async (command: ProgramCommand, params: any) => {
+  if (command.fullCommandName === `${PROGRAM_NAME}-login-pat`) {
+    const responseData = await getToken({ pat: params.token });
+    writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
+    commandWriter(CommandTypes.LOGIN, responseData);
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-login-api-key`) {
+    const responseData = await getTokenFromApiKey(params);
+    writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
+    commandWriter(CommandTypes.LOGIN, responseData);
+  } else {
+    const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
+    const desc = getLongDescriptionForCommand(command.fullCommandName);
+    if (desc) {
+      console.error(`\n${desc}\n`);
+    } else {
+      console.error(`"${beutufiyCommandName} ..." command not found.`);
+    }
+  }
+};
 
 const handleConfigCommand = (command: ProgramCommand) => {
   const action = command.name();
@@ -4129,13 +4150,12 @@ export const runCommand = async (command: ProgramCommand) => {
   if (command.isGroupCommand(CommandTypes.SIGNING_IDENTITY)) {
     return handleSigningIdentityCommand(command, params);
   }
+
+  if (command.isGroupCommand(CommandTypes.LOGIN)) {
+    return handleLoginCommand(command, params);
+  }
+
   switch (commandName) {
-    case CommandTypes.LOGIN: {
-      responseData = await getToken(params);
-      writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
-      commandWriter(CommandTypes.LOGIN, responseData);
-      break;
-    }
     default: {
       const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
       const desc = getLongDescriptionForCommand(command.fullCommandName);

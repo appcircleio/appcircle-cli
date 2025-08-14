@@ -518,6 +518,50 @@ const handleInteractiveParamsOrArguments = async (
         }
       }
       continue;
+    } else if (param.name === 'organization-id') {
+      // Special handling for API key login organization-id parameter
+      const spinner = ora('Listing Organizations...').start();
+      const userInfo = await getUserInfo();
+      const organizations = await getOrganizations();
+      if (!organizations || organizations.length === 0) {
+        spinner.text = 'No organizations available';
+        spinner.fail();
+        return;
+      }
+      
+      // Add "Skip" option for optional organization-id
+      const organizationParams = [
+        { name: 'Skip (Optional)', message: 'Skip - Organization ID is optional' },
+        ...organizations.map((organization: any) => ({
+          name: `${organization.name} (${organization.id})`,
+          message: `${organization.name} (${organization.id})`,
+        }))
+      ];
+      param.params = organizationParams;
+      spinner.stop();
+
+      const messageText = param.description || 'Organization ID (Optional)';
+      const selectPrompt = new AutoComplete({
+        name: param.name,
+        message: `${messageText} (${organizationParams.length} options)`,
+        initial: param.defaultValue,
+        limit: 10,
+        choices: Array.isArray(param.params) ? param.params : [],
+      });
+      const selected = await selectPrompt.run();
+      if (selected === 'Skip (Optional)') {
+        params['organization-id'] = undefined;
+      } else {
+        const match = /\(([^)]+)\)$/.exec(selected);
+        if (match && match[1]) {
+          params['organization-id'] = match[1].trim();
+        } else {
+          // fallback: try to find by name
+          const found = organizations.find((o: any) => `${o.name} (${o.id})` === selected || o.id === selected);
+          params['organization-id'] = found ? found.id : selected;
+        }
+      }
+      continue;
     } else if (param.name === 'role') {
       const spinner = ora('Listing Roles...').start();
       const userinfo = params.userId ? await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId }): null;

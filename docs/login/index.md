@@ -9,7 +9,7 @@ appcircle login [options]
 ## Options
 
 ```plaintext
-      --pat   Personal Access Token
+      --token   Personal Access Token
 ```
 
 ## Options inherited from parent commands

@@ -20,6 +20,29 @@ export async function getToken(options: OptionsType<{ pat: string }>) {
   return response.data;
 }
 
+export async function getTokenFromApiKey(options: OptionsType<{ name: string; secret: string; organizationId?: string }>) {
+  const requestData = {
+    name: options.name,
+    secret: options.secret,
+  };
+
+  if (options.organizationId !== undefined) {
+    (requestData as any).organizationId = options.organizationId;
+  }
+
+  try {
+    const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/api-key/token`, qs.stringify(requestData), {
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+}
+
 export async function getBuildProfiles(options: OptionsType = {}) {
   const buildProfiles = await appcircleApi.get(`build/v2/profiles`, {
     headers: getHeaders(),
