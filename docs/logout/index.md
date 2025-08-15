@@ -3,7 +3,7 @@
 Log out from your Appcircle account and clear your stored authentication token.
 
 ```plaintext
-appcircle logout [options]
+appcircle logout
 ```
 
 ## Description

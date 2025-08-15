@@ -58,6 +58,9 @@ appcircle login api-key --name "my-api-key" --secret "my-secret" --organization-
 In interactive mode (`appcircle -i`), authentication options are grouped under "Authentication (Login/Logout)" menu:
 - Select "Authentication (Login/Logout)" from the main menu
 - Choose "Login" or "Logout" from the submenu
+    - When choosing **Login**, you can authenticate using:
+        - **API Key**
+        - **Personal Access Token (PAT)**
 - Use "⬅ Back" to navigate between menus
 
 ## Options inherited from parent commands
