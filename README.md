@@ -65,6 +65,7 @@ Run `appcircle [commandName] --help` to view a list of  commands/subcommands in 
 
 - [appcircle config](/docs/config/index.md)
 - [appcircle login](/docs/login/index.md)
+- [appcircle logout](/docs/logout/index.md)
 - [appcircle build](/docs/build/index.md)
 - [appcircle signing-identity](/docs/signing-identity/index.md)
 - [appcircle testing-distribution](/docs/testing-distribution/index.md)
@@ -104,6 +105,12 @@ Appcircle CLI incorporates a GUI that allows users to interactively access its f
 ```
 appcircle -i
 ```
+
+### Features
+- **Authentication Grouping**: Login and Logout options are grouped under "Authentication (Login/Logout)" menu
+- **Smart Navigation**: Use "⬅ Back" buttons to navigate between menus
+- **Login Protection**: Prevents multiple login attempts when already authenticated
+- **Intuitive UI**: Clean menu structure with proper navigation flow
 
 ### Demo
 ![Demo](https://cdn.appcircle.io/docs/assets/appcircle_gui_demo.gif)
@@ -155,7 +162,16 @@ You can authenticate with Appcircle using either Personal Access Token or API Ke
 - Using the Appcircle CLI, authenticate with your API Key: `appcircle login api-key --name="YOUR_API_KEY_NAME" --secret="YOUR_API_KEY_SECRET"`.
 - For multi-organization accounts, you can specify an organization: `appcircle login api-key --name="YOUR_API_KEY_NAME" --secret="YOUR_API_KEY_SECRET" --organization-id="YOUR_ORG_ID"`.
 
-> Your token will be stored internally. You should always revoke your access token if you do not plan to use it in the future.
+#### Logout
+- To logout from your Appcircle account, use: `appcircle logout`
+- This will clear your stored authentication token locally
+
+#### Authentication Behavior
+- If you're already logged in and try to login again, you'll see a "You are already logged in" message
+- You must logout first before logging in with different credentials
+- Your token is stored locally and will persist until you logout or manually clear it
+
+> Your token will be stored internally. You should always logout or revoke your access token if you do not plan to use it in the future.
 
 ### Starting a New Build via the Appcircle CLI
 

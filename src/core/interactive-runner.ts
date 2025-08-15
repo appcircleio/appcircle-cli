@@ -4,10 +4,11 @@ import chalk from 'chalk';
 import ora from 'ora';
 import moment from 'moment';
 //@ts-ignore https://github.com/enquirer/enquirer/issues/212
-import { prompt, Select, AutoComplete, BooleanPrompt } from 'enquirer';
+import { prompt, Select, AutoComplete, BooleanPrompt, Input } from 'enquirer';
 import { runCommand } from './command-runner';
 import { Commands, CommandParameterTypes, CommandType } from './commands';
 import { APPCIRCLE_COLOR, OperatingSystems, UNKNOWN_PARAM_VALUE } from '../constant';
+import { readEnviromentConfigVariable, EnvironmentVariables } from '../config';
 import {
   getBranches,
   getEnterpriseProfiles,
@@ -36,6 +37,7 @@ import {
   getTestingGroups,
   getDistributionProfileById,
   getTestingGroupById,
+  getTokenFromApiKey,
   RoleType,
 } from '../services';
 import { ProgramCommand, createCommandActionCallback } from '../program';
@@ -519,47 +521,17 @@ const handleInteractiveParamsOrArguments = async (
       }
       continue;
     } else if (param.name === 'organization-id') {
-      // Special handling for API key login organization-id parameter
-      const spinner = ora('Listing Organizations...').start();
-      const userInfo = await getUserInfo();
-      const organizations = await getOrganizations();
-      if (!organizations || organizations.length === 0) {
-        spinner.text = 'No organizations available';
-        spinner.fail();
-        return;
-      }
-      
-      // Add "Skip" option for optional organization-id
-      const organizationParams = [
-        { name: 'Skip (Optional)', message: 'Skip - Organization ID is optional' },
-        ...organizations.map((organization: any) => ({
-          name: `${organization.name} (${organization.id})`,
-          message: `${organization.name} (${organization.id})`,
-        }))
-      ];
-      param.params = organizationParams;
-      spinner.stop();
-
-      const messageText = param.description || 'Organization ID (Optional)';
-      const selectPrompt = new AutoComplete({
+      // Simple input prompt for organization ID
+      const inputPrompt = new Input({
         name: param.name,
-        message: `${messageText} (${organizationParams.length} options)`,
+        message: 'Organization ID (optional - press Enter to skip):',
         initial: param.defaultValue,
-        limit: 10,
-        choices: Array.isArray(param.params) ? param.params : [],
       });
-      const selected = await selectPrompt.run();
-      if (selected === 'Skip (Optional)') {
-        params['organization-id'] = undefined;
+      const selected = await inputPrompt.run();
+      if (selected && selected.trim() !== '') {
+        params['organization-id'] = selected.trim();
       } else {
-        const match = /\(([^)]+)\)$/.exec(selected);
-        if (match && match[1]) {
-          params['organization-id'] = match[1].trim();
-        } else {
-          // fallback: try to find by name
-          const found = organizations.find((o: any) => `${o.name} (${o.id})` === selected || o.id === selected);
-          params['organization-id'] = found ? found.id : selected;
-        }
+        params['organization-id'] = undefined;
       }
       continue;
     } else if (param.name === 'role') {
@@ -1167,6 +1139,7 @@ const handleSelectedCommand = async (command: CommandType, __parentCommand?: any
         // Signal to exit if at top-level
         return { isBackToMainMenu: true } as any;
       }
+      
       const parentCommand = navigationStack[navigationStack.length - 1];
       return await handleSelectedCommand(parentCommand.command, parentCommand.preparedCommand);
     }
@@ -1242,8 +1215,26 @@ const runCommandsInteractivelyInner = async () => {
       console.log('\n' + line + '\n');
     }
 
+    // Custom choices to group Login and Logout under Authentication
+    const customChoices = [];
+    let choiceIndex = 1;
+    
+    for (const command of Commands) {
+      if (command.command === 'login') {
+        // Add Authentication as a group
+        customChoices.push(`${choiceIndex}. Authentication (Login/Logout)`);
+        choiceIndex++;
+      } else if (command.command === 'logout') {
+        // Skip logout as it's now under Authentication
+        continue;
+      } else {
+        customChoices.push(`${choiceIndex}. ${command.description}`);
+        choiceIndex++;
+      }
+    }
+    
     const choices = [
-      ...Commands.map((command, index) => `${index + 1}. ${command.description}`),
+      ...customChoices,
       '0. Exit'
     ];
 
@@ -1265,7 +1256,63 @@ const runCommandsInteractivelyInner = async () => {
     selectedCommandIndex = Number(selected.split('.')[0]) - 1;
     previousSelections.set('main', selectedCommandIndex);
     
-    selectedCommand = Commands[selectedCommandIndex];
+    // Handle Authentication group selection
+    if (selected.includes('Authentication')) {
+      // Show Authentication submenu
+      const authChoices = [
+        '1. Login',
+        '2. Logout',
+        '⬅ Back'
+      ];
+      
+      const authSelect = new AutoComplete({
+        name: 'authCommand',
+        message: 'What do you want to do?',
+        limit: 10,
+        choices: authChoices,
+      });
+      
+      const authSelected = await authSelect.run();
+      
+      if (authSelected === '⬅ Back') {
+        return { shouldShowMainMenuAgain: true };
+      }
+      
+      // Find the corresponding command
+      if (authSelected === '1. Login') {
+        // Check if user is already logged in
+        const currentToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
+        if (currentToken) {
+          console.error('You are already logged in. Use "Logout" to logout first.');
+          return { shouldShowMainMenuAgain: true };
+        }
+        selectedCommand = Commands.find(cmd => cmd.command === 'login')!;
+      } else if (authSelected === '2. Logout') {
+        selectedCommand = Commands.find(cmd => cmd.command === 'logout')!;
+      }
+    } else {
+      // Handle regular command selection
+      // Adjust index to account for Authentication grouping
+      let adjustedIndex = selectedCommandIndex;
+      
+      // Count how many commands come before the current selection
+      let commandCount = 0;
+      for (let i = 0; i < Commands.length; i++) {
+        const cmd = Commands[i];
+        if (cmd.command === 'logout') {
+          // Skip logout as it's grouped under Authentication
+          continue;
+        }
+        if (commandCount === selectedCommandIndex) {
+          adjustedIndex = i;
+          break;
+        }
+        commandCount++;
+      }
+      
+      selectedCommand = Commands[adjustedIndex];
+    }
+    
     navigationStack.length = 0;
     navigationStack.push({ command: selectedCommand, preparedCommand: undefined });
 
@@ -1276,6 +1323,10 @@ const runCommandsInteractivelyInner = async () => {
         navigationStack.length = 0;
         return { shouldShowMainMenuAgain: true };
       }
+      
+
+      
+
       
       try {
         await runCommand(preparedProgramCommand);

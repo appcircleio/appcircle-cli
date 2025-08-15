@@ -161,12 +161,37 @@ async function promptForPath(message: string, defaultPath: string): Promise<stri
 }
 
 const handleLoginCommand = async (command: ProgramCommand, params: any) => {
+  // Check if user is already logged in
+  const currentToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
+  if (currentToken) {
+    console.error('You are already logged in. Use "logout" to logout first.');
+    return;
+  }
+
   if (command.fullCommandName === `${PROGRAM_NAME}-login-pat`) {
     const responseData = await getToken({ pat: params.token });
     writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
     commandWriter(CommandTypes.LOGIN, responseData);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-login-api-key`) {
     const responseData = await getTokenFromApiKey(params);
+    
+    // Check if organization ID was requested but different one was returned
+    if (params['organization-id'] && responseData.access_token) {
+      try {
+        // Decode JWT to get currentOrganizationId
+        const tokenPayload = JSON.parse(Buffer.from(responseData.access_token.split('.')[1], 'base64').toString());
+        const returnedOrgId = tokenPayload.currentOrganizationId;
+        
+        if (returnedOrgId !== params['organization-id']) {
+          console.error(`Login failed: Your API Key does not have access to organization "${params['organization-id']}".`);
+          return; // Exit without saving token or showing success message
+        }
+      } catch (error) {
+        // If JWT decode fails, continue silently
+      }
+    }
+    
+    // Only save token and show success if organization ID matches (or no organization ID was requested)
     writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
     commandWriter(CommandTypes.LOGIN, responseData);
   } else {
@@ -178,6 +203,19 @@ const handleLoginCommand = async (command: ProgramCommand, params: any) => {
       console.error(`"${beutufiyCommandName} ..." command not found.`);
     }
   }
+};
+
+const handleLogoutCommand = async (command: ProgramCommand, params: any) => {
+  // Check if user is already logged in
+  const currentToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
+  if (!currentToken) {
+    throw new ProgramError('You are not currently logged in.');
+  }
+  
+  // Clear the stored token (no API call needed)
+  writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, '');
+  
+  console.log('Successfully logged out from Appcircle.');
 };
 
 const handleConfigCommand = (command: ProgramCommand) => {
@@ -4153,6 +4191,10 @@ export const runCommand = async (command: ProgramCommand) => {
 
   if (command.isGroupCommand(CommandTypes.LOGIN)) {
     return handleLoginCommand(command, params);
+  }
+
+  if (command.isGroupCommand(CommandTypes.LOGOUT)) {
+    return handleLogoutCommand(command, params);
   }
 
   switch (commandName) {

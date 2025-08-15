@@ -39,6 +39,51 @@ export async function getTokenFromApiKey(options: OptionsType<{ name: string; se
     });
     return response.data;
   } catch (error: any) {
+    if (error.response) {
+      const { status, data } = error.response;
+      
+      // 403 - Authorization failed (organization access)
+      if (status === 403) {
+        const orgId = options.organizationId || 'the specified organization';
+        throw new ProgramError(
+          `Login failed: Your API Key does not have access to organization "${orgId}".`
+        );
+      }
+      
+      // 400 - Bad Request (invalid format, etc.)
+      if (status === 400) {
+        if (data?.error && data.error.includes('organizationId must be a valid GUID')) {
+          throw new ProgramError(
+            `Invalid organization ID format: "${options.organizationId}"`
+          );
+        }
+        throw new ProgramError(
+          `Invalid request: ${data?.error || 'Bad request format'}`
+        );
+      }
+      
+      // 401 - Authentication failed
+      if (status === 401) {
+        throw new ProgramError(
+          `Authentication failed: Invalid API Key credentials`
+        );
+      }
+      
+      // 500+ - Server errors
+      if (status >= 500) {
+        throw new ProgramError(
+          `Server error occurred while processing your request (Status: ${status})`
+        );
+      }
+    }
+    
+    // Network or other errors
+    if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND') {
+      throw new ProgramError(
+        `Connection error: Unable to connect to Appcircle servers`
+      );
+    }
+    
     throw error;
   }
 }

@@ -12,6 +12,7 @@ export enum CommandParameterTypes {
 export enum CommandTypes {
   CONFIG = 'config',
   LOGIN = 'login',
+  LOGOUT = 'logout',
   ORGANIZATION = 'organization',
   PUBLISH = 'publish',
   BUILD = 'build',
@@ -395,6 +396,26 @@ LEARN MORE
         ],
       },
     ],
+  },
+  {
+    command: CommandTypes.LOGOUT,
+    description: 'Logout',
+    longDescription: `Logout from Appcircle and clear stored credentials
+
+USAGE
+  appcircle logout
+
+DESCRIPTION
+  Logout from Appcircle and clear your stored access token. This will remove your
+  authentication credentials from the local configuration.
+
+EXAMPLES
+  appcircle logout
+
+LEARN MORE
+  Use 'appcircle login' to authenticate again after logout.
+  Use 'appcircle config list' to see all configuration settings.`,
+    params: [],
   },
   {
     command: CommandTypes.BUILD,
