@@ -49,23 +49,29 @@ const ROOTPATH = 'signing-identity';
   }
 
   export async function getCertificateDetailById(options: OptionsType<{ certificateBundleId: string }>) {
-    const certificate = await appcircleApi.get(`${ROOTPATH}/v2/certificates/${options.certificateBundleId}`, {
+    const certificateBundleId = options.certificateBundleId;
+
+    const certificate = await appcircleApi.get(`${ROOTPATH}/v2/certificates/${certificateBundleId}`, {
         headers: getHeaders(),
       });
       return certificate.data;
   }
   export async function getKeystoreDetailById(options: OptionsType<{ keystoreId: string }>) {
-    const keystore = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${options.keystoreId}`, {
+    const keystoreId = options.keystoreId;
+
+    const keystore = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${keystoreId}`, {
         headers: getHeaders(),
       });
       return keystore.data;
   }
 
-  export async function downloadKeystoreById(options: OptionsType<{ keystoreId: string, path: string }>, downloadPath: string,fileName:string){
+  export async function downloadKeystoreById(options: OptionsType<{ keystoreId: string; path: string }>, downloadPath: string,fileName:string){
+    const keystoreId = options.keystoreId;
+
     const data = new FormData();
     data.append('Path', downloadPath);
-    data.append('Keystore Id', options.keystoreId);
-    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${options.keystoreId}`, {
+    data.append('Keystore Id', keystoreId);
+    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/keystores/${keystoreId}`, {
         responseType:'stream',
         headers: {
             ...getHeaders(),
@@ -91,11 +97,13 @@ const ROOTPATH = 'signing-identity';
         });
       });
   }
-  export async function downloadCertificateById(options: OptionsType<{ certificateId: string, path: string }>,downloadPath: string,fileName: string,extension: 'p12' | 'csr') {
-    const url = extension === 'p12' ? `${ROOTPATH}/v2/certificates/${options.certificateId}` : `${ROOTPATH}/v1/csr/${options.certificateId}`
+  export async function downloadCertificateById(options: OptionsType<{ certificateId: string; path: string }>,downloadPath: string,fileName: string,extension: 'p12' | 'csr') {
+    const certificateId = options.certificateId;
+
+    const url = extension === 'p12' ? `${ROOTPATH}/v2/certificates/${certificateId}` : `${ROOTPATH}/v1/csr/${certificateId}`
     const data = new FormData();
     data.append('Path', downloadPath);
-    data.append('Certificate Id', options.certificateId);
+    data.append('Certificate Id', certificateId);
     const downloadResponse = await appcircleApi.get(url, {
         responseType:'stream',
         headers: {
@@ -123,8 +131,10 @@ const ROOTPATH = 'signing-identity';
       });
   }
 
-  export async function removeCSRorP12CertificateById(options: OptionsType<{ certificateId: string, path: string }>, extension: 'p12' | 'csr'){
-    const url = extension === 'p12' ? `${ROOTPATH}/v2/certificates/${options.certificateId}` : `${ROOTPATH}/v1/csr/${options.certificateId}`
+  export async function removeCSRorP12CertificateById(options: OptionsType<{ certificateId: string; path: string }>, extension: 'p12' | 'csr'){
+    const certificateId = options.certificateId;
+
+    const url = extension === 'p12' ? `${ROOTPATH}/v2/certificates/${certificateId}` : `${ROOTPATH}/v1/csr/${certificateId}`
     const response = await appcircleApi.delete(url, {
         headers: getHeaders(),
     });
@@ -132,7 +142,9 @@ const ROOTPATH = 'signing-identity';
   }
 
   export async function removeKeystore(options: OptionsType<{ keystoreId: string }>){
-    const response = await appcircleApi.delete(`${ROOTPATH}/v2/keystores/${options.keystoreId}`, {
+    const keystoreId = options.keystoreId;
+
+    const response = await appcircleApi.delete(`${ROOTPATH}/v2/keystores/${keystoreId}`, {
         headers: getHeaders(),
     });
     return response.data;
@@ -154,10 +166,12 @@ const ROOTPATH = 'signing-identity';
     return result.data;
   }
   export async function downloadProvisioningProfileById(options: OptionsType<{ provisioningProfileId: string }>, downloadPath: string, fileName:string){
+    const provisioningProfileId = options.provisioningProfileId;
+
     const data = new FormData();
     data.append('Path', downloadPath);
-    data.append('Profisioning Profile Id', options.provisioningProfileId);
-    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${options.provisioningProfileId}`, {
+    data.append('Profisioning Profile Id', provisioningProfileId);
+    const downloadResponse = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${provisioningProfileId}`, {
         responseType:'stream',
         headers: {
             ...getHeaders(),
@@ -184,7 +198,9 @@ const ROOTPATH = 'signing-identity';
       });
   }
   export async function getProvisioningProfileDetailById(options: OptionsType<{ provisioningProfileId: string }>){
-    const result = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${options.provisioningProfileId}`, {
+    const provisioningProfileId = options.provisioningProfileId;
+
+    const result = await appcircleApi.get(`${ROOTPATH}/v2/provisioning-profiles/${provisioningProfileId}`, {
       headers: getHeaders(),
     });
     return result.data;
@@ -203,7 +219,9 @@ const ROOTPATH = 'signing-identity';
   }
 
   export async function removeProvisioningProfile(options: OptionsType<{ provisioningProfileId: string }>){
-    const response = await appcircleApi.delete(`${ROOTPATH}/v1/provisioning-profiles/${options.provisioningProfileId}`, {
+    const provisioningProfileId = options.provisioningProfileId;
+
+    const response = await appcircleApi.delete(`${ROOTPATH}/v1/provisioning-profiles/${provisioningProfileId}`, {
         headers: getHeaders(),
     });
     return response.data;

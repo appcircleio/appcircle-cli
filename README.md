@@ -65,6 +65,7 @@ Run `appcircle [commandName] --help` to view a list of  commands/subcommands in 
 
 - [appcircle config](/docs/config/index.md)
 - [appcircle login](/docs/login/index.md)
+- [appcircle logout](/docs/logout/index.md)
 - [appcircle build](/docs/build/index.md)
 - [appcircle signing-identity](/docs/signing-identity/index.md)
 - [appcircle testing-distribution](/docs/testing-distribution/index.md)
@@ -105,6 +106,12 @@ Appcircle CLI incorporates a GUI that allows users to interactively access its f
 appcircle -i
 ```
 
+### Features
+- **Authentication Grouping**: Login and Logout options are grouped under "Authentication (Login/Logout)" menu
+- **Smart Navigation**: Use "⬅ Back" buttons to navigate between menus
+- **Login Protection**: Prevents multiple login attempts when already authenticated
+- **Intuitive UI**: Clean menu structure with proper navigation flow
+
 ### Demo
 ![Demo](https://cdn.appcircle.io/docs/assets/appcircle_gui_demo.gif)
 
@@ -144,10 +151,27 @@ CURL_LOGGING= appcircle
 
 ### Connecting Your Appcircle Account via CLI
 
-- [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#generatingmanaging-the-personal-api-tokens)
-- Using the Appcircle CLI, create a full access API token using the following command with the personal access token specified as "pat": `appcircle login --pat="YOUR PERSONAL ACCESS TOKEN"`.
+You can authenticate with Appcircle using either Personal Access Token or API Key:
 
-> Your token will be stored internally. You should always revoke your access token if you do not plan to use it in the future.
+#### Using Personal Access Token
+- [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#generatingmanaging-the-personal-api-tokens)
+- Using the Appcircle CLI, create a full access API token using the following command: `appcircle login pat --token="YOUR PERSONAL ACCESS TOKEN"`.
+
+#### Using API Key
+- [Create an API Key from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#api-keys)
+- Using the Appcircle CLI, authenticate with your API Key: `appcircle login api-key --name="YOUR_API_KEY_NAME" --secret="YOUR_API_KEY_SECRET"`.
+- For multi-organization accounts, you can specify an organization: `appcircle login api-key --name="YOUR_API_KEY_NAME" --secret="YOUR_API_KEY_SECRET" --organization-id="YOUR_ORG_ID"`.
+
+#### Logout
+- To logout from your Appcircle account, use: `appcircle logout`
+- This will clear your stored authentication token locally
+
+#### Authentication Behavior
+- If you're already logged in and try to login again, you'll see a "You are already logged in" message
+- You must logout first before logging in with different credentials
+- Your token is stored locally and will persist until you logout or manually clear it
+
+> Your token will be stored internally. You should always logout or revoke your access token if you do not plan to use it in the future.
 
 ### Starting a New Build via the Appcircle CLI
 
@@ -156,6 +180,27 @@ CURL_LOGGING= appcircle
 - Get the build profile ID using `appcircle build profile list`
 - Get the workflows of that build profile `appcircle build profile workflows --profileId="YOUR PROFILE ID"`
 - Start a new build using `appcircle build start --profileId="YOUR PROFILE ID" --branch="YOUR BRANCH" --workflow="YOUR WORKFLOW ID"`
+
+> **Note:** When starting a build, logs are automatically downloaded upon completion. You can also manually download logs using `appcircle build download-log --taskId="YOUR_TASK_ID"` or with commit/build IDs.
+#### Build Log Download Improvements
+
+Appcircle CLI includes the following improvements for build log downloading functionality:
+
+- Build logs are automatically downloaded when a build is completed
+- A 2-minute waiting period with 5-second retry intervals is implemented for log files
+- User-friendly animation is displayed: "Waiting for build logs to be prepared..."
+- Support for manual log download with both task ID (`--taskId`) and commit/build ID (`--commitId`/`--buildId`) parameters
+- Automatic fallback to alternative download methods when the primary method fails
+- Log files are saved with descriptive filenames that include branch name, profile name, and timestamp: `{branchName}-{profileName}-build-logs-{timestamp}.txt`
+
+To download build logs:
+```shell
+# Download using Task ID (preferred method)
+appcircle build download-log --taskId="YOUR_TASK_ID"
+
+# Download using Commit ID and Build ID (alternative method)
+appcircle build download-log --commitId="YOUR_COMMIT_ID" --buildId="YOUR_BUILD_ID"
+```
 
 ### Distributing an App via the Appcircle CLI
 

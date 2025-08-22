@@ -10,6 +10,7 @@ appcircle enterprise-app-store version list [options]
 
 ```plaintext
      --entProfileId <uuid>   Enterprise Profile ID
+     --entProfile <string>   Enterprise profile name (alternative to --entProfileId)
 
      --publishType <number>  Publish Type Empty,0=All,1=Beta,2=Live (default: "0")
 ```

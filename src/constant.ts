@@ -16,7 +16,11 @@ export const BuildStatus = {
   "91": "Running",
   "92": "Completing",
   "99": "Unknown",
+  "100": "Skipped",
+  "200": "NotStarted",
   "201": "Stopped",
+  "202": "InProgress",
+  "203": "AwaitingResponse",
 };
 
 export const QueueItemStatus = {

@@ -10,6 +10,7 @@ appcircle testing-distribution upload [options]
 
 ```plaintext
      --distProfileId <uuid>  Distribution profile ID
+     --distProfile <string>  Distribution profile name (alternative to --distProfileId)
      --message <string>      Release notes
      --app <path>            App path
 ```
