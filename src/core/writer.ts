@@ -14,6 +14,9 @@ const writersMap: { [key in CommandTypes]: (data: any) => void } = {
       )
     );
   },
+  [CommandTypes.LOGOUT]: (data: any) => {
+    // Logout doesn't need special output, handled in command runner
+  },
   [CommandTypes.TESTING_DISTRIBUTION]: (data: any) => {
     if(data.fullCommandName === `${PROGRAM_NAME}-testing-distribution-profile-list`){
       if (data?.data?.length === 0) {

@@ -105,7 +105,7 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
     return response.data;
   }
   
-  export async function switchPublishProfileAutoPublishSettings(options: OptionsType<{ publishProfileId: string, platform:string, appVersionId: string, enable: boolean, currentProfileSettings: any }>) {
+  export async function switchPublishProfileAutoPublishSettings(options: OptionsType<{ publishProfileId: string, platform:string, enable: boolean, currentProfileSettings: any }>) {
     const response = await appcircleApi.patch(`publish/v2/profiles/${options.platform}/${options.publishProfileId}`,{
       profileSettings: {...options.currentProfileSettings , whenNewVersionRecieved: options.enable }
     },
