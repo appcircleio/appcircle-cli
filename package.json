@@ -9,6 +9,8 @@
   "scripts": {
     "watch": "rm -rf dist && tsc -w",
     "build": "rm -rf dist && tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "postversion": "git push && git push --tags",
     "postuninstall": "node ./scripts/appcircle-uninstall.js",
     "check:package": "zx ./scripts/check-package.mjs",
@@ -59,6 +61,7 @@
     "@types/node": "^18.15.11",
     "cz-conventional-changelog": "^3.3.0",
     "typescript": "^4.3.4",
+    "vitest": "^1.6.1",
     "zx": "^5.2.3"
   },
   "config": {
