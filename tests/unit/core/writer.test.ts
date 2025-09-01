@@ -950,5 +950,508 @@ describe('writer', () => {
         )
       })
     })
+
+    describe('Missing coverage paths', () => {
+      // Add tests for uncovered lines from coverage report
+      
+      it('should handle enterprise app store version unpublish command', () => {
+        const testData = {
+          fullCommandName: 'appcircle-enterprise-app-store-version-unpublish',
+          data: {
+            name: 'Test App',
+            summary: 'Test Summary',
+            version: '1.0.0',
+            versionCode: 1,
+            publishType: 1,
+            publishDate: '2024-01-01T10:00:00Z',
+            platformType: 1,
+            downloadCount: 50,
+            createDate: '2024-01-01T10:00:00Z',
+            updateDate: '2024-01-02T10:00:00Z'
+          }
+        }
+
+        commandWriter(CommandTypes.ENTERPRISE_APP_STORE, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              'Profile Name': 'Test App',
+              'Version': '1.0.0',
+              'Downloads': 50
+            })
+          ])
+        )
+      })
+
+      it('should handle enterprise app store version notify with empty data', () => {
+        const testData = {
+          fullCommandName: 'appcircle-enterprise-app-store-version-notify',
+          data: []
+        }
+
+        commandWriter(CommandTypes.ENTERPRISE_APP_STORE, testData)
+
+        expect(mockConsoleInfo).toHaveBeenCalledWith('No app versions available.')
+      })
+
+      it('should handle organization user re-invite command', () => {
+        const testData = {
+          fullCommandName: 'appcircle-organization-user-re-invite'
+        }
+
+        commandWriter(CommandTypes.ORGANIZATION, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('Re-invitation successfully sent again.')
+      })
+
+      it('should handle organization user remove command', () => {
+        const testData = {
+          fullCommandName: 'appcircle-organization-user-remove',
+          data: { email: 'user@example.com' }
+        }
+
+        commandWriter(CommandTypes.ORGANIZATION, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('User "user@example.com" has been removed.')
+      })
+
+      it('should handle organization role view with no roles', () => {
+        const testData = {
+          fullCommandName: 'appcircle-organization-role-view',
+          data: {
+            roles: [],
+            inheritedRoles: []
+          }
+        }
+
+        commandWriter(CommandTypes.ORGANIZATION, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No roles found.')
+      })
+
+      it('should handle organization default case (unknown command)', () => {
+        const testData = {
+          fullCommandName: 'appcircle-organization-unknown-command',
+          data: { test: 'data' }
+        }
+
+        commandWriter(CommandTypes.ORGANIZATION, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith({ test: 'data' })
+      })
+
+      it('should handle publish profile rename command', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-profile-rename',
+          data: {
+            id: 'profile1',
+            name: 'Renamed Profile',
+            createDate: '2024-01-01T10:00:00Z',
+            updateDate: '2024-01-02T10:00:00Z'
+          }
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              'Id:': 'profile1',
+              'Name:': 'Renamed Profile',
+              'Updated:': expect.any(String)
+            })
+          ])
+        )
+      })
+
+      it('should handle publish variable group view with empty data', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-variable-group-view',
+          data: []
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No publish variable found')
+      })
+
+      it('should handle publish variable group view with data', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-variable-group-view',
+          data: [
+            { key: 'API_KEY', value: 'secret123', isSecret: true },
+            { key: 'DEBUG', value: 'true', isSecret: false }
+          ]
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith([
+          { 'Key Name': 'API_KEY', 'Key Value': '********' },
+          { 'Key Name': 'DEBUG', 'Key Value': 'true' }
+        ])
+      })
+
+      it('should handle empty publish active list', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-active-list',
+          data: []
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No active publishing process available.')
+      })
+
+      it('should handle publish active list with data', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-active-list',
+          data: [
+            {
+              publishId: 'pub1',
+              profileName: 'Production Profile',
+              stepName: 'Deploy',
+              queueItemStatus: 1,
+              email: 'dev@example.com',
+              startQueueDateTime: '2024-01-01T10:00:00Z',
+              os: 1,
+              profileId: 'profile1',
+              appVersionId: 'version1'
+            }
+          ]
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              'Publish Id': 'pub1',
+              'Profile Name': 'Production Profile',
+              'Step Name': 'Deploy'
+            })
+          ])
+        )
+      })
+
+      it('should handle publish profile settings autopublish with disabled setting', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-profile-settings-autopublish',
+          data: {
+            id: 'profile1',
+            name: 'Manual Publish Profile',
+            profileSettings: { whenNewVersionRecieved: false }
+          }
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              'Auto Publish': 'No'
+            })
+          ])
+        )
+      })
+
+      it('should handle publish profile settings autopublish', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-profile-settings-autopublish',
+          data: {
+            id: 'profile1',
+            name: 'Auto Publish Profile',
+            createDate: '2024-01-01T10:00:00Z',
+            updateDate: '2024-01-02T10:00:00Z',
+            profileSettings: { whenNewVersionRecieved: true }
+          }
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              'Id:': 'profile1',
+              'Auto Publish': 'Yes'
+            })
+          ])
+        )
+      })
+
+      it('should handle publish profile version mark as rc', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-profile-version-mark-as-rc',
+          data: {
+            id: 'version1',
+            name: 'Version 1.0',
+            uniqueName: 'v1.0-unique',
+            createDate: '2024-01-01T10:00:00Z',
+            updateDate: '2024-01-02T10:00:00Z',
+            releaseCandidate: true
+          }
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              'Id:': 'version1',
+              'Release Candidate': 'Yes'
+            })
+          ])
+        )
+      })
+
+      it('should handle publish profile version unmark as rc', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-profile-version-unmark-as-rc',
+          data: {
+            id: 'version1',
+            name: 'Version 1.0',
+            uniqueName: 'v1.0-unique',
+            releaseCandidate: false
+          }
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              'Release Candidate': 'No'
+            })
+          ])
+        )
+      })
+
+      it('should handle publish profile version view with no data', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-profile-version-view',
+          data: null
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No app version found')
+      })
+
+      it('should handle publish view with no data', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-view',
+          data: null
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No publishing process found')
+      })
+
+      it('should handle publish view with steps', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-view',
+          data: {
+            id: 'publish1',
+            status: 1,
+            startedOn: '2024-01-01T10:00:00Z',
+            steps: [
+              {
+                name: 'Step 1',
+                status: 1,
+                startedByUser: { email: 'user@example.com' },
+                startedOn: '2024-01-01T10:05:00Z',
+                finishedOn: '2024-01-01T10:10:00Z'
+              }
+            ]
+          }
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleInfo).toHaveBeenCalledWith('  Steps:')
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              'Name': 'Step 1',
+              'Started By': 'user@example.com'
+            })
+          ])
+        )
+      })
+
+      it('should handle publish default case', () => {
+        const testData = {
+          fullCommandName: 'appcircle-publish-unknown-command',
+          data: { test: 'publish data' }
+        }
+
+        commandWriter(CommandTypes.PUBLISH, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith({ test: 'publish data' })
+      })
+
+      it('should handle signing identity certificate upload', () => {
+        const testData = {
+          fullCommandName: 'appcircle-signing-identity-certificate-upload',
+          data: {
+            id: 'cert1',
+            name: 'Upload Certificate',
+            storeType: 1,
+            filename: 'cert.p12',
+            expireDate: '2025-01-01T10:00:00Z'
+          }
+        }
+
+        commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.objectContaining({
+            'Certificate Id': 'cert1',
+            'File Name': 'cert.p12'
+          })
+        )
+      })
+
+      it('should handle signing identity certificate upload with no data', () => {
+        const testData = {
+          fullCommandName: 'appcircle-signing-identity-certificate-upload',
+          data: null
+        }
+
+        commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No iOS certificate found')
+      })
+
+      it('should handle signing identity certificate create', () => {
+        const testData = {
+          fullCommandName: 'appcircle-signing-identity-certificate-create',
+          data: {
+            id: 'cert2',
+            name: 'New Certificate',
+            storeType: 2,
+            createDate: '2024-01-01T10:00:00Z'
+          }
+        }
+
+        commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.objectContaining({
+            'Certificate Id': 'cert2',
+            'Certificate Name': 'New Certificate'
+          })
+        )
+      })
+
+      it('should handle signing identity certificate view', () => {
+        const testData = {
+          fullCommandName: 'appcircle-signing-identity-certificate-view',
+          data: {
+            id: 'cert3',
+            name: 'View Certificate',
+            filename: 'view-cert.p12',
+            storeType: 1,
+            expireDate: '2025-01-01T10:00:00Z',
+            createDate: '2024-01-01T10:00:00Z',
+            updateDate: '2024-01-02T10:00:00Z'
+          }
+        }
+
+        commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.objectContaining({
+            'Certificate Id': 'cert3',
+            'File Name': 'view-cert.p12',
+            'Created': expect.any(String),
+            'Updated': expect.any(String)
+          })
+        )
+      })
+
+      it('should handle empty Android keystore list', () => {
+        const testData = {
+          fullCommandName: 'appcircle-signing-identity-keystore-list',
+          data: []
+        }
+
+        commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No Android keystore found')
+      })
+
+      it('should handle keystore view', () => {
+        const testData = {
+          fullCommandName: 'appcircle-signing-identity-keystore-view',
+          data: {
+            id: 'keystore1',
+            name: 'Production Keystore',
+            alias: 'prod-alias',
+            fileName: 'production.keystore',
+            createDate: '2024-01-01T10:00:00Z',
+            expireDate: '2025-01-01T10:00:00Z'
+          }
+        }
+
+        commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.objectContaining({
+            'Keystore Id': 'keystore1',
+            'Alias': 'prod-alias'
+          })
+        )
+      })
+
+      it('should handle keystore view with no data', () => {
+        const testData = {
+          fullCommandName: 'appcircle-signing-identity-keystore-view',
+          data: null
+        }
+
+        commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No Android keystore found')
+      })
+
+      it('should handle provisioning profile view', () => {
+        const testData = {
+          fullCommandName: 'appcircle-signing-identity-provisioning-profile-view',
+          data: {
+            id: 'profile1',
+            name: 'Development Profile',
+            appId: 'com.example.app',
+            storeType: 1,
+            hasCertificate: true,
+            expireDate: '2025-01-01T10:00:00Z',
+            createDate: '2024-01-01T10:00:00Z'
+          }
+        }
+
+        commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
+
+        expect(mockConsoleTable).toHaveBeenCalledWith(
+          expect.objectContaining({
+            'Id': 'profile1',
+            'Associated App ID': 'com.example.app',
+            'Has Certificate': true
+          })
+        )
+      })
+
+      it('should handle provisioning profile view with no data', () => {
+        const testData = {
+          fullCommandName: 'appcircle-signing-identity-provisioning-profile-view',
+          data: null
+        }
+
+        commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
+
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No Provisioning Profile found')
+      })
+    })
   })
 })
