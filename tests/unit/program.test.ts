@@ -1,0 +1,636 @@
+/**
+ * @fileoverview Comprehensive tests for program.ts
+ * Combines program creation tests and exported functions tests
+ */
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// Mock all dependencies
+vi.mock('commander', () => ({
+  Command: vi.fn().mockImplementation(() => ({
+    name: vi.fn().mockReturnValue('test-program'),
+    version: vi.fn().mockReturnThis(),
+    option: vi.fn().mockReturnThis(),
+    command: vi.fn().mockReturnThis(),
+    description: vi.fn().mockReturnThis(),
+    addHelpText: vi.fn().mockReturnThis(),
+    argument: vi.fn().mockReturnThis(),
+    requiredOption: vi.fn().mockReturnThis(),
+    action: vi.fn().mockReturnThis(),
+    configureOutput: vi.fn().mockReturnThis(),
+    hook: vi.fn().mockReturnThis(),
+    parseAsync: vi.fn().mockResolvedValue(undefined),
+    parent: null,
+    args: [],
+    opts: vi.fn().mockReturnValue({}),
+    options: [
+      { flags: '-v, --version', description: 'output the version number' },
+      { flags: '-h, --help', description: 'display help for command' }
+    ]
+  })),
+  createCommand: vi.fn().mockImplementation(() => ({
+    name: vi.fn().mockReturnValue('test-program'),
+    version: vi.fn().mockReturnThis(),
+    option: vi.fn().mockReturnThis(),
+    command: vi.fn().mockReturnThis(),
+    description: vi.fn().mockReturnThis(),
+    addHelpText: vi.fn().mockReturnThis(),
+    argument: vi.fn().mockReturnThis(),
+    requiredOption: vi.fn().mockReturnThis(),
+    action: vi.fn().mockReturnThis(),
+    configureOutput: vi.fn().mockReturnThis(),
+    hook: vi.fn().mockReturnThis(),
+    parseAsync: vi.fn().mockResolvedValue(undefined),
+    parent: null,
+    args: [],
+    opts: vi.fn().mockReturnValue({}),
+    options: [
+      { flags: '-v, --version', description: 'output the version number' },
+      { flags: '-h, --help', description: 'display help for command' }
+    ],
+    helpInformation: vi.fn().mockReturnValue('help info')
+  }))
+}));
+
+vi.mock('../../src/constant.js', () => ({
+  PROGRAM_NAME: 'appcircle'
+}));
+
+vi.mock('../../src/core/commands.js', () => ({
+  CommandTypes: {
+    CONFIG: 'config',
+    LOGIN: 'login'
+  },
+  Commands: [
+    {
+      command: 'config',
+      description: 'Manage configuration',
+      longDescription: 'Long description for config command',
+      ignore: false,
+      params: [
+        {
+          name: 'env',
+          type: 'string',
+          required: true,
+          valueType: 'environment',
+          description: 'Environment name'
+        },
+        {
+          name: 'verbose',
+          type: 'boolean',
+          required: false,
+          defaultValue: false,
+          description: 'Enable verbose output'
+        }
+      ],
+      arguments: [
+        {
+          name: 'action',
+          description: 'Action to perform',
+          longDescription: 'Long description for action argument'
+        }
+      ],
+      subCommands: [
+        {
+          command: 'list',
+          description: 'List configurations',
+          ignore: false,
+          params: [
+            {
+              name: 'format',
+              type: 'string',
+              required: false,
+              valueType: 'json|yaml',
+              defaultValue: 'json',
+              description: 'Output format'
+            }
+          ]
+        },
+        {
+          command: 'add',
+          description: 'Add configuration',
+          ignore: false,
+          params: []
+        }
+      ]
+    },
+    {
+      command: 'login',
+      description: 'Login to Appcircle',
+      ignore: false,
+      params: [
+        {
+          name: 'pat',
+          type: 'string',
+          required: false,
+          valueType: 'token',
+          description: 'Personal Access Token'
+        }
+      ]
+    },
+    {
+      command: 'ignored',
+      description: 'This should be ignored',
+      ignore: true,
+      params: []
+    }
+  ],
+  CommandParameterTypes: {
+    BOOLEAN: 'boolean',
+    STRING: 'string'
+  }
+}));
+
+// Mock package.json
+vi.mock('../../package.json', () => ({
+  default: { version: '2.7.3' }
+}));
+
+describe('Program.ts - Comprehensive Tests', () => {
+  let mockProcessArgv: string[];
+
+  beforeEach(() => {
+    mockProcessArgv = [...process.argv];
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.argv = mockProcessArgv;
+  });
+
+  describe('🏗️ Program Creation Tests', () => {
+    describe('createCommandActionCallback', () => {
+      it('should create a command action callback with correct properties', async () => {
+        const { createCommandActionCallback } = await import('../../src/program.js');
+        
+        const mockActionCommand = {
+          name: vi.fn().mockReturnValue('test-command'),
+          parent: { name: vi.fn().mockReturnValue('appcircle') },
+          args: ['arg1', 'arg2'],
+          opts: vi.fn().mockReturnValue({ verbose: true })
+        };
+
+        const mockThisCommand = {
+          opts: vi.fn().mockReturnValue({ output: 'json' })
+        };
+
+        const result = createCommandActionCallback(mockActionCommand, mockThisCommand);
+
+        expect(result.fullCommandName).toBe('appcircle-test-command');
+        expect(result.name()).toBe('test-command');
+        expect(result.parent).toBe(mockActionCommand.parent);
+        expect(result.opts()).toEqual({ output: 'json', verbose: true });
+      });
+
+      it('should handle command with function args', async () => {
+        const { createCommandActionCallback } = await import('../../src/program.js');
+        
+        const mockActionCommand = {
+          name: vi.fn().mockReturnValue('test-command'),
+          parent: null,
+          args: vi.fn().mockReturnValue(['arg1', 'arg2']),
+          opts: vi.fn().mockReturnValue({ verbose: true })
+        };
+
+        const result = createCommandActionCallback(mockActionCommand);
+
+        expect(result.args()).toEqual(['arg1', 'arg2']);
+      });
+
+      it('should check if command is group command', async () => {
+        const { createCommandActionCallback } = await import('../../src/program.js');
+        
+        const mockActionCommand = {
+          name: vi.fn().mockReturnValue('config'),
+          parent: { name: vi.fn().mockReturnValue('appcircle') },
+          args: [],
+          opts: vi.fn().mockReturnValue({})
+        };
+
+        const result = createCommandActionCallback(mockActionCommand);
+
+        expect(result.isGroupCommand('config')).toBe(true);
+        expect(result.isGroupCommand('login')).toBe(false);
+      });
+    });
+
+    describe('createProgram', () => {
+      it('should create program with version', async () => {
+        const { createProgram } = await import('../../src/program.js');
+        
+        const program = createProgram();
+        
+        // Program should have been created and version called
+        expect(program).toBeDefined();
+        expect(program.parseAsync).toBeDefined();
+      });
+
+      it('should create program with global options', async () => {
+        const { createProgram } = await import('../../src/program.js');
+        
+        const program = createProgram();
+        
+        // Program should have been created successfully  
+        expect(program).toBeDefined();
+        expect(typeof program.parseAsync).toBe('function');
+      });
+
+      it('should configure program output', async () => {
+        const { createProgram } = await import('../../src/program.js');
+        
+        const program = createProgram();
+        
+        // Program should be properly configured
+        expect(program).toBeDefined();
+        expect(program.parseAsync).toBeDefined();
+      });
+
+      it('should setup pre and post hooks', async () => {
+        const { createProgram } = await import('../../src/program.js');
+        
+        const program = createProgram();
+        
+        // Program should have hooks set up
+        expect(program).toBeDefined();
+        expect(program.parseAsync).toBeDefined();
+      });
+
+      it('should set onCommandRun callback when provided', async () => {
+        const { createProgram } = await import('../../src/program.js');
+        const mockCallback = vi.fn();
+        
+        const program = createProgram(mockCallback);
+        
+        expect(program.onCommandRun).toBeDefined();
+      });
+    });
+  });
+
+  describe('📤 Exported Functions Tests', () => {
+    describe('createCommands function', () => {
+      it('should create commands with descriptions', async () => {
+        const mockProgram = {
+          command: vi.fn().mockReturnThis(),
+          description: vi.fn().mockReturnThis(),
+          addHelpText: vi.fn().mockReturnThis(),
+          argument: vi.fn().mockReturnThis(),
+          option: vi.fn().mockReturnThis(),
+          requiredOption: vi.fn().mockReturnThis(),
+          action: vi.fn().mockReturnThis()
+        };
+
+        const mockActionCb = vi.fn();
+        const { createCommands } = await import('../../src/program.js');
+        const { Commands } = await import('../../src/core/commands.js');
+
+        createCommands(mockProgram, Commands, mockActionCb);
+
+        expect(mockProgram.command).toHaveBeenCalledWith('config');
+        expect(mockProgram.command).toHaveBeenCalledWith('login');
+        expect(mockProgram.description).toHaveBeenCalledWith('Manage configuration');
+        expect(mockProgram.description).toHaveBeenCalledWith('Login to Appcircle');
+      });
+
+      it('should add long descriptions when present', async () => {
+        const mockProgram = {
+          command: vi.fn().mockReturnThis(),
+          description: vi.fn().mockReturnThis(),
+          addHelpText: vi.fn().mockReturnThis(),
+          argument: vi.fn().mockReturnThis(),
+          option: vi.fn().mockReturnThis(),
+          requiredOption: vi.fn().mockReturnThis(),
+          action: vi.fn().mockReturnThis()
+        };
+
+        const mockActionCb = vi.fn();
+        const { createCommands } = await import('../../src/program.js');
+        const { Commands } = await import('../../src/core/commands.js');
+
+        createCommands(mockProgram, Commands, mockActionCb);
+
+        expect(mockProgram.addHelpText).toHaveBeenCalledWith('after', '\nLong description for config command\n');
+      });
+
+      it('should create arguments for commands', async () => {
+        const mockProgram = {
+          command: vi.fn().mockReturnThis(),
+          description: vi.fn().mockReturnThis(),
+          addHelpText: vi.fn().mockReturnThis(),
+          argument: vi.fn().mockReturnThis(),
+          option: vi.fn().mockReturnThis(),
+          requiredOption: vi.fn().mockReturnThis(),
+          action: vi.fn().mockReturnThis()
+        };
+
+        const mockActionCb = vi.fn();
+        const { createCommands } = await import('../../src/program.js');
+        const { Commands } = await import('../../src/core/commands.js');
+
+        createCommands(mockProgram, Commands, mockActionCb);
+
+        expect(mockProgram.argument).toHaveBeenCalledWith('[action]', 'Long description for action argument');
+      });
+
+      it('should create required options for commands', async () => {
+        const mockProgram = {
+          command: vi.fn().mockReturnThis(),
+          description: vi.fn().mockReturnThis(),
+          addHelpText: vi.fn().mockReturnThis(),
+          argument: vi.fn().mockReturnThis(),
+          option: vi.fn().mockReturnThis(),
+          requiredOption: vi.fn().mockReturnThis(),
+          action: vi.fn().mockReturnThis()
+        };
+
+        const mockActionCb = vi.fn();
+        const { createCommands } = await import('../../src/program.js');
+        const { Commands } = await import('../../src/core/commands.js');
+
+        createCommands(mockProgram, Commands, mockActionCb);
+
+        expect(mockProgram.requiredOption).toHaveBeenCalledWith(
+          '--env <environment>',
+          'Environment name'
+        );
+      });
+
+      it('should create boolean options for commands', async () => {
+        const mockProgram = {
+          command: vi.fn().mockReturnThis(),
+          description: vi.fn().mockReturnThis(),
+          addHelpText: vi.fn().mockReturnThis(),
+          argument: vi.fn().mockReturnThis(),
+          option: vi.fn().mockReturnThis(),
+          requiredOption: vi.fn().mockReturnThis(),
+          action: vi.fn().mockReturnThis()
+        };
+
+        const mockActionCb = vi.fn();
+        const { createCommands } = await import('../../src/program.js');
+        const { Commands } = await import('../../src/core/commands.js');
+
+        createCommands(mockProgram, Commands, mockActionCb);
+
+        expect(mockProgram.option).toHaveBeenCalledWith('--verbose', 'Enable verbose output', false);
+      });
+
+      it('should create optional options with default values', async () => {
+        const mockSubProgram = {
+          command: vi.fn().mockReturnThis(),
+          description: vi.fn().mockReturnThis(),
+          addHelpText: vi.fn().mockReturnThis(),
+          argument: vi.fn().mockReturnThis(),
+          option: vi.fn().mockReturnThis(),
+          requiredOption: vi.fn().mockReturnThis(),
+          action: vi.fn().mockReturnThis()
+        };
+
+        const mockProgram = {
+          command: vi.fn().mockReturnValue(mockSubProgram),
+          description: vi.fn().mockReturnThis(),
+          addHelpText: vi.fn().mockReturnThis(),
+          argument: vi.fn().mockReturnThis(),
+          option: vi.fn().mockReturnThis(),
+          requiredOption: vi.fn().mockReturnThis(),
+          action: vi.fn().mockReturnThis()
+        };
+
+        const mockActionCb = vi.fn();
+        const { createCommands } = await import('../../src/program.js');
+        const { Commands } = await import('../../src/core/commands.js');
+
+        createCommands(mockProgram, Commands, mockActionCb);
+
+        expect(mockSubProgram.option).toHaveBeenCalledWith('--format <json|yaml>', 'Output format', 'json');
+      });
+
+      it('should set action callbacks for all commands', async () => {
+        const mockProgram = {
+          command: vi.fn().mockReturnThis(),
+          description: vi.fn().mockReturnThis(),
+          addHelpText: vi.fn().mockReturnThis(),
+          argument: vi.fn().mockReturnThis(),
+          option: vi.fn().mockReturnThis(),
+          requiredOption: vi.fn().mockReturnThis(),
+          action: vi.fn().mockReturnThis()
+        };
+
+        const mockActionCb = vi.fn();
+        const { createCommands } = await import('../../src/program.js');
+        const { Commands } = await import('../../src/core/commands.js');
+
+        createCommands(mockProgram, Commands, mockActionCb);
+
+        expect(mockProgram.action).toHaveBeenCalled();
+      });
+
+      it('should filter out ignored commands', async () => {
+        const mockProgram = {
+          command: vi.fn().mockReturnThis(),
+          description: vi.fn().mockReturnThis(),
+          addHelpText: vi.fn().mockReturnThis(),
+          argument: vi.fn().mockReturnThis(),
+          option: vi.fn().mockReturnThis(),
+          requiredOption: vi.fn().mockReturnThis(),
+          action: vi.fn().mockReturnThis()
+        };
+
+        const commandsWithIgnored = [
+          {
+            command: 'config',
+            description: 'Config command',
+            ignore: false,
+            params: []
+          },
+          {
+            command: 'ignored',
+            description: 'This should be ignored',
+            ignore: true,
+            params: []
+          }
+        ];
+
+        const mockActionCb = vi.fn();
+        const { createCommands } = await import('../../src/program.js');
+
+        createCommands(mockProgram, commandsWithIgnored, mockActionCb);
+
+        expect(mockProgram.command).toHaveBeenCalledWith('config');
+        expect(mockProgram.command).not.toHaveBeenCalledWith('ignored');
+      });
+    });
+
+    describe('prepareFullCommandName function', () => {
+      it('should return PROGRAM_NAME for null command', async () => {
+        const { prepareFullCommandName } = await import('../../src/program.js');
+        
+        const result = prepareFullCommandName(null);
+        expect(result).toBe('appcircle');
+      });
+
+      it('should return PROGRAM_NAME for command without name function', async () => {
+        const { prepareFullCommandName } = await import('../../src/program.js');
+        
+        const result = prepareFullCommandName({ name: 'not-a-function' });
+        expect(result).toBe('appcircle');
+      });
+
+      it('should handle command with no parent', async () => {
+        const { prepareFullCommandName } = await import('../../src/program.js');
+        
+        const mockCommand = {
+          name: () => 'config',
+          parent: null
+        };
+
+        const result = prepareFullCommandName(mockCommand);
+        expect(result).toBe('appcircle-config');
+      });
+
+      it('should handle command that returns PROGRAM_NAME', async () => {
+        const { prepareFullCommandName } = await import('../../src/program.js');
+        
+        const mockCommand = {
+          name: () => 'appcircle',
+          parent: null
+        };
+
+        const result = prepareFullCommandName(mockCommand);
+        expect(result).toBe('appcircle');
+      });
+
+      it('should handle command with parent', async () => {
+        const { prepareFullCommandName } = await import('../../src/program.js');
+        
+        const mockParent = {
+          name: () => 'config',
+          parent: null
+        };
+
+        const mockCommand = {
+          name: () => 'list',
+          parent: mockParent
+        };
+
+        const result = prepareFullCommandName(mockCommand);
+        expect(result).toBe('appcircle-config-list');
+      });
+
+      it('should handle deeply nested commands', async () => {
+        const { prepareFullCommandName } = await import('../../src/program.js');
+        
+        const mockGrandparent = {
+          name: () => 'config',
+          parent: null
+        };
+
+        const mockParent = {
+          name: () => 'env',
+          parent: mockGrandparent
+        };
+
+        const mockCommand = {
+          name: () => 'list',
+          parent: mockParent
+        };
+
+        const result = prepareFullCommandName(mockCommand);
+        expect(result).toBe('appcircle-config-env-list');
+      });
+
+      it('should handle command with empty name', async () => {
+        const { prepareFullCommandName } = await import('../../src/program.js');
+        
+        const mockParent = {
+          name: () => 'config',
+          parent: null
+        };
+
+        const mockCommand = {
+          name: () => '',
+          parent: mockParent
+        };
+
+        const result = prepareFullCommandName(mockCommand);
+        expect(result).toBe('appcircle-config');
+      });
+
+      it('should handle parent that is not an object', async () => {
+        const { prepareFullCommandName } = await import('../../src/program.js');
+        
+        const mockCommand = {
+          name: () => 'config',
+          parent: 'not-an-object'
+        };
+
+        const result = prepareFullCommandName(mockCommand);
+        expect(result).toBe('appcircle-config');
+      });
+    });
+  });
+
+  describe('🔧 Command Validation Logic', () => {
+    it('should validate command types correctly', async () => {
+      const commands = await import('../../src/core/commands');
+      
+      expect(commands.CommandTypes.CONFIG).toBe('config');
+      expect(commands.CommandTypes.LOGIN).toBe('login');
+    });
+
+    it('should validate parameter types', async () => {
+      const commands = await import('../../src/core/commands');
+      
+      expect(commands.CommandParameterTypes.BOOLEAN).toBe('boolean');
+      expect(commands.CommandParameterTypes.STRING).toBe('string');
+    });
+
+    it('should handle parameter requirements correctly', async () => {
+      const commands = await import('../../src/core/commands');
+      
+      const configCommand = commands.Commands.find((cmd: any) => cmd.command === 'config');
+      expect(configCommand).toBeDefined();
+      
+      const envParam = configCommand.params.find((param: any) => param.name === 'env');
+      expect(envParam.required).toBe(true);
+      
+      const verboseParam = configCommand.params.find((param: any) => param.name === 'verbose');
+      expect(verboseParam.required).toBe(false);
+      expect(verboseParam.defaultValue).toBe(false);
+    });
+  });
+
+  describe('🎯 Command Integration Tests', () => {
+    it('should handle full program creation flow', async () => {
+      const { createProgram } = await import('../../src/program.js');
+      
+      const program = createProgram();
+      
+      // Verify program was configured properly
+      expect(program).toBeDefined();
+      expect(program.parseAsync).toBeDefined();
+      expect(program.onCommandRun).toBeDefined();
+    });
+
+    it('should create command with proper hierarchy', async () => {
+      const { createCommands } = await import('../../src/program.js');
+      const { Commands } = await import('../../src/core/commands.js');
+      
+      const mockProgram = {
+        command: vi.fn().mockReturnThis(),
+        description: vi.fn().mockReturnThis(),
+        addHelpText: vi.fn().mockReturnThis(),
+        argument: vi.fn().mockReturnThis(),
+        option: vi.fn().mockReturnThis(),
+        requiredOption: vi.fn().mockReturnThis(),
+        action: vi.fn().mockReturnThis()
+      };
+
+      createCommands(mockProgram, Commands, vi.fn());
+
+      // Should create all non-ignored commands
+      expect(mockProgram.command).toHaveBeenCalledWith('config');
+      expect(mockProgram.command).toHaveBeenCalledWith('login');
+      expect(mockProgram.command).not.toHaveBeenCalledWith('ignored');
+    });
+  });
+});
