@@ -4,7 +4,7 @@ import { CommandTypes, Commands, CommandParameterTypes } from "./core/commands.j
 
 export type ProgramCommand = { fullCommandName: string, isGroupCommand: (commandName: CommandTypes) => boolean,  parent:  Command | null; name: () => string; args: any; opts: () => { [key: string]: any } };
 
-const createCommands = (program: any, commands: typeof Commands, actionCb: any) => {
+export const createCommands = (program: any, commands: typeof Commands, actionCb: any) => {
   commands.filter((c) => !c.ignore).forEach((command) => {
     let comandPrg = program.command(command.command).description(command.description);
 
@@ -35,7 +35,7 @@ const createCommands = (program: any, commands: typeof Commands, actionCb: any) 
   });
 };
 
-const prepareFullCommandName = (command: Command | any): string => {
+export const prepareFullCommandName = (command: Command | any): string => {
   if (!command || typeof command.name !== 'function') {
     return PROGRAM_NAME;
   }

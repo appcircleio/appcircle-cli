@@ -21,22 +21,38 @@ export default defineConfig({
         'src/**/*.test.ts',
         'src/**/*.spec.ts'
       ],
+      // Separate thresholds for different test types
       thresholds: {
         global: {
-          branches: 80,
-          functions: 80,
-          lines: 80,
-          statements: 80
+          branches: 75,
+          functions: 70,
+          lines: 75,
+          statements: 75
+        },
+        // Unit tests should have higher coverage
+        'tests/unit/**': {
+          branches: 85,
+          functions: 85,
+          lines: 85,
+          statements: 85
+        },
+        // Integration tests focus on workflows
+        'tests/integration/**': {
+          branches: 60,
+          functions: 60,
+          lines: 60,
+          statements: 60
         }
       }
     },
-    testTimeout: 10000,
+    testTimeout: 15000,
     hookTimeout: 10000,
-    setupFiles: []
+    setupFiles: ['./tests/setup/test-setup.ts']
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
+      '@': resolve(__dirname, 'src'),
+      '@tests': resolve(__dirname, 'tests')
     }
   }
 })

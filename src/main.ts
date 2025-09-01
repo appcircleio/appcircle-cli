@@ -12,14 +12,14 @@ import { PROGRAM_NAME } from './constant.js';
 import chalk from 'chalk';
 import { Commands } from './core/commands.js';
 
-const collectErrorMessageFromData = (data: any) => {
+export const collectErrorMessageFromData = (data: any) => {
   if(data && (typeof data === 'string' || data instanceof String || data instanceof ArrayBuffer)) {
     return data;
   }
   return data ?  '\n↳ ' + Object.keys(data).filter(k => k !== 'stackTrace').map(key =>  ' -' +key +': ' + data[key]).join('\n↳ '): '';
 }
 
-const handleError = (error: any) => {
+export const handleError = (error: any) => {
   // Handle AppcircleExitError specially
   if (error.name === 'AppcircleExitError') {
     if (error.code === 0 && (!error.message || error.message === '')) {
@@ -79,7 +79,7 @@ process.on('unCaughtException', (error) => {
  * @return {Promise<void>} - This function does not return anything.
  */
 
-const main = async () => {
+export const main = async () => {
   const program = createProgram();
   const argv = minimist(process.argv.slice(2));
   

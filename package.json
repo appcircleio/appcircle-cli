@@ -9,7 +9,7 @@
   "scripts": {
     "watch": "rm -rf dist && tsc -w",
     "build": "rm -rf dist && tsc",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:watch": "vitest",
     "postversion": "git push && git push --tags",
     "postuninstall": "node ./scripts/appcircle-uninstall.js",
@@ -62,6 +62,7 @@
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "3.2.4",
     "cz-conventional-changelog": "^3.0.1",
+    "msw": "^2.11.0",
     "typescript": "^4.3.4",
     "vitest": "^3.2.4",
     "zx": "^5.2.3"
