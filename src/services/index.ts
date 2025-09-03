@@ -140,7 +140,7 @@ export async function startBuild(
       throw new ProgramError(`Branch ID is required when commit hash is provided. Please provide --branchId or --branch parameter.`);
     }
     const allCommitsByBranchId = await getCommits({ branchId: branchId! });
-    const foundCommit = allCommitsByBranchId?.find((c:any) => c.hash == options.commitHash);
+    const foundCommit = allCommitsByBranchId?.find((c: any) => c.hash === options.commitHash);
     if (foundCommit) {
       commitId = foundCommit.id;
     } else {
@@ -192,7 +192,7 @@ export async function downloadArtifact(options: OptionsType<{ buildId?: string; 
       if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
         buildId = buildsResponse.builds[0].id;
       } else {
-        throw new Error(`No builds found for commit ID: ${options.commitId}`);
+        throw new ProgramError(`No builds found for commit ID: ${options.commitId}`);
       }
     }
     const endpoint = `build/v1/commits/${options.commitId}/builds/${buildId}`;
@@ -246,12 +246,12 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
         buildId = buildsResponse.builds[0].id;
         console.log(`Found latest build ID from commit: ${buildId}`);
       } else {
-        throw new Error(`No builds found for commit ID: ${options.commitId}`);
+        throw new ProgramError(`No builds found for commit ID: ${options.commitId}`);
       }
     }
   } catch (apiError: any) {
     if (!buildId) {
-      throw new Error(`Could not get build ID: ${apiError.message}`);
+      throw new ProgramError(`Could not get build ID: ${apiError.message}`);
     }
     console.log(`API error: ${apiError.message}. Continuing with existing build ID: ${buildId}`);
   }
@@ -275,7 +275,7 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
     if (downloadResponse.data && 
         (downloadResponse.data.includes('No Logs Available') || 
          downloadResponse.data.trim() === '')) {
-      throw new Error('No Logs Available');
+      throw new ProgramError('No Logs Available');
     }
     
     const writer = fs.createWriteStream(`${downloadPath}/${fileName || `${buildId}-log.txt`}`);
@@ -292,9 +292,9 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
     });
   } catch (error: any) {
     if (error.response && error.response.status === 404) {
-      throw new Error('No Logs Available (404)');
+      throw new ProgramError('No Logs Available (404)');
     } else if (error.response && error.response.status) {
-      throw new Error(`HTTP error: ${error.response.status}`);
+      throw new ProgramError(`HTTP error: ${error.response.status}`);
     }
     throw error;
   }
@@ -424,7 +424,6 @@ async function createTextEnvironmentVariable(options: OptionsType<{ variableGrou
 async function createFileEnvironmentVariable(options: OptionsType<{ key: string; isSecret: boolean; filePath: string; variableGroupId: string }>) {
   const form = new FormData();
   const file = fs.createReadStream(options.filePath);
-  console.log('options.filePath): ', options.filePath);
   form.append('Key', options.key);
   form.append('Value', path.basename(options.filePath));
   form.append('IsSecret', 'false');
@@ -546,9 +545,9 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
         
         downloadResponse.data.on('end', () => {
           if (responseText.includes('No Logs Available')) {
-            reject(new Error('No Logs Available'));
+            reject(new ProgramError('No Logs Available'));
           } else if (responseText.trim() === '') {
-            reject(new Error('Empty response'));
+            reject(new ProgramError('Empty response'));
           } else {
             const targetFile = `${downloadPath}/${fileName || `build-task-${options.taskId}-log.txt`}`;
             const writer = fs.createWriteStream(targetFile);
@@ -587,7 +586,7 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
     });
   } catch (error: any) {
     if (error.response && error.response.status === 404) {
-      throw new Error('HTTP error: 404');
+      throw new ProgramError('HTTP error: 404');
     }
     throw error;
   }
