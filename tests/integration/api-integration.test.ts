@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { server } from '@tests/setup/test-setup';
+import { server } from '../setup/test-setup';
 import { MemoryAuth, setAuth } from '../core/auth-abstraction';
 
 describe('API Integration Tests', () => {

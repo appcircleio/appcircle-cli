@@ -212,7 +212,7 @@ describe('constant.ts', () => {
       let arrayCount = 0;
       let stringCount = 0;
       
-      CountriesList.forEach((country, index) => {
+      CountriesList.forEach((country, _index) => {
         if (Array.isArray(country)) {
           arrayCount++;
           expect(typeof country[0]).toBe('string'); // Country name
@@ -230,8 +230,8 @@ describe('constant.ts', () => {
     });
 
     it('should contain specific countries', () => {
-      const countryNames = CountriesList.map(country => Array.isArray(country) ? country[0] : country.split(',')[0]);
-      const countryCodes = CountriesList.map(country => Array.isArray(country) ? country[1] : country.split(',')[1]);
+      const countryNames = CountriesList.map(country => Array.isArray(country) ? country[0] : (country as string).split(',')[0]);
+      const countryCodes = CountriesList.map(country => Array.isArray(country) ? country[1] : (country as string).split(',')[1]);
 
       expect(countryNames).toContain('United States');
       expect(countryNames).toContain('Turkey');
@@ -245,14 +245,14 @@ describe('constant.ts', () => {
     });
 
     it('should have unique country codes', () => {
-      const countryCodes = CountriesList.map(country => Array.isArray(country) ? country[1] : country.split(',')[1]);
+      const countryCodes = CountriesList.map(country => Array.isArray(country) ? country[1] : (country as string).split(',')[1]);
       const uniqueCodes = new Set(countryCodes.filter(code => code)); // Filter out undefined
       expect(uniqueCodes.size).toBe(countryCodes.filter(code => code).length);
     });
 
     it('should have valid country code format', () => {
       CountriesList.forEach(country => {
-        const code = Array.isArray(country) ? country[1] : country.split(',')[1];
+        const code = Array.isArray(country) ? country[1] : (country as string).split(',')[1];
         if (code) {
           expect(code).toMatch(/^[A-Z]{2}$/); // Two uppercase letters
         }
@@ -264,7 +264,7 @@ describe('constant.ts', () => {
         if (Array.isArray(country)) {
           return [country[0], country[1]];
         } else {
-          const parts = country.split(',');
+          const parts = (country as string).split(',');
           return [parts[0], parts[1]];
         }
       }));

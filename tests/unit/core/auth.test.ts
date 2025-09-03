@@ -13,7 +13,7 @@ import {
   isAuthenticated,
   login 
 } from '../../core/auth-abstraction';
-import { setupAuthMocks, setupAuthSuccess, setupAuthFailure } from '@tests/setup/auth-mocks';
+import { setupAuthMocks, setupAuthSuccess, setupAuthFailure } from '../../setup/auth-mocks';
 
 describe('Auth Abstraction', () => {
   beforeEach(() => {

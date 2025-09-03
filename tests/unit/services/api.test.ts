@@ -269,9 +269,9 @@ describe('API Client', () => {
       }
       
       // Register the interceptor function for testing
-      mockAxiosInterceptorUse.mockImplementation((fn) => {
+      mockAxiosInterceptorUse.mockImplementation((_fn: any) => {
         // Store the interceptor function for testing
-        mockAxiosInterceptorUse.interceptorFn = mockInterceptorFunction
+        (mockAxiosInterceptorUse as any).interceptorFn = mockInterceptorFunction
       })
       
       const mockConfig = {

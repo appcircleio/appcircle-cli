@@ -88,9 +88,9 @@ vi.mock('../../../src/services', async (importOriginal) => {
   const defaultString = 'mock-value';
   
   const actual = await importOriginal();
+  const actualObj = typeof actual === 'object' && actual !== null ? actual : {};
   return {
-    ...actual,
-    // Authentication - critical for tests
+    ...actualObj,
     getToken: vi.fn().mockResolvedValue({ access_token: 'mock_token_success' }),
     getTokenFromApiKey: vi.fn().mockResolvedValue({ access_token: 'mock_api_token_success' }),
     
@@ -951,9 +951,16 @@ describe('Command Runner - Comprehensive Tests', () => {
       ]);
       vi.mocked(getTestingDistributionUploadInformation).mockResolvedValueOnce({
         fileId: 'file-123',
-        uploadUrl: 'https://upload.url'
+        uploadUrl: 'https://upload.url',
+        configuration: { httpMethod: 'PUT' }
       });
-      vi.mocked(uploadArtifactWithSignedUrl).mockResolvedValueOnce({});
+      vi.mocked(uploadArtifactWithSignedUrl).mockResolvedValueOnce({
+        data: {},
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {}
+      } as any);
       vi.mocked(commitTestingDistributionFileUpload).mockResolvedValueOnce({
         taskId: 'task-123'
       });
@@ -1108,9 +1115,16 @@ describe('Command Runner - Comprehensive Tests', () => {
       
       vi.mocked(getEnterpriseUploadInformation).mockResolvedValueOnce({
         fileId: 'ent-file-123',
-        uploadUrl: 'https://enterprise-upload.url'
+        uploadUrl: 'https://enterprise-upload.url',
+        configuration: { httpMethod: 'PUT' }
       });
-      vi.mocked(uploadArtifactWithSignedUrl).mockResolvedValueOnce({});
+      vi.mocked(uploadArtifactWithSignedUrl).mockResolvedValueOnce({
+        data: {},
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {}
+      } as any);
       vi.mocked(commitEnterpriseFileUpload).mockResolvedValueOnce({
         taskId: 'ent-task-123'
       });

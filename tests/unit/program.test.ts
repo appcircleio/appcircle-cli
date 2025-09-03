@@ -209,8 +209,8 @@ describe('Program.ts - Comprehensive Tests', () => {
 
         const result = createCommandActionCallback(mockActionCommand);
 
-        expect(result.isGroupCommand('config')).toBe(true);
-        expect(result.isGroupCommand('login')).toBe(false);
+        expect(result.isGroupCommand('config' as any)).toBe(true);
+        expect(result.isGroupCommand('login' as any)).toBe(false);
       });
     });
 
@@ -259,7 +259,7 @@ describe('Program.ts - Comprehensive Tests', () => {
         const { createProgram } = await import('../../src/program.js');
         const mockCallback = vi.fn();
         
-        const program = createProgram(mockCallback);
+        const program = createProgram();
         
         expect(program.onCommandRun).toBeDefined();
       });
@@ -590,12 +590,12 @@ describe('Program.ts - Comprehensive Tests', () => {
       const configCommand = commands.Commands.find((cmd: any) => cmd.command === 'config');
       expect(configCommand).toBeDefined();
       
-      const envParam = configCommand.params.find((param: any) => param.name === 'env');
-      expect(envParam.required).toBe(true);
+      const envParam = configCommand?.params.find((param: any) => param.name === 'env');
+      expect(envParam?.required).toBe(true);
       
-      const verboseParam = configCommand.params.find((param: any) => param.name === 'verbose');
-      expect(verboseParam.required).toBe(false);
-      expect(verboseParam.defaultValue).toBe(false);
+      const verboseParam = configCommand?.params.find((param: any) => param.name === 'verbose');
+      expect(verboseParam?.required).toBe(false);
+      expect(verboseParam?.defaultValue).toBe(false);
     });
   });
 
@@ -663,7 +663,7 @@ describe('Program.ts - Comprehensive Tests', () => {
     it('should handle required option errors with command descriptions', async () => {
       const { createProgram } = await import('../../src/program.js');
       
-      const mockWrite = vi.fn();
+      const _mockWrite = vi.fn();
       const program = createProgram();
       
       // Mock process.argv to simulate command
@@ -717,11 +717,11 @@ describe('Program.ts - Comprehensive Tests', () => {
     it('should handle command callback execution', async () => {
       const { createProgram } = await import('../../src/program.js');
       
-      let capturedCallback: any;
+      let _capturedCallback: any;
       const program = createProgram();
       
       program.onCommandRun((cmd: any) => {
-        capturedCallback = cmd;
+        _capturedCallback = cmd;
       });
       
       expect(program.onCommandRun).toBeDefined();
@@ -806,7 +806,7 @@ describe('Program.ts - Comprehensive Tests', () => {
 
     it('should test configureOutput error handlers', async () => {
       // This test tries to trigger the uncovered lines in configureOutput
-      const mockWrite = vi.fn();
+      const _mockWrite = vi.fn();
       
       // Test required option error handling (lines 142-162)
       const requiredOptionError = 'error: required option';

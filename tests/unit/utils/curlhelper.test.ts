@@ -168,8 +168,8 @@ describe('CurlHelper', () => {
       const config: AxiosRequestConfig = { 
         method: 'post',
         headers: { 
-          'common': { 'Accept': 'application/json' },
-          'post': { 'Content-Type': 'application/json' },
+          'common': { 'Accept': 'application/json' } as any,
+          'post': { 'Content-Type': 'application/json' } as any,
           'Authorization': 'Bearer token'
         }
       };

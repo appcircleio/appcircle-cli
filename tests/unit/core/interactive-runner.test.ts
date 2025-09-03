@@ -50,7 +50,7 @@ vi.mock('chalk', () => ({
     yellow: vi.fn((text) => text),
     cyan: vi.fn((text) => text),
     magenta: vi.fn((text) => text),
-    hex: vi.fn((color) => (text) => text)
+    hex: vi.fn((_color: string) => (text: string) => text)
   }
 }));
 
@@ -66,7 +66,7 @@ vi.mock('fs', () => ({
 }));
 
 vi.mock('path', () => ({
-  resolve: vi.fn((dir, file) => {
+  resolve: vi.fn((_dir: string, file?: string) => {
     if (file && file.includes('package.json')) {
       return '/mock/path/package.json';
     }
@@ -302,10 +302,12 @@ describe('interactive-runner.ts', () => {
       expect(commandRunner.runCommand).toBeDefined();
       
       const mockCommand = {
-        command: 'config',
-        subCommand: 'list',
-        params: {},
-        fullCommandName: 'appcircle-config-list'
+        fullCommandName: 'appcircle-config-list',
+        isGroupCommand: vi.fn().mockReturnValue(false),
+        parent: null,
+        name: vi.fn().mockReturnValue('config'),
+        args: ['config', 'list'],
+        opts: vi.fn().mockReturnValue({})
       };
 
       await commandRunner.runCommand(mockCommand);
@@ -340,7 +342,7 @@ describe('interactive-runner.ts', () => {
 
       expect(config.readEnviromentConfigVariable).toBeDefined();
       
-      const value = config.readEnviromentConfigVariable('TEST_VAR');
+      const value = config.readEnviromentConfigVariable('AC_ACCESS_TOKEN' as any);
       expect(value).toBe('test-value');
     });
   });
