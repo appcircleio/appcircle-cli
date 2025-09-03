@@ -57,47 +57,7 @@ describe('Main.ts - Integration Tests', () => {
     mockProcessExit?.mockRestore?.();
   });
 
-  describe('🚀 Advanced Main Function Integration Tests', () => {
-    // These tests are currently skipped due to complex mock configuration requirements
-    // They were moved here from main.test.ts to maintain the test organization
-    // These tests can be re-enabled when proper integration test infrastructure is set up
-    
-    it.skip('should handle JSON output mode (integration)', async () => {
-      // Test for JSON output mode integration
-      // Requires complex mock setup for minimist, config, and program modules
-      expect(true).toBe(true);
-    });
-
-    it.skip('should handle interactive mode with -i flag (integration)', async () => {
-      // Test for interactive mode with -i flag
-      // Requires complex mock setup for argument parsing and interactive runner
-      expect(true).toBe(true);
-    });
-
-    it.skip('should handle interactive mode with --interactive flag (integration)', async () => {
-      // Test for interactive mode with --interactive flag  
-      // Requires complex mock setup for argument parsing and interactive runner
-      expect(true).toBe(true);
-    });
-
-    it.skip('should handle non-interactive mode with command parsing (integration)', async () => {
-      // Test for non-interactive command parsing
-      // Requires complex mock setup for program creation and parsing
-      expect(true).toBe(true);
-    });
-
-    it.skip('should handle empty argv triggering interactive mode (integration)', async () => {
-      // Test for empty argv interactive mode trigger
-      // Requires complex mock setup for argument detection and interactive runner
-      expect(true).toBe(true);
-    });
-
-    it.skip('should handle valid subcommand without error (integration)', async () => {
-      // Test for valid subcommand processing
-      // Requires complex mock setup for subcommand validation and execution
-      expect(true).toBe(true);
-    });
-
+  describe('🚀 Integration Test Requirements', () => {
     it('should document integration test requirements', () => {
       // This test documents what would be needed for full integration testing:
       // 1. Proper mock configuration for all imported modules

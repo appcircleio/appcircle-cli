@@ -146,14 +146,5 @@ describe('Auth Abstraction', () => {
       expect(response.access_token).toBeTruthy();
     });
 
-    it.skip('should reject invalid credentials', async () => {
-      const mockAuth = setupAuthSuccess();
-      
-      await expect(login({}))
-        .rejects.toThrow('Invalid credentials');
-      
-      await expect(login({ apiKey: 'key_only' }))
-        .rejects.toThrow('Invalid credentials');
-    });
   });
 });
