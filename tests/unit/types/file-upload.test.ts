@@ -1,198 +1,171 @@
-import { describe, it, expect } from 'vitest';
-import type { 
+import { describe, it, expect } from 'vitest'
+
+import { 
   FileUploadRequestConfiguration, 
   FileUploadInformation 
-} from '../../../src/types/file-upload';
+} from '../../../src/types/file-upload'
 
-describe('file-upload types', () => {
+describe('FileUpload Types', () => {
   describe('FileUploadRequestConfiguration', () => {
-    it('should accept PUT method', () => {
-      const config: FileUploadRequestConfiguration = {
-        httpMethod: 'PUT'
-      };
-      
-      expect(config.httpMethod).toBe('PUT');
-      expect(config.signParameters).toBeUndefined();
-    });
+    it('should define correct structure for POST configuration', () => {
+      const postConfig: FileUploadRequestConfiguration = {
+        httpMethod: 'POST',
+        signParameters: {
+          'Content-Type': 'application/octet-stream',
+          'Authorization': 'Bearer token123'
+        }
+      }
 
-    it('should accept POST method', () => {
-      const config: FileUploadRequestConfiguration = {
-        httpMethod: 'POST'
-      };
-      
-      expect(config.httpMethod).toBe('POST');
-      expect(config.signParameters).toBeUndefined();
-    });
+      expect(postConfig.httpMethod).toBe('POST')
+      expect(postConfig.signParameters).toEqual({
+        'Content-Type': 'application/octet-stream',
+        'Authorization': 'Bearer token123'
+      })
+    })
 
-    it('should accept signParameters as object', () => {
-      const config: FileUploadRequestConfiguration = {
+    it('should define correct structure for PUT configuration', () => {
+      const putConfig: FileUploadRequestConfiguration = {
         httpMethod: 'PUT',
-        signParameters: { key: 'value', token: 'abc123' }
-      };
-      
-      expect(config.httpMethod).toBe('PUT');
-      expect(config.signParameters).toEqual({ key: 'value', token: 'abc123' });
-    });
+        signParameters: {
+          'x-amz-server-side-encryption': 'AES256'
+        }
+      }
 
-    it('should accept signParameters as null', () => {
+      expect(putConfig.httpMethod).toBe('PUT')
+      expect(putConfig.signParameters).toEqual({
+        'x-amz-server-side-encryption': 'AES256'
+      })
+    })
+
+    it('should allow null signParameters', () => {
       const config: FileUploadRequestConfiguration = {
         httpMethod: 'POST',
         signParameters: null
-      };
-      
-      expect(config.httpMethod).toBe('POST');
-      expect(config.signParameters).toBeNull();
-    });
+      }
 
-    it('should accept signParameters as undefined', () => {
-      const config: FileUploadRequestConfiguration = {
-        httpMethod: 'PUT',
-        signParameters: undefined
-      };
-      
-      expect(config.httpMethod).toBe('PUT');
-      expect(config.signParameters).toBeUndefined();
-    });
+      expect(config.httpMethod).toBe('POST')
+      expect(config.signParameters).toBeNull()
+    })
 
-    it('should accept empty signParameters object', () => {
+    it('should allow undefined signParameters', () => {
       const config: FileUploadRequestConfiguration = {
-        httpMethod: 'POST',
-        signParameters: {}
-      };
-      
-      expect(config.httpMethod).toBe('POST');
-      expect(config.signParameters).toEqual({});
-    });
-  });
+        httpMethod: 'PUT'
+        // signParameters is optional
+      }
+
+      expect(config.httpMethod).toBe('PUT')
+      expect(config.signParameters).toBeUndefined()
+    })
+
+    it('should only accept valid HTTP methods', () => {
+      // TypeScript compile-time test - these should be valid
+      const postConfig: FileUploadRequestConfiguration = { httpMethod: 'POST' }
+      const putConfig: FileUploadRequestConfiguration = { httpMethod: 'PUT' }
+
+      expect(postConfig.httpMethod).toBe('POST')
+      expect(putConfig.httpMethod).toBe('PUT')
+    })
+  })
 
   describe('FileUploadInformation', () => {
-    it('should contain all required properties', () => {
+    it('should define complete upload information structure', () => {
       const uploadInfo: FileUploadInformation = {
-        fileId: 'file-123',
-        uploadUrl: 'https://upload.example.com/file',
-        configuration: {
-          httpMethod: 'PUT'
-        }
-      };
-      
-      expect(uploadInfo.fileId).toBe('file-123');
-      expect(uploadInfo.uploadUrl).toBe('https://upload.example.com/file');
-      expect(uploadInfo.configuration.httpMethod).toBe('PUT');
-    });
-
-    it('should work with POST method configuration', () => {
-      const uploadInfo: FileUploadInformation = {
-        fileId: 'file-456',
-        uploadUrl: 'https://api.example.com/upload',
-        configuration: {
-          httpMethod: 'POST',
-          signParameters: { signature: 'xyz789' }
-        }
-      };
-      
-      expect(uploadInfo.fileId).toBe('file-456');
-      expect(uploadInfo.uploadUrl).toBe('https://api.example.com/upload');
-      expect(uploadInfo.configuration.httpMethod).toBe('POST');
-      expect(uploadInfo.configuration.signParameters).toEqual({ signature: 'xyz789' });
-    });
-
-    it('should work with complex configuration', () => {
-      const uploadInfo: FileUploadInformation = {
-        fileId: 'complex-file-789',
-        uploadUrl: 'https://s3.amazonaws.com/bucket/key',
+        fileId: 'file-123-uuid',
+        uploadUrl: 'https://upload.example.com/file/123',
         configuration: {
           httpMethod: 'PUT',
           signParameters: {
-            'x-amz-signature': 'signature-value',
-            'x-amz-date': '20231201T120000Z',
-            'x-amz-algorithm': 'AWS4-HMAC-SHA256'
+            'Content-Type': 'application/zip',
+            'x-amz-acl': 'private'
           }
         }
-      };
-      
-      expect(uploadInfo.fileId).toBe('complex-file-789');
-      expect(uploadInfo.uploadUrl).toBe('https://s3.amazonaws.com/bucket/key');
-      expect(uploadInfo.configuration.httpMethod).toBe('PUT');
-      expect(uploadInfo.configuration.signParameters).toEqual({
-        'x-amz-signature': 'signature-value',
-        'x-amz-date': '20231201T120000Z',
-        'x-amz-algorithm': 'AWS4-HMAC-SHA256'
-      });
-    });
+      }
 
-    it('should work with null signParameters', () => {
+      expect(uploadInfo.fileId).toBe('file-123-uuid')
+      expect(uploadInfo.uploadUrl).toBe('https://upload.example.com/file/123')
+      expect(uploadInfo.configuration.httpMethod).toBe('PUT')
+      expect(uploadInfo.configuration.signParameters).toEqual({
+        'Content-Type': 'application/zip',
+        'x-amz-acl': 'private'
+      })
+    })
+
+    it('should work with POST method configuration', () => {
       const uploadInfo: FileUploadInformation = {
-        fileId: 'simple-file',
-        uploadUrl: 'https://upload.service.com/endpoint',
+        fileId: 'mobile-app-v1.0.0',
+        uploadUrl: 'https://api.appcircle.io/upload/mobile-app',
         configuration: {
           httpMethod: 'POST',
-          signParameters: null
+          signParameters: {
+            'Authorization': 'Bearer access-token',
+            'Content-Type': 'multipart/form-data'
+          }
         }
-      };
-      
-      expect(uploadInfo.fileId).toBe('simple-file');
-      expect(uploadInfo.uploadUrl).toBe('https://upload.service.com/endpoint');
-      expect(uploadInfo.configuration.httpMethod).toBe('POST');
-      expect(uploadInfo.configuration.signParameters).toBeNull();
-    });
+      }
 
-    it('should work without signParameters', () => {
+      expect(uploadInfo.fileId).toBe('mobile-app-v1.0.0')
+      expect(uploadInfo.uploadUrl).toBe('https://api.appcircle.io/upload/mobile-app')
+      expect(uploadInfo.configuration.httpMethod).toBe('POST')
+    })
+
+    it('should work with minimal configuration', () => {
       const uploadInfo: FileUploadInformation = {
-        fileId: 'no-params-file',
-        uploadUrl: 'https://direct.upload.com/path',
+        fileId: 'simple-file-id',
+        uploadUrl: 'https://simple.upload.url',
         configuration: {
           httpMethod: 'PUT'
         }
-      };
-      
-      expect(uploadInfo.fileId).toBe('no-params-file');
-      expect(uploadInfo.uploadUrl).toBe('https://direct.upload.com/path');
-      expect(uploadInfo.configuration.httpMethod).toBe('PUT');
-      expect(uploadInfo.configuration.signParameters).toBeUndefined();
-    });
-  });
+      }
 
-  describe('Type safety tests', () => {
-    it('should enforce httpMethod to be PUT or POST only', () => {
-      // These should compile fine
-      const putConfig: FileUploadRequestConfiguration = { httpMethod: 'PUT' };
-      const postConfig: FileUploadRequestConfiguration = { httpMethod: 'POST' };
-      
-      expect(putConfig.httpMethod).toBe('PUT');
-      expect(postConfig.httpMethod).toBe('POST');
-      
-      // TypeScript should prevent other values like 'GET', 'DELETE', etc.
-      // but we can't test compilation errors in runtime tests
-    });
+      expect(uploadInfo.fileId).toBe('simple-file-id')
+      expect(uploadInfo.uploadUrl).toBe('https://simple.upload.url')
+      expect(uploadInfo.configuration.httpMethod).toBe('PUT')
+      expect(uploadInfo.configuration.signParameters).toBeUndefined()
+    })
 
-    it('should enforce required properties in FileUploadInformation', () => {
-      // This should compile fine with all required properties
-      const completeInfo: FileUploadInformation = {
+    it('should handle empty signParameters object', () => {
+      const uploadInfo: FileUploadInformation = {
         fileId: 'test-file',
-        uploadUrl: 'https://test.com',
-        configuration: { httpMethod: 'PUT' }
-      };
-      
-      expect(completeInfo.fileId).toBeDefined();
-      expect(completeInfo.uploadUrl).toBeDefined();
-      expect(completeInfo.configuration).toBeDefined();
-    });
-
-    it('should allow string keys in signParameters', () => {
-      const config: FileUploadRequestConfiguration = {
-        httpMethod: 'POST',
-        signParameters: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer token',
-          'X-Custom-Header': 'custom-value'
+        uploadUrl: 'https://test.com/upload',
+        configuration: {
+          httpMethod: 'POST',
+          signParameters: {}
         }
-      };
-      
-      expect(config.signParameters).toEqual({
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer token',
-        'X-Custom-Header': 'custom-value'
-      });
-    });
-  });
-});
+      }
+
+      expect(uploadInfo.configuration.signParameters).toEqual({})
+    })
+  })
+
+  describe('Type compatibility and usage patterns', () => {
+    it('should work in typical file upload scenario', () => {
+      // Simulate a typical file upload preparation
+      const prepareFileUpload = (
+        fileId: string, 
+        uploadUrl: string, 
+        method: 'PUT' | 'POST'
+      ): FileUploadInformation => {
+        return {
+          fileId,
+          uploadUrl,
+          configuration: {
+            httpMethod: method,
+            signParameters: method === 'PUT' ? {
+              'Content-Type': 'application/octet-stream'
+            } : {
+              'Authorization': 'Bearer token'
+            }
+          }
+        }
+      }
+
+      const putUpload = prepareFileUpload('file1', 'https://s3.example.com', 'PUT')
+      const postUpload = prepareFileUpload('file2', 'https://api.example.com', 'POST')
+
+      expect(putUpload.configuration.httpMethod).toBe('PUT')
+      expect(postUpload.configuration.httpMethod).toBe('POST')
+      expect(putUpload.configuration.signParameters).toHaveProperty('Content-Type')
+      expect(postUpload.configuration.signParameters).toHaveProperty('Authorization')
+    })
+  })
+})

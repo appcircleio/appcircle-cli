@@ -26,8 +26,22 @@ vi.mock('../../src/utils/orahelper', () => ({
   }))
 }));
 
+// Mock the config variables to use test URLs
+vi.mock('../../src/services/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/services/api')>();
+  return {
+    ...actual,
+    AUTH_HOSTNAME: 'https://auth.appcircle.io',
+    API_HOSTNAME: 'https://api.appcircle.io',
+  };
+});
+
 // Global test setup
 beforeAll(() => {
+  // Set required environment variables for integration tests
+  process.env.AUTH_HOSTNAME = 'https://auth.appcircle.io';
+  process.env.API_HOSTNAME = 'https://api.appcircle.io';
+  
   // Start MSW server for integration tests
   server.listen({ onUnhandledRequest: 'warn' });
   

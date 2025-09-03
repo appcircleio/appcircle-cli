@@ -681,5 +681,87 @@ describe('Main.ts - Comprehensive Tests', () => {
         expect.stringContaining('Network Error')
       );
     });
+
+    describe('Additional edge case coverage', () => {
+      it('should handle collectErrorMessageFromData with string input', async () => {
+        const { collectErrorMessageFromData } = await import('../../src/main.js');
+        
+        const result = collectErrorMessageFromData('Simple error message');
+        expect(result).toBe('Simple error message');
+      });
+
+      it('should handle collectErrorMessageFromData with ArrayBuffer', async () => {
+        const { collectErrorMessageFromData } = await import('../../src/main.js');
+        
+        const buffer = new ArrayBuffer(8);
+        const result = collectErrorMessageFromData(buffer);
+        expect(result).toBe(buffer);
+      });
+
+      it('should handle collectErrorMessageFromData with String object', async () => {
+        const { collectErrorMessageFromData } = await import('../../src/main.js');
+        
+        const stringObj = new String('Test string object');
+        const result = collectErrorMessageFromData(stringObj);
+        expect(result).toBe(stringObj);
+      });
+
+      it('should filter out stackTrace from error data', async () => {
+        const { collectErrorMessageFromData } = await import('../../src/main.js');
+        
+        const errorData = {
+          error: 'validation failed',
+          field: 'username',
+          stackTrace: 'should be filtered out'
+        };
+        
+        const result = collectErrorMessageFromData(errorData);
+        expect(result).toContain('error: validation failed');
+        expect(result).toContain('field: username');
+        expect(result).not.toContain('stackTrace');
+      });
+
+      it('should handle null/undefined data gracefully', async () => {
+        const { collectErrorMessageFromData } = await import('../../src/main.js');
+        
+        expect(collectErrorMessageFromData(null)).toBe('');
+        expect(collectErrorMessageFromData(undefined)).toBe('');
+      });
+
+      it('should handle handleError with AppcircleExitError silent success', async () => {
+        const { handleError } = await import('../../src/main.js');
+        
+        const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
+        
+        const error = {
+          name: 'AppcircleExitError',
+          code: 0,
+          message: ''
+        };
+        
+        handleError(error);
+        expect(mockExit).toHaveBeenCalledWith(0);
+        
+        mockExit.mockRestore();
+      });
+
+      it('should handle handleError with non-zero exit code and empty message', async () => {
+        const { handleError } = await import('../../src/main.js');
+        
+        const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
+        
+        const error = {
+          name: 'AppcircleExitError',
+          code: 1,
+          message: ''
+        };
+        
+        handleError(error);
+        expect(mockExit).toHaveBeenCalledWith(1);
+        
+        mockExit.mockRestore();
+      });
+    });
+
   });
 });

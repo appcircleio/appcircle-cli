@@ -51,6 +51,33 @@ describe('writer', () => {
         )
       })
 
+      it('should handle empty data objects in JSON mode', () => {
+        const emptyData = {}
+        
+        commandWriter(CommandTypes.LOGIN, emptyData)
+        
+        expect(mockConsoleLog).toHaveBeenCalledWith(
+          JSON.stringify(emptyData)
+        )
+      })
+
+
+      it('should handle complex nested data in JSON mode', () => {
+        const complexData = {
+          data: {
+            access_token: 'token',
+            user: { id: 1, name: 'test' },
+            permissions: ['read', 'write']
+          }
+        }
+        
+        commandWriter(CommandTypes.LOGIN, complexData)
+        
+        expect(mockConsoleLog).toHaveBeenCalledWith(
+          JSON.stringify(complexData.data)
+        )
+      })
+
       it('should handle null data gracefully', () => {
         // The writer tries to access data.data, so null will cause an error
         // Let's test with an empty object instead
@@ -1452,6 +1479,121 @@ describe('writer', () => {
 
         expect(mockConsoleLog).toHaveBeenCalledWith('  No Provisioning Profile found')
       })
+    })
+
+    describe('Edge cases and error handling', () => {
+
+      it('should handle empty arrays in various commands', () => {
+        const testData = {
+          fullCommandName: 'appcircle-testing-distribution-testing-group-list',
+          data: []
+        }
+        
+        commandWriter(CommandTypes.TESTING_DISTRIBUTION, testData)
+        
+        expect(mockConsoleLog).toHaveBeenCalledWith('  No testing group found')
+      })
+
+      it('should handle malformed command names without crashing', () => {
+        const testData = {
+          fullCommandName: 'unknown-command-format',
+          data: { test: 'value' }
+        }
+        
+        expect(() => {
+          commandWriter(CommandTypes.BUILD, testData)
+        }).not.toThrow()
+      })
+
+      it('should handle null/undefined in nested data structures', () => {
+        const testData = {
+          fullCommandName: 'appcircle-build-list',
+          data: {
+            builds: [
+              {
+                id: 'build1',
+                hash: null,
+                status: undefined,
+                startDate: null
+              }
+            ]
+          }
+        }
+        
+        expect(() => {
+          commandWriter(CommandTypes.BUILD, testData)
+        }).not.toThrow()
+      })
+
+      it('should handle very large data sets', () => {
+        const largeData = Array.from({ length: 1000 }, (_, i) => ({
+          id: `item${i}`,
+          name: `Name ${i}`,
+          value: Math.random()
+        }))
+        
+        const testData = {
+          fullCommandName: 'appcircle-testing-distribution-testing-group-list',
+          data: largeData
+        }
+        
+        expect(() => {
+          commandWriter(CommandTypes.TESTING_DISTRIBUTION, testData)
+        }).not.toThrow()
+        
+        expect(mockConsoleTable).toHaveBeenCalled()
+      })
+
+      it('should handle special characters in output', () => {
+        const testData = {
+          fullCommandName: 'appcircle-testing-distribution-profile-create',
+          data: {
+            name: 'Test Profile with "quotes" & special <chars> 🎉'
+          }
+        }
+        
+        commandWriter(CommandTypes.TESTING_DISTRIBUTION, testData)
+        
+        expect(mockConsoleInfo).toHaveBeenCalledWith(
+          '\nTest Profile with "quotes" & special <chars> 🎉 distribution profile created successfully!'
+        )
+      })
+
+      it('should handle config command which has empty implementation', () => {
+        expect(() => {
+          commandWriter(CommandTypes.CONFIG, { any: 'data' })
+        }).not.toThrow()
+        
+        expect(() => {
+          commandWriter(CommandTypes.CONFIG, null)
+        }).not.toThrow()
+      })
+
+      it('should handle logout command which has empty implementation', () => {
+        expect(() => {
+          commandWriter(CommandTypes.LOGOUT, { message: 'logged out' })
+        }).not.toThrow()
+        
+        expect(() => {
+          commandWriter(CommandTypes.LOGOUT, undefined)
+        }).not.toThrow()
+      })
+    })
+  })
+
+  describe('configWriter', () => {
+    it('should handle basic config writing operations', () => {
+      const configData = { 
+        currentEnv: 'production',
+        environments: {
+          dev: { apiUrl: 'dev.api.com' },
+          prod: { apiUrl: 'prod.api.com' }
+        }
+      }
+      
+      expect(() => {
+        configWriter(configData)
+      }).not.toThrow()
     })
   })
 })

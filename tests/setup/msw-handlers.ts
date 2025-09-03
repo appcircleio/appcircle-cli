@@ -9,54 +9,76 @@ const AUTH_BASE = 'https://auth.appcircle.io';
 export const authHandlers = [
   // PAT Login handler  
   http.post(`${AUTH_BASE}/auth/v1/token`, async ({ request }) => {
-    const body = await request.text();
-    const params = new URLSearchParams(body);
-    const pat = params.get('pat');
-    
-    if (pat === 'valid_pat_token') {
-      return HttpResponse.json({
-        access_token: 'mock_access_token_123',
-        refresh_token: 'mock_refresh_token_123',
-        expires_in: 3600,
-        token_type: 'Bearer'
-      });
-    }
-    
-    if (pat === 'expired_pat_token') {
+    try {
+      const body = await request.text();
+      const params = new URLSearchParams(body);
+      const pat = params.get('pat');
+      
+      console.log('PAT request received:', pat); // Debug log
+      
+      if (pat === 'valid_pat_token') {
+        return HttpResponse.json({
+          access_token: 'mock_access_token_123',
+          refresh_token: 'mock_refresh_token_123',
+          expires_in: 3600,
+          token_type: 'Bearer'
+        }, { status: 200 });
+      }
+      
+      if (pat === 'expired_pat_token') {
+        return HttpResponse.json({
+          error: 'invalid_grant',
+          error_description: 'PAT token expired'
+        }, { status: 401 });
+      }
+      
+      
+      // Invalid PAT token
       return HttpResponse.json({
         error: 'invalid_grant',
-        error_description: 'PAT token expired'
+        error_description: 'Invalid PAT token'
       }, { status: 401 });
+    } catch (error) {
+      console.error('PAT handler error:', error);
+      return HttpResponse.json({
+        error: 'internal_error',
+        error_description: 'Internal server error'
+      }, { status: 500 });
     }
-    
-    // Invalid PAT token
-    return HttpResponse.json({
-      error: 'invalid_grant',
-      error_description: 'Invalid PAT token'
-    }, { status: 401 });
   }),
 
   // API Key Login handler  
   http.post(`${AUTH_BASE}/auth/v1/api-key/token`, async ({ request }) => {
-    const body = await request.text();
-    const params = new URLSearchParams(body);
-    const name = params.get('name');
-    const secret = params.get('secret');
-    
-    if (name === 'test@example.com' && secret === 'valid_api_key') {
+    try {
+      const body = await request.text();
+      const params = new URLSearchParams(body);
+      const name = params.get('name');
+      const secret = params.get('secret');
+      const organizationId = params.get('organizationId');
+      
+      console.log('API Key request received:', { name, secret, organizationId }); // Debug log
+      
+      if (name === 'test@example.com' && secret === 'valid_api_key') {
+        return HttpResponse.json({
+          access_token: 'mock_api_access_token_123',
+          refresh_token: 'mock_refresh_token_123',
+          expires_in: 3600,
+          token_type: 'Bearer'
+        }, { status: 200 });
+      }
+      
+      // Invalid API key credentials
       return HttpResponse.json({
-        access_token: 'mock_api_access_token_123',
-        refresh_token: 'mock_refresh_token_123',
-        expires_in: 3600,
-        token_type: 'Bearer'
-      });
+        error: 'invalid_credentials',
+        error_description: 'Invalid API key credentials'
+      }, { status: 401 });
+    } catch (error) {
+      console.error('API Key handler error:', error);
+      return HttpResponse.json({
+        error: 'internal_error',
+        error_description: 'Internal server error'
+      }, { status: 500 });
     }
-    
-    // Invalid API key credentials
-    return HttpResponse.json({
-      error: 'invalid_credentials',
-      error_description: 'Invalid API key credentials'
-    }, { status: 401 });
   }),
 
   // Token refresh

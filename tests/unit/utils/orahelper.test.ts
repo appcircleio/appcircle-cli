@@ -112,5 +112,36 @@ describe('orahelper', () => {
       expect(spinner2.text).toBe('');
     });
 
+    it('should handle empty message string', () => {
+      mockGetConsoleOutputType.mockReturnValue('plain');
+      
+      const spinner = createOra('');
+      expect(typeof spinner).toBe('object');
+      expect(typeof spinner.start).toBe('function');
+    });
+
+    it('should handle long message string', () => {
+      mockGetConsoleOutputType.mockReturnValue('json');
+      
+      const longMessage = 'This is a very long message that might be used for detailed progress information during file uploads or complex operations';
+      const spinner = createOra(longMessage);
+      
+      expect(spinner.text).toBe('');
+      expect(typeof spinner.start).toBe('function');
+    });
+
+    it('should handle special characters in message', () => {
+      mockGetConsoleOutputType.mockReturnValue('json');
+      
+      const specialMessage = '🚀 Loading with émojis & special çharacters...';
+      const spinner = createOra(specialMessage);
+      
+      expect(spinner.text).toBe('');
+      expect(() => {
+        spinner.start();
+        spinner.succeed();
+      }).not.toThrow();
+    });
+
   });
 });
