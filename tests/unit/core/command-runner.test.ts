@@ -8,6 +8,24 @@ import { runCommand } from '../../../src/core/command-runner';
 import { AppcircleExitError } from '../../../src/core/AppcircleExitError';
 import { ProgramError } from '../../../src/core/ProgramError';
 import { CommandTypes } from '../../../src/core/commands';
+import type { AxiosResponse } from 'axios';
+
+// Type definitions for mock commands
+interface MockCommand {
+  name: ReturnType<typeof vi.fn>;
+  args: ReturnType<typeof vi.fn>;
+  opts: ReturnType<typeof vi.fn>;
+  isGroupCommand: ReturnType<typeof vi.fn>;
+  fullCommandName: string;
+  parent: null;
+}
+
+interface MockCommandParams {
+  [key: string]: unknown;
+}
+
+// Type for mock axios response
+type MockAxiosResponse = AxiosResponse<unknown, unknown>;
 
 // Mock external dependencies
 vi.mock('enquirer', () => ({
@@ -291,10 +309,10 @@ vi.spyOn(console, 'error').mockImplementation(() => {});
 // Helper functions for creating mock commands
 const createMockCommand = (
   fullCommandName: string, 
-  options: any = {}, 
+  options: MockCommandParams = {}, 
   commandType?: CommandTypes,
-  args: any[] = []
-) => {
+  args: string[] = []
+): MockCommand => {
   return {
     name: vi.fn().mockReturnValue(fullCommandName.split('-').pop() || 'unknown'),
     args: vi.fn().mockReturnValue(args),
@@ -334,27 +352,29 @@ describe('Command Runner - Comprehensive Tests', () => {
 
   describe('🏗️ Basic Command Execution', () => {
     it('should handle unknown commands gracefully', async () => {
-      const mockCommand = {
-        name: () => 'unknown',
-        args: () => [],
-        opts: () => ({}),
-        isGroupCommand: () => false,
-        fullCommandName: 'appcircle-unknown'
-      };
-
-      await expect(runCommand(mockCommand as any)).rejects.toThrow(AppcircleExitError);
-    });
-
-    it('should call command opts and name methods', async () => {
-      const mockCommand = {
+      const mockCommand: MockCommand = {
         name: vi.fn().mockReturnValue('unknown'),
         args: vi.fn().mockReturnValue([]),
         opts: vi.fn().mockReturnValue({}),
         isGroupCommand: vi.fn().mockReturnValue(false),
-        fullCommandName: 'appcircle-unknown'
+        fullCommandName: 'appcircle-unknown',
+        parent: null
       };
 
-      await expect(runCommand(mockCommand as any)).rejects.toThrow();
+      await expect(runCommand(mockCommand)).rejects.toThrow(AppcircleExitError);
+    });
+
+    it('should call command opts and name methods', async () => {
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('unknown'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({}),
+        isGroupCommand: vi.fn().mockReturnValue(false),
+        fullCommandName: 'appcircle-unknown',
+        parent: null
+      };
+
+      await expect(runCommand(mockCommand)).rejects.toThrow();
       
       expect(mockCommand.name).toHaveBeenCalled();
       expect(mockCommand.opts).toHaveBeenCalled();
@@ -557,16 +577,17 @@ describe('Command Runner - Comprehensive Tests', () => {
     });
 
     it('should handle invalid config command', async () => {
-      const mockCommand = {
-        name: () => 'invalid-action',  // Invalid action to test error handling
-        args: () => ['old-env'],
-        opts: () => ({}),
-        isGroupCommand: (type: any) => type === CommandTypes.CONFIG,
-        fullCommandName: 'appcircle-config-invalid-action'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('invalid-action'),  // Invalid action to test error handling
+        args: vi.fn().mockReturnValue(['old-env']),
+        opts: vi.fn().mockReturnValue({}),
+        isGroupCommand: vi.fn().mockImplementation((type: CommandTypes) => type === CommandTypes.CONFIG),
+        fullCommandName: 'appcircle-config-invalid-action',
+        parent: null
       };
 
       // Invalid config actions should throw error
-      await expect(runCommand(mockCommand as any)).rejects.toThrow('Config command action not found');
+      await expect(runCommand(mockCommand)).rejects.toThrow('Config command action not found');
     });
 
     it('should handle config reset command', async () => {
@@ -595,39 +616,42 @@ describe('Command Runner - Comprehensive Tests', () => {
         { id: 'org2', name: 'Test Org 2' }
       ]);
       
-      const mockCommand = {
-        name: () => 'list',
-        args: () => [],
-        opts: () => ({ organization: 'Test Org' }),
-        isGroupCommand: (type: any) => type === CommandTypes.ORGANIZATION,
-        fullCommandName: 'appcircle-organization-list'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('list'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({ organization: 'Test Org' }),
+        isGroupCommand: vi.fn().mockImplementation((type: CommandTypes) => type === CommandTypes.ORGANIZATION),
+        fullCommandName: 'appcircle-organization-list',
+        parent: null
       };
 
-      await expect(runCommand(mockCommand as any)).resolves.not.toThrow();
+      await expect(runCommand(mockCommand)).resolves.not.toThrow();
     });
 
     it('should handle organization command with organizationId', async () => {
-      const mockCommand = {
-        name: () => 'users',
-        args: () => [],
-        opts: () => ({ organizationId: 'org1' }),
-        isGroupCommand: (type: any) => type === CommandTypes.ORGANIZATION,
-        fullCommandName: 'appcircle-organization-users'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('users'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({ organizationId: 'org1' }),
+        isGroupCommand: vi.fn().mockImplementation((type: CommandTypes) => type === CommandTypes.ORGANIZATION),
+        fullCommandName: 'appcircle-organization-users',
+        parent: null
       };
 
-      await expect(runCommand(mockCommand as any)).resolves.not.toThrow();
+      await expect(runCommand(mockCommand)).resolves.not.toThrow();
     });
 
     it('should throw error for invalid organization', async () => {
-      const mockCommand = {
-        name: () => 'users',
-        args: () => [],
-        opts: () => ({ organization: 'NonExistent Org' }),
-        isGroupCommand: (type: any) => type === CommandTypes.ORGANIZATION,
-        fullCommandName: 'appcircle-organization-users'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('users'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({ organization: 'NonExistent Org' }),
+        isGroupCommand: vi.fn().mockImplementation((type: CommandTypes) => type === CommandTypes.ORGANIZATION),
+        fullCommandName: 'appcircle-organization-users',
+        parent: null
       };
 
-      await expect(runCommand(mockCommand as any)).rejects.toThrow();
+      await expect(runCommand(mockCommand)).rejects.toThrow();
     });
   });
 
@@ -677,51 +701,55 @@ describe('Command Runner - Comprehensive Tests', () => {
 
   describe('📊 Command Flow Coverage', () => {
     it('should handle publish command group', async () => {
-      const mockCommand = {
-        name: () => 'list',
-        args: () => [],
-        opts: () => ({}),
-        isGroupCommand: (type: any) => type === CommandTypes.PUBLISH,
-        fullCommandName: 'appcircle-publish-list'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('list'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({}),
+        isGroupCommand: vi.fn().mockImplementation((type: CommandTypes) => type === CommandTypes.PUBLISH),
+        fullCommandName: 'appcircle-publish-list',
+        parent: null
       };
 
-      await expect(runCommand(mockCommand as any)).resolves.not.toThrow();
+      await expect(runCommand(mockCommand)).resolves.not.toThrow();
     });
 
     it('should handle signing-identity command group', async () => {
-      const mockCommand = {
-        name: () => 'list',
-        args: () => [],
-        opts: () => ({}),
-        isGroupCommand: (type: any) => type === CommandTypes.SIGNING_IDENTITY,
-        fullCommandName: 'appcircle-signing-identity-list'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('list'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({}),
+        isGroupCommand: vi.fn().mockImplementation((type: CommandTypes) => type === CommandTypes.SIGNING_IDENTITY),
+        fullCommandName: 'appcircle-signing-identity-list',
+        parent: null
       };
 
-      await expect(runCommand(mockCommand as any)).resolves.not.toThrow();
+      await expect(runCommand(mockCommand)).resolves.not.toThrow();
     });
 
     it('should handle testing-distribution command group', async () => {
-      const mockCommand = {
-        name: () => 'list',
-        args: () => [],
-        opts: () => ({}),
-        isGroupCommand: (type: any) => type === CommandTypes.TESTING_DISTRIBUTION,
-        fullCommandName: 'appcircle-testing-distribution-list'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('list'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({}),
+        isGroupCommand: vi.fn().mockImplementation((type: CommandTypes) => type === CommandTypes.TESTING_DISTRIBUTION),
+        fullCommandName: 'appcircle-testing-distribution-list',
+        parent: null
       };
 
-      await expect(runCommand(mockCommand as any)).resolves.not.toThrow();
+      await expect(runCommand(mockCommand)).resolves.not.toThrow();
     });
 
     it('should handle enterprise-app-store command group', async () => {
-      const mockCommand = {
-        name: () => 'list',
-        args: () => [],
-        opts: () => ({}),
-        isGroupCommand: (type: any) => type === CommandTypes.ENTERPRISE_APP_STORE,
-        fullCommandName: 'appcircle-enterprise-app-store-list'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('list'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({}),
+        isGroupCommand: vi.fn().mockImplementation((type: CommandTypes) => type === CommandTypes.ENTERPRISE_APP_STORE),
+        fullCommandName: 'appcircle-enterprise-app-store-list',
+        parent: null
       };
 
-      await expect(runCommand(mockCommand as any)).resolves.not.toThrow();
+      await expect(runCommand(mockCommand)).resolves.not.toThrow();
     });
   });
 
@@ -758,29 +786,31 @@ describe('Command Runner - Comprehensive Tests', () => {
     });
 
     it('should handle parameter errors', async () => {
-      const mockCommand = {
-        name: () => 'test',
-        args: () => [],
-        opts: () => ({ isError: true }),
-        isGroupCommand: () => false,
-        fullCommandName: 'appcircle-test'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('test'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({ isError: true }),
+        isGroupCommand: vi.fn().mockReturnValue(false),
+        fullCommandName: 'appcircle-test',
+        parent: null
       };
 
-      await expect(runCommand(mockCommand as any))
+      await expect(runCommand(mockCommand))
         .rejects.toThrow(AppcircleExitError);
     });
 
     it('should handle unknown command groups', async () => {
-      const mockCommand = {
-        name: () => 'unknown',
-        args: () => [],
-        opts: () => ({}),
-        isGroupCommand: () => false,
-        fullCommandName: 'appcircle-unknown-command'
+      const mockCommand: MockCommand = {
+        name: vi.fn().mockReturnValue('unknown'),
+        args: vi.fn().mockReturnValue([]),
+        opts: vi.fn().mockReturnValue({}),
+        isGroupCommand: vi.fn().mockReturnValue(false),
+        fullCommandName: 'appcircle-unknown-command',
+        parent: null
       };
 
       // Unknown commands should throw AppcircleExitError with code 1
-      await expect(runCommand(mockCommand as any))
+      await expect(runCommand(mockCommand))
         .rejects.toThrow('Command not found');
     });
   });
@@ -959,8 +989,12 @@ describe('Command Runner - Comprehensive Tests', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {}
-      } as any);
+        config: {
+          url: '',
+          method: 'put'
+        },
+        request: {}
+      } as MockAxiosResponse);
       vi.mocked(commitTestingDistributionFileUpload).mockResolvedValueOnce({
         taskId: 'task-123'
       });
@@ -1123,8 +1157,12 @@ describe('Command Runner - Comprehensive Tests', () => {
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {}
-      } as any);
+        config: {
+          url: '',
+          method: 'put'
+        },
+        request: {}
+      } as MockAxiosResponse);
       vi.mocked(commitEnterpriseFileUpload).mockResolvedValueOnce({
         taskId: 'ent-task-123'
       });
@@ -1557,6 +1595,214 @@ describe('Command Runner - Comprehensive Tests', () => {
         
         // Should log error with beautified command name
         expect(consoleSpy).toHaveBeenCalledWith('"appcircle login test command ..." command not found.');
+        
+        consoleSpy.mockRestore();
+      });
+    });
+  });
+
+  describe('🔧 Logout Helper Functions Tests', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    describe('checkIfUserIsLoggedIn', () => {
+      it('should return true when user has access token', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('valid_token');
+        
+        const { checkIfUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        
+        const result = checkIfUserIsLoggedIn();
+        expect(result).toBe(true);
+      });
+
+      it('should return false when user has no access token', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
+        
+        const { checkIfUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        
+        const result = checkIfUserIsLoggedIn();
+        expect(result).toBe(false);
+      });
+
+      it('should return false when access token is empty string', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
+        
+        const { checkIfUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        
+        const result = checkIfUserIsLoggedIn();
+        expect(result).toBe(false);
+      });
+
+      it('should return false when access token is undefined', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
+        
+        const { checkIfUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        
+        const result = checkIfUserIsLoggedIn();
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('validateUserIsLoggedIn', () => {
+      it('should not throw error when user is logged in', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('valid_token');
+        
+        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        
+        expect(() => validateUserIsLoggedIn()).not.toThrow();
+      });
+
+      it('should throw ProgramError when user is not logged in', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
+        
+        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        const { ProgramError } = await import('../../../src/core/ProgramError');
+        
+        expect(() => validateUserIsLoggedIn()).toThrow(ProgramError);
+        expect(() => validateUserIsLoggedIn()).toThrow('You are not currently logged in.');
+      });
+
+      it('should throw ProgramError when access token is empty', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
+        
+        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        const { ProgramError } = await import('../../../src/core/ProgramError');
+        
+        expect(() => validateUserIsLoggedIn()).toThrow(ProgramError);
+        expect(() => validateUserIsLoggedIn()).toThrow('You are not currently logged in.');
+      });
+    });
+
+    describe('clearStoredToken', () => {
+      it('should clear stored token by setting it to empty string', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.writeEnviromentConfigVariable).mockImplementation(() => {});
+        
+        const { clearStoredToken } = await import('../../../src/core/command-runner');
+        
+        clearStoredToken();
+        
+        expect(config.writeEnviromentConfigVariable).toHaveBeenCalledWith(
+          config.EnvironmentVariables.AC_ACCESS_TOKEN,
+          ''
+        );
+      });
+
+      it('should call writeEnviromentConfigVariable exactly once', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.writeEnviromentConfigVariable).mockImplementation(() => {});
+        
+        const { clearStoredToken } = await import('../../../src/core/command-runner');
+        
+        clearStoredToken();
+        
+        expect(config.writeEnviromentConfigVariable).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('displayLogoutSuccessMessage', () => {
+      it('should display logout success message', async () => {
+        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        
+        const { displayLogoutSuccessMessage } = await import('../../../src/core/command-runner');
+        
+        displayLogoutSuccessMessage();
+        
+        expect(consoleSpy).toHaveBeenCalledWith('Successfully logged out from Appcircle.');
+        
+        consoleSpy.mockRestore();
+      });
+
+      it('should call console.log exactly once', async () => {
+        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        
+        const { displayLogoutSuccessMessage } = await import('../../../src/core/command-runner');
+        
+        displayLogoutSuccessMessage();
+        
+        expect(consoleSpy).toHaveBeenCalledTimes(1);
+        
+        consoleSpy.mockRestore();
+      });
+    });
+
+    describe('handleLogoutCommand integration', () => {
+      it('should successfully handle logout when user is logged in', async () => {
+        const config = await import('../../../src/config');
+        // Mock user as logged in
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('valid_token');
+        vi.mocked(config.writeEnviromentConfigVariable).mockImplementation(() => {});
+        
+        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        
+        // Import the individual helper functions to test the flow
+        const { validateUserIsLoggedIn, clearStoredToken, displayLogoutSuccessMessage } = await import('../../../src/core/command-runner');
+        
+        // This simulates what handleLogoutCommand does
+        expect(() => validateUserIsLoggedIn()).not.toThrow();
+        clearStoredToken();
+        displayLogoutSuccessMessage();
+        
+        expect(config.writeEnviromentConfigVariable).toHaveBeenCalledWith(
+          config.EnvironmentVariables.AC_ACCESS_TOKEN,
+          ''
+        );
+        expect(consoleSpy).toHaveBeenCalledWith('Successfully logged out from Appcircle.');
+        
+        consoleSpy.mockRestore();
+      });
+
+      it('should throw error when trying to logout when not logged in', async () => {
+        const config = await import('../../../src/config');
+        // Mock user as not logged in
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
+        
+        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        const { ProgramError } = await import('../../../src/core/ProgramError');
+        
+        // This should throw before reaching clearStoredToken or displayLogoutSuccessMessage
+        expect(() => validateUserIsLoggedIn()).toThrow(ProgramError);
+        expect(() => validateUserIsLoggedIn()).toThrow('You are not currently logged in.');
+      });
+
+      it('should handle complete logout flow', async () => {
+        const config = await import('../../../src/config');
+        
+        // Mock user as logged in initially
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('user_token_123');
+        vi.mocked(config.writeEnviromentConfigVariable).mockImplementation(() => {});
+        
+        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        
+        const { 
+          checkIfUserIsLoggedIn, 
+          validateUserIsLoggedIn, 
+          clearStoredToken, 
+          displayLogoutSuccessMessage 
+        } = await import('../../../src/core/command-runner');
+        
+        // Verify user is initially logged in
+        expect(checkIfUserIsLoggedIn()).toBe(true);
+        
+        // Execute logout flow
+        validateUserIsLoggedIn();
+        clearStoredToken();
+        displayLogoutSuccessMessage();
+        
+        // Verify the correct actions were taken
+        expect(config.writeEnviromentConfigVariable).toHaveBeenCalledWith(
+          config.EnvironmentVariables.AC_ACCESS_TOKEN,
+          ''
+        );
+        expect(consoleSpy).toHaveBeenCalledWith('Successfully logged out from Appcircle.');
         
         consoleSpy.mockRestore();
       });

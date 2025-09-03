@@ -249,17 +249,33 @@ const handleLoginCommand = async (command: ProgramCommand, params: any) => {
   }
 };
 
-const handleLogoutCommand = async (command: ProgramCommand, params: any) => {
-  // Check if user is already logged in
+export const checkIfUserIsLoggedIn = (): boolean => {
   const currentToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
-  if (!currentToken) {
+  return !!currentToken;
+};
+
+export const validateUserIsLoggedIn = (): void => {
+  if (!checkIfUserIsLoggedIn()) {
     throw new ProgramError('You are not currently logged in.');
   }
+};
+
+export const clearStoredToken = (): void => {
+  writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, '');
+};
+
+export const displayLogoutSuccessMessage = (): void => {
+  console.log('Successfully logged out from Appcircle.');
+};
+
+const handleLogoutCommand = async (command: ProgramCommand, params: any) => {
+  // Check if user is already logged in
+  validateUserIsLoggedIn();
   
   // Clear the stored token (no API call needed)
-  writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, '');
+  clearStoredToken();
   
-  console.log('Successfully logged out from Appcircle.');
+  displayLogoutSuccessMessage();
 };
 
 const handleConfigCommand = (command: ProgramCommand) => {
