@@ -1252,4 +1252,314 @@ describe('Command Runner - Comprehensive Tests', () => {
       expect(foundGroup?.id).toBe('group1');
     });
   });
+
+  describe('🔧 Login Helper Functions Tests', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    describe('checkIfUserAlreadyLoggedIn', () => {
+      it('should return true when user has access token', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('valid_token');
+        
+        const { checkIfUserAlreadyLoggedIn } = await import('../../../src/core/command-runner');
+        
+        const result = checkIfUserAlreadyLoggedIn();
+        expect(result).toBe(true);
+      });
+
+      it('should return false when user has no access token', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
+        
+        const { checkIfUserAlreadyLoggedIn } = await import('../../../src/core/command-runner');
+        
+        const result = checkIfUserAlreadyLoggedIn();
+        expect(result).toBe(false);
+      });
+
+      it('should return false when access token is empty string', async () => {
+        const config = await import('../../../src/config');
+        vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
+        
+        const { checkIfUserAlreadyLoggedIn } = await import('../../../src/core/command-runner');
+        
+        const result = checkIfUserAlreadyLoggedIn();
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('handleAlreadyLoggedIn', () => {
+      it('should log error message when user is already logged in', async () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        
+        const { handleAlreadyLoggedIn } = await import('../../../src/core/command-runner');
+        
+        handleAlreadyLoggedIn();
+        expect(consoleSpy).toHaveBeenCalledWith('You are already logged in. Use "logout" to logout first.');
+        
+        consoleSpy.mockRestore();
+      });
+    });
+
+    describe('decodeJwtToken', () => {
+      it('should decode valid JWT token and return payload', async () => {
+        // Create a mock JWT token with base64 encoded payload
+        const payload = { currentOrganizationId: 'org123', sub: 'user123' };
+        const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64');
+        const mockToken = `header.${encodedPayload}.signature`;
+        
+        const { decodeJwtToken } = await import('../../../src/core/command-runner');
+        
+        const result = decodeJwtToken(mockToken);
+        expect(result).toEqual(payload);
+      });
+
+      it('should return null for invalid JWT token format', async () => {
+        const { decodeJwtToken } = await import('../../../src/core/command-runner');
+        
+        const result = decodeJwtToken('invalid.token');
+        expect(result).toBeNull();
+      });
+
+      it('should return null for malformed JWT payload', async () => {
+        const invalidPayload = 'invalid-base64';
+        const mockToken = `header.${invalidPayload}.signature`;
+        
+        const { decodeJwtToken } = await import('../../../src/core/command-runner');
+        
+        const result = decodeJwtToken(mockToken);
+        expect(result).toBeNull();
+      });
+
+      it('should return null when token cannot be parsed as JSON', async () => {
+        const invalidJsonPayload = Buffer.from('not json').toString('base64');
+        const mockToken = `header.${invalidJsonPayload}.signature`;
+        
+        const { decodeJwtToken } = await import('../../../src/core/command-runner');
+        
+        const result = decodeJwtToken(mockToken);
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('validateOrganizationId', () => {
+      it('should return true when no organization-id parameter provided', async () => {
+        const { validateOrganizationId } = await import('../../../src/core/command-runner');
+        
+        const params = {};
+        const responseData = { access_token: 'token' };
+        
+        const result = validateOrganizationId(params, responseData);
+        expect(result).toBe(true);
+      });
+
+      it('should return true when no access token in response', async () => {
+        const { validateOrganizationId } = await import('../../../src/core/command-runner');
+        
+        const params = { 'organization-id': 'org123' };
+        const responseData = {};
+        
+        const result = validateOrganizationId(params, responseData);
+        expect(result).toBe(true);
+      });
+
+      it('should return true when JWT decode fails', async () => {
+        const { validateOrganizationId } = await import('../../../src/core/command-runner');
+        
+        const params = { 'organization-id': 'org123' };
+        const responseData = { access_token: 'invalid.token' };
+        
+        const result = validateOrganizationId(params, responseData);
+        expect(result).toBe(true);
+      });
+
+      it('should return true when organization IDs match', async () => {
+        const payload = { currentOrganizationId: 'org123' };
+        const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64');
+        const mockToken = `header.${encodedPayload}.signature`;
+        
+        const { validateOrganizationId } = await import('../../../src/core/command-runner');
+        
+        const params = { 'organization-id': 'org123' };
+        const responseData = { access_token: mockToken };
+        
+        const result = validateOrganizationId(params, responseData);
+        expect(result).toBe(true);
+      });
+
+      it('should return false and log error when organization IDs do not match', async () => {
+        const payload = { currentOrganizationId: 'org456' };
+        const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64');
+        const mockToken = `header.${encodedPayload}.signature`;
+        
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        
+        const { validateOrganizationId } = await import('../../../src/core/command-runner');
+        
+        const params = { 'organization-id': 'org123' };
+        const responseData = { access_token: mockToken };
+        
+        const result = validateOrganizationId(params, responseData);
+        expect(result).toBe(false);
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Login failed: Your API Key does not have access to organization "org123".'
+        );
+        
+        consoleSpy.mockRestore();
+      });
+    });
+
+    describe('handlePatLogin', () => {
+      it('should successfully handle PAT login and store token', async () => {
+        const services = await import('../../../src/services');
+        const config = await import('../../../src/config');
+        const commandRunner = await import('../../../src/core/command-runner');
+        
+        const mockResponse = { access_token: 'pat_token_success' };
+        vi.mocked(services.getToken).mockResolvedValueOnce(mockResponse);
+        vi.mocked(config.writeEnviromentConfigVariable).mockImplementation(() => {});
+        
+        // Mock commandWriter function
+        vi.doMock('../../../src/core/writer', () => ({
+          commandWriter: vi.fn()
+        }));
+        
+        const params = { token: 'pat_token_123' };
+        
+        await expect(commandRunner.handlePatLogin(params)).resolves.not.toThrow();
+        
+        expect(services.getToken).toHaveBeenCalledWith({ pat: 'pat_token_123' });
+        expect(config.writeEnviromentConfigVariable).toHaveBeenCalledWith(
+          config.EnvironmentVariables.AC_ACCESS_TOKEN, 
+          'pat_token_success'
+        );
+      });
+
+      it('should handle PAT login failure', async () => {
+        const services = await import('../../../src/services');
+        vi.mocked(services.getToken).mockRejectedValueOnce(new Error('Invalid PAT token'));
+        
+        const { handlePatLogin } = await import('../../../src/core/command-runner');
+        
+        const params = { token: 'invalid_pat_token' };
+        
+        await expect(handlePatLogin(params)).rejects.toThrow('Invalid PAT token');
+      });
+    });
+
+    describe('handleApiKeyLogin', () => {
+      it('should successfully handle API key login when validation passes', async () => {
+        const services = await import('../../../src/services');
+        const config = await import('../../../src/config');
+        
+        // Create a valid token that will pass organization validation
+        const payload = { currentOrganizationId: 'org123' };
+        const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64');
+        const mockToken = `header.${encodedPayload}.signature`;
+        
+        const mockResponse = { access_token: mockToken };
+        vi.mocked(services.getTokenFromApiKey).mockResolvedValueOnce(mockResponse);
+        vi.mocked(config.writeEnviromentConfigVariable).mockImplementation(() => {});
+        
+        const { handleApiKeyLogin } = await import('../../../src/core/command-runner');
+        
+        const params = { name: 'test@example.com', secret: 'api_key_123', 'organization-id': 'org123' };
+        
+        await expect(handleApiKeyLogin(params)).resolves.not.toThrow();
+        
+        expect(services.getTokenFromApiKey).toHaveBeenCalledWith(params);
+        expect(config.writeEnviromentConfigVariable).toHaveBeenCalledWith(
+          config.EnvironmentVariables.AC_ACCESS_TOKEN, 
+          mockToken
+        );
+      });
+
+      it('should not store token when organization validation fails', async () => {
+        const services = await import('../../../src/services');
+        const config = await import('../../../src/config');
+        
+        // Create a token with different org ID that will fail validation
+        const payload = { currentOrganizationId: 'org456' };
+        const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64');
+        const mockToken = `header.${encodedPayload}.signature`;
+        
+        const mockResponse = { access_token: mockToken };
+        vi.mocked(services.getTokenFromApiKey).mockResolvedValueOnce(mockResponse);
+        const writeConfigSpy = vi.mocked(config.writeEnviromentConfigVariable);
+        
+        // Mock console.error to suppress the error log during test
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        
+        const { handleApiKeyLogin } = await import('../../../src/core/command-runner');
+        
+        const params = { name: 'test@example.com', secret: 'api_key_123', 'organization-id': 'org123' };
+        
+        await handleApiKeyLogin(params);
+        
+        expect(services.getTokenFromApiKey).toHaveBeenCalledWith(params);
+        expect(writeConfigSpy).not.toHaveBeenCalled();
+        
+        consoleSpy.mockRestore();
+      });
+
+      it('should handle API key login failure', async () => {
+        const services = await import('../../../src/services');
+        vi.mocked(services.getTokenFromApiKey).mockRejectedValueOnce(new Error('Invalid API key'));
+        
+        const { handleApiKeyLogin } = await import('../../../src/core/command-runner');
+        
+        const params = { name: 'test@example.com', secret: 'invalid_api_key', organizationId: 'org123' };
+        
+        await expect(handleApiKeyLogin(params)).rejects.toThrow('Invalid API key');
+      });
+    });
+
+    describe('handleUnknownLoginCommand', () => {
+      it('should log error message for unknown login command without description', async () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        
+        const { handleUnknownLoginCommand } = await import('../../../src/core/command-runner');
+        
+        const mockCommand = {
+          fullCommandName: 'appcircle-login-unknown',
+          name: vi.fn().mockReturnValue('unknown'),
+          isGroupCommand: vi.fn(),
+          parent: null,
+          args: ['login', 'unknown'],
+          opts: vi.fn().mockReturnValue({})
+        };
+        
+        handleUnknownLoginCommand(mockCommand);
+        
+        // Verify that console.error was called with expected message
+        expect(consoleSpy).toHaveBeenCalledWith('"appcircle login unknown ..." command not found.');
+        
+        consoleSpy.mockRestore();
+      });
+
+      it('should log beautified command name when no description available', async () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        
+        const { handleUnknownLoginCommand } = await import('../../../src/core/command-runner');
+        
+        const mockCommand = {
+          fullCommandName: 'appcircle-login-test-command',
+          name: vi.fn().mockReturnValue('test-command'),
+          isGroupCommand: vi.fn(),
+          parent: null,
+          args: ['login', 'test-command'],
+          opts: vi.fn().mockReturnValue({})
+        };
+        
+        handleUnknownLoginCommand(mockCommand);
+        
+        // Should log error with beautified command name
+        expect(consoleSpy).toHaveBeenCalledWith('"appcircle login test command ..." command not found.');
+        
+        consoleSpy.mockRestore();
+      });
+    });
+  });
 });
