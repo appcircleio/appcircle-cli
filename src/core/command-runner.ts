@@ -160,48 +160,92 @@ async function promptForPath(message: string, defaultPath: string): Promise<stri
   }
 }
 
+// Helper function to check if user is already logged in
+export const checkIfUserAlreadyLoggedIn = (): boolean => {
+  const currentToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
+  return !!currentToken;
+};
+
+// Helper function to handle already logged in case
+export const handleAlreadyLoggedIn = (): void => {
+  console.error('You are already logged in. Use "logout" to logout first.');
+};
+
+// Helper function to handle PAT login
+export const handlePatLogin = async (params: any): Promise<void> => {
+  const responseData = await getToken({ pat: params.token });
+  writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
+  commandWriter(CommandTypes.LOGIN, responseData);
+};
+
+// Helper function to decode JWT token and get organization ID
+export const decodeJwtToken = (token: string): { currentOrganizationId?: string } | null => {
+  try {
+    const tokenPayload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    return tokenPayload;
+  } catch (error) {
+    return null;
+  }
+};
+
+// Helper function to validate organization ID from token
+export const validateOrganizationId = (params: any, responseData: any): boolean => {
+  if (!params['organization-id'] || !responseData.access_token) {
+    return true; // No validation needed
+  }
+
+  const tokenPayload = decodeJwtToken(responseData.access_token);
+  if (!tokenPayload) {
+    return true; // If JWT decode fails, continue silently
+  }
+
+  const returnedOrgId = tokenPayload.currentOrganizationId;
+  if (returnedOrgId !== params['organization-id']) {
+    console.error(`Login failed: Your API Key does not have access to organization "${params['organization-id']}".`);
+    return false;
+  }
+
+  return true;
+};
+
+// Helper function to handle API key login
+export const handleApiKeyLogin = async (params: any): Promise<void> => {
+  const responseData = await getTokenFromApiKey(params);
+  
+  // Check if organization ID validation passes
+  if (!validateOrganizationId(params, responseData)) {
+    return; // Exit without saving token or showing success message
+  }
+  
+  // Only save token and show success if organization ID matches (or no organization ID was requested)
+  writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
+  commandWriter(CommandTypes.LOGIN, responseData);
+};
+
+// Helper function to handle unknown login command
+export const handleUnknownLoginCommand = (command: ProgramCommand): void => {
+  const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
+  const desc = getLongDescriptionForCommand(command.fullCommandName);
+  if (desc) {
+    console.error(`\n${desc}\n`);
+  } else {
+    console.error(`"${beutufiyCommandName} ..." command not found.`);
+  }
+};
+
 const handleLoginCommand = async (command: ProgramCommand, params: any) => {
   // Check if user is already logged in
-  const currentToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
-  if (currentToken) {
-    console.error('You are already logged in. Use "logout" to logout first.');
+  if (checkIfUserAlreadyLoggedIn()) {
+    handleAlreadyLoggedIn();
     return;
   }
 
   if (command.fullCommandName === `${PROGRAM_NAME}-login-pat`) {
-    const responseData = await getToken({ pat: params.token });
-    writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
-    commandWriter(CommandTypes.LOGIN, responseData);
+    await handlePatLogin(params);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-login-api-key`) {
-    const responseData = await getTokenFromApiKey(params);
-    
-    // Check if organization ID was requested but different one was returned
-    if (params['organization-id'] && responseData.access_token) {
-      try {
-        // Decode JWT to get currentOrganizationId
-        const tokenPayload = JSON.parse(Buffer.from(responseData.access_token.split('.')[1], 'base64').toString());
-        const returnedOrgId = tokenPayload.currentOrganizationId;
-        
-        if (returnedOrgId !== params['organization-id']) {
-          console.error(`Login failed: Your API Key does not have access to organization "${params['organization-id']}".`);
-          return; // Exit without saving token or showing success message
-        }
-      } catch (error) {
-        // If JWT decode fails, continue silently
-      }
-    }
-    
-    // Only save token and show success if organization ID matches (or no organization ID was requested)
-    writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
-    commandWriter(CommandTypes.LOGIN, responseData);
+    await handleApiKeyLogin(params);
   } else {
-    const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
-    const desc = getLongDescriptionForCommand(command.fullCommandName);
-    if (desc) {
-      console.error(`\n${desc}\n`);
-    } else {
-      console.error(`"${beutufiyCommandName} ..." command not found.`);
-    }
+    handleUnknownLoginCommand(command);
   }
 };
 
@@ -4143,7 +4187,7 @@ function findCommandByParts(parts: string[], commandList: CommandType[]): Comman
   return found;
 }
 
-function getLongDescriptionForCommand(fullCommandName: string): string | undefined {
+export function getLongDescriptionForCommand(fullCommandName: string): string | undefined {
   const parts = fullCommandName.replace(/^appcircle-/, '').split('-');
   const cmd = findCommandByParts(parts, Commands);
   if (cmd) return cmd.longDescription || cmd.description;
