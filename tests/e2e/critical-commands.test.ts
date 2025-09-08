@@ -26,7 +26,8 @@ interface CommandResult {
 function runCommand(args: string[], timeout = TEST_TIMEOUT): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
     const child = spawn('node', [CLI_PATH, ...args], {
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: process.env // Pass current environment variables to child process
     });
 
     let stdout = '';
@@ -92,10 +93,20 @@ describe('Critical Command E2E Tests', () => {
     });
 
     it('should handle logout command when not authenticated', async () => {
+      // Ensure we're testing with a clean config file by deleting it if it exists
+      if (existsSync(tempConfigFile)) {
+        unlinkSync(tempConfigFile);
+      }
+      
+      // Force environment variable to be set correctly for this test
+      process.env.AC_CONFIG_PATH = tempConfigFile;
+      
+      // Test logout without authentication (should fail gracefully)
       const result = await runCommand(['logout']);
       
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain('not currently logged in');
+      // Should fail with non-zero exit code
+      expect(result.exitCode).toBeGreaterThan(0);
+      expect(result.stderr).toContain('You are not currently logged in');
     });
 
     it('should handle invalid command gracefully', async () => {

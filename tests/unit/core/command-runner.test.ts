@@ -511,11 +511,19 @@ describe('Command Runner - Comprehensive Tests', () => {
       const config = await import('../../../src/config');
       vi.mocked(config.readEnviromentConfigVariable).mockReturnValue(''); // No token
 
+      const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
       const params = {};
       const command = createMockCommand('appcircle-logout', params, CommandTypes.LOGOUT);
 
-      await expect(runCommand(command)).rejects.toThrow(ProgramError);
-      await expect(runCommand(command)).rejects.toThrow('You are not currently logged in.');
+      await runCommand(command);
+
+      expect(consoleSpy).toHaveBeenCalledWith('You are not currently logged in.');
+      expect(mockProcessExit).toHaveBeenCalledWith(1);
+
+      mockProcessExit.mockRestore();
+      consoleSpy.mockRestore();
     });
   });
 
@@ -1658,26 +1666,40 @@ describe('Command Runner - Comprehensive Tests', () => {
         expect(() => validateUserIsLoggedIn()).not.toThrow();
       });
 
-      it('should throw ProgramError when user is not logged in', async () => {
+      it('should call process.exit(1) when user is not logged in', async () => {
         const config = await import('../../../src/config');
         vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
         
-        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
-        const { ProgramError } = await import('../../../src/core/ProgramError');
+        const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         
-        expect(() => validateUserIsLoggedIn()).toThrow(ProgramError);
-        expect(() => validateUserIsLoggedIn()).toThrow('You are not currently logged in.');
+        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        
+        validateUserIsLoggedIn();
+        
+        expect(consoleSpy).toHaveBeenCalledWith('You are not currently logged in.');
+        expect(mockProcessExit).toHaveBeenCalledWith(1);
+        
+        mockProcessExit.mockRestore();
+        consoleSpy.mockRestore();
       });
 
-      it('should throw ProgramError when access token is empty', async () => {
+      it('should call process.exit(1) when access token is empty', async () => {
         const config = await import('../../../src/config');
         vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
         
-        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
-        const { ProgramError } = await import('../../../src/core/ProgramError');
+        const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         
-        expect(() => validateUserIsLoggedIn()).toThrow(ProgramError);
-        expect(() => validateUserIsLoggedIn()).toThrow('You are not currently logged in.');
+        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        
+        validateUserIsLoggedIn();
+        
+        expect(consoleSpy).toHaveBeenCalledWith('You are not currently logged in.');
+        expect(mockProcessExit).toHaveBeenCalledWith(1);
+        
+        mockProcessExit.mockRestore();
+        consoleSpy.mockRestore();
       });
     });
 
@@ -1760,17 +1782,24 @@ describe('Command Runner - Comprehensive Tests', () => {
         consoleSpy.mockRestore();
       });
 
-      it('should throw error when trying to logout when not logged in', async () => {
+      it('should exit process when trying to logout when not logged in', async () => {
         const config = await import('../../../src/config');
         // Mock user as not logged in
         vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
         
-        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
-        const { ProgramError } = await import('../../../src/core/ProgramError');
+        const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         
-        // This should throw before reaching clearStoredToken or displayLogoutSuccessMessage
-        expect(() => validateUserIsLoggedIn()).toThrow(ProgramError);
-        expect(() => validateUserIsLoggedIn()).toThrow('You are not currently logged in.');
+        const { validateUserIsLoggedIn } = await import('../../../src/core/command-runner');
+        
+        // This should exit process before reaching clearStoredToken or displayLogoutSuccessMessage
+        validateUserIsLoggedIn();
+        
+        expect(consoleSpy).toHaveBeenCalledWith('You are not currently logged in.');
+        expect(mockProcessExit).toHaveBeenCalledWith(1);
+        
+        mockProcessExit.mockRestore();
+        consoleSpy.mockRestore();
       });
 
       it('should handle complete logout flow', async () => {
