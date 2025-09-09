@@ -48,6 +48,21 @@ beforeAll(() => {
   // Suppress console in tests unless debugging
   if (!process.env.DEBUG_TESTS) {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    
+    // Ensure console methods exist before mocking them
+    if (!console.error) {
+      console.error = () => {};
+    }
+    if (!console.warn) {
+      console.warn = () => {};
+    }
+    if (!console.info) {
+      console.info = () => {};
+    }
+    if (!console.table) {
+      console.table = () => {};
+    }
+    
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(console, 'info').mockImplementation(() => {});
