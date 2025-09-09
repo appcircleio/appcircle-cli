@@ -1,7 +1,30 @@
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
-import readline from 'readline'; // Added readline for user prompt
+import {
+  validateParameterErrorFlag,
+  sanitizeForFileName,
+  resolveOrganizationIdFromParams,
+  resolveUserIdFromUserParam,
+  resolveProfileIdFromName,
+  resolveBranchIdFromName,
+  resolveWorkflowIdFromName,
+  resolveConfigurationIdFromName,
+  createUnknownCommandError,
+  formatElapsedTime,
+  setupDownloadDirectory,
+  getUserRemovalIdentifier,
+  extractVariableGroupId,
+  validateBuildStartParameters,
+  determineBuildWaitBehavior,
+  processBuildResponseForImmediateReturn,
+  checkIfUserAlreadyLoggedIn as utilCheckIfUserAlreadyLoggedIn,
+  checkIfUserIsLoggedIn as utilCheckIfUserIsLoggedIn,
+  validatePublishPlatform as utilValidatePublishPlatform,
+  validateFileSizeForUpload as utilValidateFileSizeForUpload,
+  generateArtifactFileName,
+  expandTildeInPath
+} from './command-runner-utilities';
 import { CommandTypes } from './commands';
 import {
   EnvironmentVariables,
@@ -160,10 +183,12 @@ export async function promptForPath(message: string, defaultPath: string): Promi
   }
 }
 
-// Helper function to check if user is already logged in
+// Helper function to check if user is already logged in (uses extracted utility)
 export const checkIfUserAlreadyLoggedIn = (): boolean => {
-  const currentToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
-  return !!currentToken;
+  return utilCheckIfUserAlreadyLoggedIn({
+    get: (key: string) => readEnviromentConfigVariable(key as EnvironmentVariables),
+    has: (key: string) => !!readEnviromentConfigVariable(key as EnvironmentVariables)
+  });
 };
 
 // Helper function to handle already logged in case
@@ -250,8 +275,10 @@ const handleLoginCommand = async (command: ProgramCommand, params: any) => {
 };
 
 export const checkIfUserIsLoggedIn = (): boolean => {
-  const currentToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
-  return !!currentToken;
+  return utilCheckIfUserIsLoggedIn({
+    get: (key: string) => readEnviromentConfigVariable(key as EnvironmentVariables),
+    has: (key: string) => !!readEnviromentConfigVariable(key as EnvironmentVariables)
+  });
 };
 
 export const validateUserIsLoggedIn = (): void => {
@@ -367,71 +394,58 @@ export const ensureDirectoryAndGetFilePath = (inputPath: string, fileName: strin
 
 // Organization parameter resolution utilities
 export const resolveOrganizationId = async (params: any, getOrganizations: any, getUserInfo: any) => {
-  // Organization validation and resolution
-  if (params.organization && (!params.organizationId || params.organizationId === 'all' || params.organizationId === 'current')) {
-    const organizations = await getOrganizations();
-    const foundOrganization = organizations.find((org: any) => org.name === params.organization);
-    if (!foundOrganization) {
-      throw new ProgramError(`Organization "${params.organization}" not found.
-        
-Available organizations:
-${organizations.map((org: any) => `  - ${org.name}`).join('\n')}`);
-    }
-    params.organizationId = foundOrganization.id;
+  const organizations = await getOrganizations();
+  const currentUser = await getUserInfo();
+  
+  const result = resolveOrganizationIdFromParams(params, organizations, currentUser);
+  if (!result.isValid) {
+    throw new ProgramError(result.error!);
   }
   
-  if (!params.organizationId || params.organizationId === CURRENT_PARAM_VALUE) {
-    params.organizationId = (await getUserInfo()).currentOrganizationId;
-  }
-  
+  params.organizationId = result.organizationId;
   return params.organizationId;
 };
 
-export const resolveUserIdFromUserParam = async (params: any, getOrganizationUsersWithRoles: any) => {
+export const resolveUserIdFromUserParamCmd = async (params: any, getOrganizationUsersWithRoles: any) => {
   if (params.user && !params.userId) {
     const users = await getOrganizationUsersWithRoles({ organizationId: params.organizationId });
-    const foundUser = users.find((user: any) => user.email === params.user || user.fullName === params.user);
-    if (!foundUser) {
-      throw new ProgramError(`User "${params.user}" not found in organization.
-        
-Available users:
-${users.map((user: any) => `  - ${user.email} (${user.fullName || 'No name'})`).join('\n')}`);
+    
+    const result = resolveUserIdFromUserParam(params, users);
+    if (!result.isValid) {
+      throw new ProgramError(result.error!);
     }
-    params.userId = foundUser.id;
+    
+    params.userId = result.userId;
   }
   
   return params.userId;
 };
 
-export const getUserRemovalIdentifier = async (params: any, getOrganizationUserinfo: any) => {
-  let removalIdentifier = params.email || params.userId;
-  let itemType = params.email ? 'Invitation' : 'User';
+export const getUserRemovalIdentifierAsync = async (params: any, getOrganizationUserinfo: any) => {
+  let userInfo;
   
   if (params.userId && params.userId !== UNKNOWN_PARAM_VALUE) {
-    itemType = 'User';
     try {
-      const userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
-      removalIdentifier = userInfo.email || params.userId; // Prefer email, fallback to ID
+      userInfo = await getOrganizationUserinfo({ organizationId: params.organizationId, userId: params.userId });
     } catch (e) {
-      // If fetching user info fails, removalIdentifier remains params.userId (already set or from default)
+      // If fetching user info fails, userInfo remains undefined
     }
   }
   
-  return { removalIdentifier, itemType };
+  return getUserRemovalIdentifier(params, userInfo);
 };
 
 // Build parameter validation utilities
 export const validateAndResolveBuildProfile = async (params: any, getBuildProfiles: any) => {
   if (params.profile && !params.profileId) {
     const buildProfiles = await getBuildProfiles();
-    const foundProfile = buildProfiles.find((profile: any) => profile.name === params.profile);
-    if (!foundProfile) {
-      throw new ProgramError(`Build profile "${params.profile}" not found.
-        
-Available build profiles:
-${buildProfiles.map((profile: any) => `  - ${profile.name}`).join('\n')}`);
+    
+    const result = resolveProfileIdFromName(params, buildProfiles);
+    if (!result.isValid) {
+      throw new ProgramError(result.error!);
     }
-    params.profileId = foundProfile.id;
+    
+    params.profileId = result.profileId;
   }
   return params.profileId;
 };
@@ -439,14 +453,13 @@ ${buildProfiles.map((profile: any) => `  - ${profile.name}`).join('\n')}`);
 export const validateAndResolveBranch = async (params: any, getBranches: any) => {
   if (params.branch && !params.branchId && params.profileId) {
     const branchesResponse = await getBranches({ profileId: params.profileId });
-    const foundBranch = branchesResponse.branches?.find((branch: any) => branch.name === params.branch);
-    if (!foundBranch) {
-      throw new ProgramError(`Branch "${params.branch}" not found for build profile.
-        
-Available branches:
-${branchesResponse.branches?.map((branch: any) => `  - ${branch.name}`).join('\n') || 'No branches found'}`);
+    
+    const result = resolveBranchIdFromName(params, branchesResponse.branches || []);
+    if (!result.isValid) {
+      throw new ProgramError(result.error!);
     }
-    params.branchId = foundBranch.id;
+    
+    params.branchId = result.branchId;
   }
   return params.branchId;
 };
@@ -454,14 +467,13 @@ ${branchesResponse.branches?.map((branch: any) => `  - ${branch.name}`).join('\n
 export const validateAndResolveWorkflow = async (params: any, getWorkflows: any) => {
   if (params.workflow && !params.workflowId && params.profileId) {
     const workflows = await getWorkflows({ profileId: params.profileId });
-    const foundWorkflow = workflows.find((workflow: any) => workflow.workflowName === params.workflow);
-    if (!foundWorkflow) {
-      throw new ProgramError(`Workflow "${params.workflow}" not found for build profile.
-        
-Available workflows:
-${workflows.map((workflow: any) => `  - ${workflow.workflowName}`).join('\n')}`);
+    
+    const result = resolveWorkflowIdFromName(params, workflows);
+    if (!result.isValid) {
+      throw new ProgramError(result.error!);
     }
-    params.workflowId = foundWorkflow.id;
+    
+    params.workflowId = result.workflowId;
   }
   return params.workflowId;
 };
@@ -469,14 +481,13 @@ ${workflows.map((workflow: any) => `  - ${workflow.workflowName}`).join('\n')}`)
 export const validateAndResolveConfiguration = async (params: any, getConfigurations: any) => {
   if (params.configuration && !params.configurationId && params.profileId) {
     const configurations = await getConfigurations({ profileId: params.profileId });
-    const foundConfiguration = configurations.find((config: any) => config.item1?.configurationName === params.configuration);
-    if (!foundConfiguration) {
-      throw new ProgramError(`Configuration "${params.configuration}" not found for build profile.
-        
-Available configurations:
-${configurations.map((config: any) => `  - ${config.item1?.configurationName || 'Unknown'}`).join('\n')}`);
+    
+    const result = resolveConfigurationIdFromName(params, configurations);
+    if (!result.isValid) {
+      throw new ProgramError(result.error!);
     }
-    params.configurationId = foundConfiguration.item1.id;
+    
+    params.configurationId = result.configurationId;
   }
   return params.configurationId;
 };
@@ -617,27 +628,20 @@ export const createListCommand = async (spinnerMessage: string, dataFunction: Fu
   });
 };
 
-// Build artifact download utilities
-export const setupDownloadDirectory = (params: any, homeDir: string): string => {
+// Build artifact download utilities - use utility version
+export const setupDownloadDirectoryCmd = (params: any, homeDir: string): string => {
   const defaultDownloadDir = path.join(homeDir, 'Downloads');
-  let downloadPath = params.path ? path.resolve((params.path).replace('~', homeDir)) : defaultDownloadDir;
+  const result = setupDownloadDirectory(params.path, defaultDownloadDir);
   
-  if (!fs.existsSync(downloadPath)) {
-    try {
-      fs.mkdirSync(downloadPath, { recursive: true });
-    } catch (e) {
-      console.log(chalk.yellow(`Could not create directory at ${downloadPath}. Using home directory instead.`));
-      downloadPath = homeDir;
-    }
+  if (!result.isValid) {
+    console.log(chalk.yellow(`Could not create directory. Using home directory instead.`));
+    return homeDir;
   }
   
-  return downloadPath;
+  return result.downloadPath!;
 };
 
-export const generateArtifactFileName = (prefix: string = 'artifacts'): string => {
-  const timestamp = Date.now();
-  return `${prefix}-${timestamp}.zip`;
-};
+// generateArtifactFileName moved to command-runner-utilities.ts
 
 export const downloadArtifactWithRetry = async (params: any, downloadPath: string, fileName: string, spinner: any): Promise<void> => {
   try {
@@ -676,18 +680,13 @@ export const validateAndProcessVariableGroupFile = (params: any, spinner: any): 
   
   // Clean up variableGroupId if it has extra formatting
   if (params.variableGroupId) {
-    const match = /\(([^)]+)\)$/.exec(params.variableGroupId);
-    if (match && match[1]) {
-      params.variableGroupId = match[1];
-    }
+    params.variableGroupId = extractVariableGroupId(params.variableGroupId);
   }
   
-  const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
-  if (!fs.existsSync(expandedPath)) {
-    spinner.fail('File not found');
-    throw new AppcircleExitError('File not found', 1);
-  }
+  // Use our own validateFileExists function and validate JSON content
+  const expandedPath = validateFileExists(params.filePath, 'File not found');
   
+  // Validate JSON content
   try {
     const fileContent = fs.readFileSync(expandedPath, 'utf8');
     JSON.parse(fileContent);
@@ -706,13 +705,7 @@ export const createProgressSpinner = (message: string) => {
     createOra(message).start();
 };
 
-export const formatElapsedTime = (startTime: number): string => {
-  const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-  return elapsedMinutes > 0 ? 
-    `${elapsedMinutes}m ${elapsedSeconds % 60}s` : 
-    `${elapsedSeconds}s`;
-};
+// formatElapsedTime function is now imported from utilities
 
 export const updateBuildStatusMessage = (buildStatus: number | null, elapsedText: string, progressSpinner: any, hasWarning: boolean = false) => {
   if (buildStatus === null || buildStatus === undefined) {
@@ -865,8 +858,7 @@ export const downloadBuildArtifactsWithSpinner = async (commitId: string, buildI
   await new Promise(resolve => setTimeout(resolve, 10000));
   artifactSpinner.text = 'Downloading artifacts...';
   try {
-    const timestamp = Date.now();
-    const artifactFileName = `artifacts-${timestamp}.zip`;
+    const artifactFileName = generateArtifactFileName();
     await downloadArtifact({ 
       commitId: commitId, 
       buildId: buildId,
@@ -2285,8 +2277,9 @@ ${users.map((user: any) => `  - ${user.email} (${user.fullName || 'No name'})`).
 
 // Publish command parameter validation utilities
 export const validatePublishPlatform = (params: any) => {
-  if (params.platform && !['ios', 'android'].includes(params.platform.toLowerCase())) {
-    throw new ProgramError(`Invalid platform(${params.platform}). Supported platforms: ios, android`);
+  const validation = utilValidatePublishPlatform(params);
+  if (!validation.isValid) {
+    throw new ProgramError(validation.errors[0]);
   }
 };
 
@@ -2457,28 +2450,23 @@ export const handlePublishProfileRename = async (command: ProgramCommand, params
 };
 
 export const validateFileForUpload = (filePath: string, originalPath: string) => {
-  let expandedPath = filePath;
+  const expandedPath = expandTildeInPath(filePath);
+  const resolvedPath = path.resolve(expandedPath);
   
-  if (expandedPath.includes('~')) {
-    expandedPath = expandedPath.replace(/~/g, os.homedir());
+  if (!fs.existsSync(resolvedPath)) {
+    throw new AppcircleExitError(`File not found: ${originalPath}`, 1);
   }
   
-  expandedPath = path.resolve(expandedPath);
-  
-  if (!fs.existsSync(expandedPath)) {
-    throw new AppcircleExitError('File not found: ' + originalPath, 1);
-  }
-
-  return expandedPath;
+  return resolvedPath;
 };
 
 export const validateFileSizeForUpload = (filePath: string) => {
-  let stats = fs.statSync(filePath);
   const maxBytes = getMaxUploadBytes();
-  if (maxBytes !== null && stats.size > maxBytes) {
-    throw new AppcircleExitError(`File size ${(stats.size / GB).toFixed(2)} GB exceeds the allowed limit of ${(maxBytes / GB).toFixed(2)} GB.`, 1);
+  const validation = utilValidateFileSizeForUpload(filePath, maxBytes);
+  if (!validation.isValid) {
+    throw new AppcircleExitError(validation.error!, 1);
   }
-  return { stats, maxBytes };
+  return { stats: validation.stats, maxBytes: validation.maxBytes };
 };
 
 export const waitForTaskCompletion = async (taskId: string): Promise<void> => {
@@ -3021,14 +3009,9 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
   }
 
   if (command.fullCommandName === `${PROGRAM_NAME}-build-start`) {
-    if (!params.profileId && !params.profile) {
-      const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      }
-      throw new AppcircleExitError('', 1);
-    }
-    if (!params.workflowId && !params.workflow) {
+    // Use extracted validation function
+    const validation = validateBuildStartParameters(params, command.fullCommandName);
+    if (!validation.isValid) {
       const desc = getLongDescriptionForCommand(command.fullCommandName);
       if (desc) {
         console.error(`\n${desc}\n`);
@@ -3039,20 +3022,20 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     try {
       const responseData = await startBuild(params);
       
-      // Check if user wants to wait for build completion
-      // Commander.js converts kebab-case to camelCase
-      const hasNoWaitFlag = process.argv.includes('--no-wait');
-      const shouldWait = !hasNoWaitFlag;
+      // Use extracted wait behavior function
+      const waitBehavior = determineBuildWaitBehavior(process.argv, getConsoleOutputType());
       
-      // If --no-wait is specified, return immediately with task info
-      if (!shouldWait) {
-        if (getConsoleOutputType() === 'json') {
+      // Use extracted response processing function
+      const responseProcessing = processBuildResponseForImmediateReturn(
+        responseData,
+        waitBehavior.shouldWait,
+        waitBehavior.isJsonMode
+      );
+      
+      if (!responseProcessing.shouldContinueMonitoring) {
+        if (responseProcessing.jsonOutput) {
           spinner.stop();
-          const jsonOutput = {
-            taskId: responseData.taskId,
-            queueItemId: responseData.queueItemId
-          };
-          console.log(JSON.stringify(jsonOutput));
+          console.log(JSON.stringify(responseProcessing.jsonOutput));
           throw new AppcircleExitError('', 0);
         } else {
           commandWriter(CommandTypes.BUILD, {
@@ -3162,7 +3145,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                 artifactSpinner.text = 'Downloading artifacts...';
                 try {
                   const timestamp = Date.now();
-                  const artifactFileName = `artifacts-${timestamp}.zip`;
+                  const artifactFileName = generateArtifactFileName();
                   await downloadArtifact({ 
                     commitId: commitId, 
                     buildId: buildId,
@@ -3220,7 +3203,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   const artifactSpinner = createOra('Downloading artifacts...').start();
                   try {
                     const timestamp = Date.now();
-                    const artifactFileName = `artifacts-${timestamp}.zip`;
+                    const artifactFileName = generateArtifactFileName();
                     await downloadArtifact({ 
                       commitId: commitIdForArtifact, 
                       buildId: buildIdForArtifact,
@@ -3344,7 +3327,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                 artifactSpinner.text = 'Downloading artifacts...';
                 try {
                   const timestamp = Date.now();
-                  const artifactFileName = `artifacts-${timestamp}.zip`;
+                  const artifactFileName = generateArtifactFileName();
                   await downloadArtifact({ 
                     commitId: commitId, 
                     buildId: buildId,
@@ -3640,8 +3623,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       }
     }
     
-    const timestamp = Date.now();
-    const artifactFileName = `artifacts-${timestamp}.zip`;
+    const artifactFileName = generateArtifactFileName();
     const spinner = createOra(`Downloading`).start();
     
     try {
@@ -5054,9 +5036,10 @@ export const runCommand = async (command: ProgramCommand) => {
 
   //console.log('Full-Command-Name: ', command.fullCommandName, params);
 
-  //In interactive mode, if any parameters have errors, we can't continue execution.
-  if (params.isError) {
-    throw new AppcircleExitError('Parameter error', 1);
+  // Validate parameter error flag using utility function
+  const paramValidation = validateParameterErrorFlag(params);
+  if (!paramValidation.isValid) {
+    throw new AppcircleExitError(paramValidation.error!, 1);
   }
 
   // Handle config command
@@ -5096,38 +5079,12 @@ export const runCommand = async (command: ProgramCommand) => {
 
   switch (commandName) {
     default: {
-      const beutufiyCommandName = command.fullCommandName.split('-').join(' ');
       const desc = getLongDescriptionForCommand(command.fullCommandName);
-      if (desc) {
-        console.error(`\n${desc}\n`);
-      } else {
-        console.error(`"${beutufiyCommandName} ..." command not found.`);
-      }
+      const errorMessage = createUnknownCommandError(command.fullCommandName, desc);
+      console.error(errorMessage);
       throw new AppcircleExitError('Command not found', 1);
     }
   }
 };
 
-/**
- * Sanitizes a string to be safe for use in file names
- * Replaces or removes characters that are not safe for file names across different operating systems
- */
-function sanitizeForFileName(input: string): string {
-  if (!input || typeof input !== 'string') {
-    return 'unknown';
-  }
-  
-  return input
-    // Replace path separators with hyphens
-    .replace(/[\/\\]/g, '-')
-    // Replace other unsafe characters with hyphens  
-    .replace(/[<>:"|?*]/g, '-')
-    // Replace spaces with hyphens for better compatibility
-    .replace(/\s+/g, '-')
-    // Remove any consecutive hyphens
-    .replace(/-+/g, '-')
-    // Remove leading/trailing hyphens
-    .replace(/^-+|-+$/g, '')
-    // Fallback if string becomes empty
-    || 'unknown';
-}
+// Sanitization function is now imported from utilities
