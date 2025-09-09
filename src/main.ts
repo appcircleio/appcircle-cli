@@ -11,6 +11,13 @@ import { AppcircleExitError } from "./core/AppcircleExitError.js";
 import { PROGRAM_NAME } from './constant.js';
 import chalk from 'chalk';
 import { Commands } from './core/commands.js';
+import { 
+  processCommandLineArguments,
+  modifyProcessArgv,
+  handleInvalidSubCommandError,
+  getOutputType,
+  handleMainExecutionError
+} from './core/main-utilities.js';
 
 export const collectErrorMessageFromData = (data: any) => {
   if(data && (typeof data === 'string' || data instanceof String || data instanceof ArrayBuffer)) {
@@ -83,37 +90,18 @@ export const main = async () => {
   const program = createProgram();
   const argv = minimist(process.argv.slice(2));
   
-  const knownTopLevelCommands = Commands.map(cmd => cmd.command);
+  const context = processCommandLineArguments(argv, Commands);
   
-  let isFallbackToInteractive = false;
+  if (!context.isValid) {
+    handleInvalidSubCommandError(context.errorMessage!, context.command!);
+    return;
+  }
   
-  if (argv._.length === 1 && knownTopLevelCommands.includes(argv._[0])) {
-    if (argv._[0] === 'login' && argv.pat) {
-      isFallbackToInteractive = false;
-    } else {
-      isFallbackToInteractive = true;
-    }
-  } else if (argv._.length >= 2) {
-    const topLevelCommand = Commands.find(cmd => cmd.command === argv._[0]);
-    if (topLevelCommand && argv._[1]) {
-      const subCommand = topLevelCommand.subCommands?.find(sub => sub.command === argv._[1]);
-      if (!subCommand) {
-        console.error('Incorrect Usage.\n');
-        console.error(`Unknown subcommand "${argv._[1]}" for "${argv._[0]}".`);
-        console.error(`\nUse --help to see available commands and options.`);
-        console.error(`Example: appcircle ${argv._[0]} --help`);
-        process.exit(1);
-      }
-    }
-  }
-
-  if (isFallbackToInteractive) {
-    process.argv.push('-i');
-  }
+  modifyProcessArgv(context.shouldFallback);
 
   try {
-    setConsoleOutputType(argv.output || argv.o || 'plain');
-    if (process.argv.length === 2 || argv.i || argv.interactive || isFallbackToInteractive) {
+    setConsoleOutputType(getOutputType(argv));
+    if (context.shouldRunInteractive) {
       setInteractiveMode(true);
       runCommandsInteractively();
     } else {
@@ -122,23 +110,7 @@ export const main = async () => {
       await program.parseAsync();
     }
   } catch (error) {
-    const err = error as any;
-    if (getConsoleOutputType() === 'json') {
-      if (!(err.name === 'AppcircleExitError' && (err.code === 0 || err.message === ''))) {
-        console.error(JSON.stringify(err));
-      }
-    } else {
-      if (err.name === 'AppcircleExitError') {
-        if (err.code !== 0 && err.message) {
-          console.error(err.message);
-        }
-      } else if (axios.isAxiosError(err)) {
-        console.error(`${err.message} ${err.code}`);
-      } else {
-        console.error(err);
-      }
-    }
-    process.exit(err.name === 'AppcircleExitError' ? err.code : 1);
+    handleMainExecutionError(error);
   }
 };
 
