@@ -8,87 +8,67 @@ import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
 import { ProgramError } from '../core/ProgramError';
 import os from 'os';
 import { FileUploadInformation } from '../types/file-upload';
-import { getMaxUploadBytes, GB } from '../utils/size-limit';
+import { getMaxUploadBytes } from '../utils/size-limit';
+import {
+  createPATAuthData,
+  createAPIKeyAuthData,
+  validateAPIKeyParams,
+  createAuthHeaders,
+  handleAPIKeyAuthError,
+  validateBuildStartParams,
+  resolveCommitId,
+  resolveConfigurationId,
+  createBuildRequestUrl,
+  createBuildRequestHeaders,
+  determineBuildIdForDownload,
+  generateArtifactFilename,
+  validateAndCreateDownloadPath,
+  validateDownloadResponse,
+  processDownloadError,
+  validateLogContent,
+  isTextBasedContent,
+  processLogDownloadError,
+  sortBuildsByDate,
+  getLatestBuildIdFromSorted,
+  validateUploadFile,
+  createUploadFormData,
+  createUploadRequestConfig,
+  validateEnvironmentVariableParams,
+  validateSignedUrlUploadInfo,
+  determineUploadMethod,
+  validateFileSize
+} from './index-utilities';
 
 export async function getToken(options: OptionsType<{ pat: string }>) {
-  const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, qs.stringify({ pat: options.pat }), {
-    headers: {
-      accept: 'application/json',
-      'content-type': 'application/x-www-form-urlencoded',
-    },
+  const authData = createPATAuthData(options.pat);
+  const headers = createAuthHeaders();
+  
+  const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, authData, {
+    headers,
   });
   return response.data;
 }
 
 export async function getTokenFromApiKey(options: OptionsType<{ name: string; secret: string; organizationId?: string }>) {
-  const requestData = {
-    name: options.name,
-    secret: options.secret,
-  };
-
-  if (options.organizationId !== undefined) {
-    (requestData as any).organizationId = options.organizationId;
+  const validation = validateAPIKeyParams(options.name, options.secret);
+  if (!validation.isValid) {
+    throw new ProgramError(validation.error!);
   }
 
+  const requestData = createAPIKeyAuthData(options.name, options.secret, options.organizationId);
+  const headers = createAuthHeaders();
+
   try {
-    const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/api-key/token`, qs.stringify(requestData), {
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/x-www-form-urlencoded',
-      },
+    const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/api-key/token`, requestData, {
+      headers,
     });
     return response.data;
   } catch (error: any) {
-    if (error.response) {
-      const { status, data } = error.response;
-      
-      // 403 - Authorization failed (organization access)
-      if (status === 403) {
-        const orgId = options.organizationId || 'the specified organization';
-        throw new ProgramError(
-          `Login failed: Your API Key does not have access to organization "${orgId}".`
-        );
-      }
-      
-      // 400 - Bad Request (invalid format, etc.)
-      if (status === 400) {
-        if (data?.error && data.error.includes('organizationId must be a valid GUID')) {
-          throw new ProgramError(
-            `Invalid organization ID format: "${options.organizationId}"`
-          );
-        }
-        throw new ProgramError(
-          `Invalid request: ${data?.error || 'Bad request format'}`
-        );
-      }
-      
-      // 401 - Authentication failed
-      if (status === 401) {
-        throw new ProgramError(
-          `Authentication failed: Invalid API Key credentials`
-        );
-      }
-      
-      // 500+ - Server errors
-      if (status >= 500) {
-        throw new ProgramError(
-          `Server error occurred while processing your request (Status: ${status})`
-        );
-      }
-    }
-    
-    // Network or other errors
-    if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND') {
-      throw new ProgramError(
-        `Connection error: Unable to connect to Appcircle servers`
-      );
-    }
-    
-    throw error;
+    handleAPIKeyAuthError(error, options.organizationId);
   }
 }
 
-export async function getBuildProfiles(options: OptionsType = {}) {
+export async function getBuildProfiles(_options: OptionsType = {}) {
   const buildProfiles = await appcircleApi.get(`build/v2/profiles`, {
     headers: getHeaders(),
   });
@@ -119,53 +99,39 @@ export async function getActiveBuilds() {
 export async function startBuild(
   options: OptionsType<{ profileId: string; branchId?: string; workflowId?: string; commitId?: string, commitHash?: string, configurationId?: string }>
 ) {
+  const validation = validateBuildStartParams(options);
+  if (!validation.isValid) {
+    throw new ProgramError(validation.error!);
+  }
+
   let workflowId = options.workflowId || '';
   let commitId = options.commitId || '';
   let configurationId = options.configurationId || '';
-  let branchId = options.branchId;
+  const branchId = options.branchId;
 
-  // branchId is only required if commitId is not provided
-  if (!commitId && !options.commitHash) {
-    if (!branchId) {
-      throw new ProgramError(`Branch ID is required when commit ID is not provided. Please provide --branchId or --branch parameter.`);
-    }
+  // Resolve commit ID if not provided
+  if (!commitId) {
     const allCommitsByBranchId = await getCommits({ branchId: branchId! });
-    if (allCommitsByBranchId && allCommitsByBranchId.length > 0) {
-      commitId = allCommitsByBranchId[0].id;
-    } else {
-      throw new ProgramError(`No commits found for branch ID "${branchId}".`);
+    const result = resolveCommitId(allCommitsByBranchId, options.commitHash);
+    if (result.error) {
+      throw new ProgramError(`${result.error} for branch ID "${branchId}".`);
     }
-  } else if (!commitId && options.commitHash) {
-    if (!branchId) {
-      throw new ProgramError(`Branch ID is required when commit hash is provided. Please provide --branchId or --branch parameter.`);
-    }
-    const allCommitsByBranchId = await getCommits({ branchId: branchId! });
-    const foundCommit = allCommitsByBranchId?.find((c: any) => c.hash === options.commitHash);
-    if (foundCommit) {
-      commitId = foundCommit.id;
-    } else {
-      throw new ProgramError(`Commit with hash "${options.commitHash}" not found for branch ID "${branchId}".`);
-    }
+    commitId = result.commitId;
   }
 
+  // Resolve configuration ID if not provided
   if (!configurationId) {
     const allConfigurations = await getConfigurations({ profileId: options.profileId });
-    if (allConfigurations && allConfigurations.length > 0 && allConfigurations[0].item1 && allConfigurations[0].item1.id) {
-      configurationId = allConfigurations[0].item1.id;
-    } else {
-      throw new ProgramError(`No configurations found for profile ID "${options.profileId}".`);
+    const result = resolveConfigurationId(allConfigurations);
+    if (result.error) {
+      throw new ProgramError(`${result.error} for profile ID "${options.profileId}".`);
     }
+    configurationId = result.configurationId;
   }
   
-  const postUrl = `build/v2/commits/${commitId}?${qs.stringify({ action: 'build', workflowId, configurationId })}`;
+  const postUrl = createBuildRequestUrl(commitId, workflowId, configurationId);
   const postBody = '{}';
-  const postHeaders = {
-    headers: {
-      ...getHeaders(),
-      accept: '*/*',
-      'content-type': 'application/x-www-form-urlencoded',
-    },
-  };
+  const postHeaders = createBuildRequestHeaders(getHeaders());
 
   const buildResponse = await appcircleApi.post(
     postUrl,
@@ -177,25 +143,17 @@ export async function startBuild(
 
 export async function downloadArtifact(options: OptionsType<{ buildId?: string; commitId: string; branchId?: string; profileId?: string }>, downloadPath: string, artifactFileName?: string) {
   try {
-    let buildId = options.buildId;
-    if (options.branchId && options.profileId) {
-      const latestBuildId = await getLatestBuildId({ 
-        branchId: options.branchId, 
-        profileId: options.profileId 
-      });
-      if (latestBuildId) {
-        buildId = latestBuildId;
-      }
+    const buildResult = await determineBuildIdForDownload(options, getLatestBuildId, getBuildsOfCommit);
+    if (buildResult.error) {
+      throw new ProgramError(buildResult.error);
     }
-    else if (!buildId || buildId === '00000000-0000-0000-0000-000000000000') {
-      const buildsResponse = await getBuildsOfCommit({ commitId: options.commitId });
-      if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
-        buildId = buildsResponse.builds[0].id;
-      } else {
-        throw new ProgramError(`No builds found for commit ID: ${options.commitId}`);
-      }
+
+    const pathValidation = validateAndCreateDownloadPath(downloadPath, fs);
+    if (!pathValidation.isValid) {
+      throw new ProgramError(pathValidation.error!);
     }
-    const endpoint = `build/v1/commits/${options.commitId}/builds/${buildId}`;
+
+    const endpoint = `build/v1/commits/${options.commitId}/builds/${buildResult.buildId}`;
     const response = await appcircleApi.get(
       endpoint,
       {
@@ -203,20 +161,18 @@ export async function downloadArtifact(options: OptionsType<{ buildId?: string; 
         responseType: 'arraybuffer',
       }
     );
-    if (response.status === 200) {
-      const fileName = artifactFileName || `artifacts-${Date.now()}.zip`;
-      const artifactPath = path.join(downloadPath, fileName);
-      // Ensure directory exists before writing file
-      fs.mkdirSync(downloadPath, { recursive: true });
-      fs.writeFileSync(artifactPath, response.data);
-    } else {
-      throw new Error('Build artifact not found');
+    
+    const responseValidation = validateDownloadResponse(response, buildResult.buildId);
+    if (!responseValidation.isValid) {
+      throw new Error(responseValidation.error);
     }
+
+    const fileName = generateArtifactFilename(artifactFileName);
+    const artifactPath = path.join(downloadPath, fileName);
+    fs.writeFileSync(artifactPath, response.data);
   } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw new Error(`Build artifact not found. No artifact available for latest build ID (${options.buildId}).`);
-    }
-    throw error;
+    const errorMessage = processDownloadError(error, options.buildId);
+    throw new Error(errorMessage);
   }
 }
 
@@ -272,10 +228,9 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
       },
     });
 
-    if (downloadResponse.data && 
-        (downloadResponse.data.includes('No Logs Available') || 
-         downloadResponse.data.trim() === '')) {
-      throw new ProgramError('No Logs Available');
+    const logValidation = validateLogContent(downloadResponse.data);
+    if (!logValidation.isValid) {
+      throw new ProgramError(logValidation.error!);
     }
     
     const writer = fs.createWriteStream(`${downloadPath}/${fileName || `${buildId}-log.txt`}`);
@@ -291,29 +246,26 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
       });
     });
   } catch (error: any) {
-    if (error.response && error.response.status === 404) {
-      throw new ProgramError('No Logs Available (404)');
-    } else if (error.response && error.response.status) {
-      throw new ProgramError(`HTTP error: ${error.response.status}`);
-    }
-    throw error;
+    const errorMessage = processLogDownloadError(error);
+    throw new ProgramError(errorMessage);
   }
 }
 
 export async function uploadArtifact(options: OptionsType<{ message: string; app: string; distProfileId: string }>) {
-  const data = new FormData();
-  data.append('Message', options.message);
-  data.append('File', fs.createReadStream(options.app));
+  const fileValidation = validateUploadFile(options.app, fs);
+  if (!fileValidation.isValid) {
+    throw new ProgramError(fileValidation.error!);
+  }
 
-  const uploadResponse = await appcircleApi.post(`distribution/v2/profiles/${options.distProfileId}/app-versions`, data, {
-    maxContentLength: Infinity,
-    maxBodyLength: Infinity,
-    headers: {
-      ...getHeaders(),
-      ...data.getHeaders(),
-      'Content-Type': 'multipart/form-data;boundary=' + data.getBoundary(),
-    },
-  });
+  const fileStream = fs.createReadStream(options.app);
+  const data = createUploadFormData(options.message, fileStream, FormData);
+  const config = createUploadRequestConfig(data, getHeaders(), getMaxUploadBytes());
+
+  const uploadResponse = await appcircleApi.post(
+    `distribution/v2/profiles/${options.distProfileId}/app-versions`, 
+    data, 
+    config
+  );
   return uploadResponse.data;
 }
 
@@ -322,21 +274,22 @@ export async function uploadArtifactWithSignedUrl(
 ) {
   const { app, uploadInfo } = options;
   
-  if (!uploadInfo || !uploadInfo.uploadUrl) {
-    throw new ProgramError('Invalid upload information received from server');
+  const uploadInfoValidation = validateSignedUrlUploadInfo(uploadInfo);
+  if (!uploadInfoValidation.isValid) {
+    throw new ProgramError(uploadInfoValidation.error!);
   }
   
   const stats = fs.statSync(app);
   const maxBytes = getMaxUploadBytes();
-  if (maxBytes !== null && stats.size > maxBytes) {
-    throw new ProgramError(
-      `File size ${(stats.size / GB).toFixed(2)} GB exceeds the allowed limit of ${(maxBytes / GB).toFixed(2)} GB.`
-    );
+  const fileSizeValidation = validateFileSize(stats.size, maxBytes);
+  if (!fileSizeValidation.isValid) {
+    throw new ProgramError(fileSizeValidation.error!);
   }
 
   const { uploadUrl, configuration } = uploadInfo;
+  const uploadMethod = determineUploadMethod(configuration);
   
-  if (!configuration || !configuration.httpMethod || configuration.httpMethod === 'PUT') {
+  if (uploadMethod === 'PUT') {
     const file = fs.createReadStream(app);
     return axios.put(uploadUrl, file, {
       maxContentLength: Infinity,
@@ -365,7 +318,7 @@ export async function uploadArtifactWithSignedUrl(
   });
 }
 
-export async function getEnvironmentVariableGroups(options: OptionsType = {}) {
+export async function getEnvironmentVariableGroups(_options: OptionsType = {}) {
   const environmentVariableGroups = await appcircleApi.get(`build/v1/variable-groups`, {
     headers: getHeaders(),
   });
@@ -451,6 +404,17 @@ export async function createEnvironmentVariable(
     isSecret: boolean;
   }>
 ) {
+  const validation = validateEnvironmentVariableParams(
+    options.type,
+    options.key,
+    options.value,
+    options.filePath
+  );
+  
+  if (!validation.isValid) {
+    throw new ProgramError(validation.error!);
+  }
+
   if (options.type === EnvironmentVariableTypes.FILE) {
     return createFileEnvironmentVariable(options);
   } else if (!options.type || options.type === EnvironmentVariableTypes.TEXT) {
@@ -460,7 +424,7 @@ export async function createEnvironmentVariable(
   }
 }
 
-export async function getBranches(options: OptionsType<{ profileId: string }>, showConsole: boolean = true) {
+export async function getBranches(options: OptionsType<{ profileId: string }>, _showConsole: boolean = true) {
   const branchResponse = await appcircleApi.get(`build/v1/profiles/${options.profileId}`, {
     headers: getHeaders(),
   });
@@ -537,17 +501,16 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
     }
     
     return new Promise((resolve, reject) => {
-      if (downloadResponse.headers['content-type'] && downloadResponse.headers['content-type'].includes('text/plain')) {
+      if (isTextBasedContent(downloadResponse.headers['content-type'])) {
         let responseText = '';
         downloadResponse.data.on('data', (chunk: Buffer) => {
           responseText += chunk.toString('utf8');
         });
         
         downloadResponse.data.on('end', () => {
-          if (responseText.includes('No Logs Available')) {
-            reject(new ProgramError('No Logs Available'));
-          } else if (responseText.trim() === '') {
-            reject(new ProgramError('Empty response'));
+          const logValidation = validateLogContent(responseText);
+          if (!logValidation.isValid) {
+            reject(new ProgramError(logValidation.error!));
           } else {
             const targetFile = `${downloadPath}/${fileName || `build-task-${options.taskId}-log.txt`}`;
             const writer = fs.createWriteStream(targetFile);
@@ -585,10 +548,8 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
       }
     });
   } catch (error: any) {
-    if (error.response && error.response.status === 404) {
-      throw new ProgramError('HTTP error: 404');
-    }
-    throw error;
+    const errorMessage = processLogDownloadError(error);
+    throw new ProgramError(errorMessage);
   }
 }
 
@@ -618,11 +579,7 @@ export async function getLatestBuildId(options: OptionsType<{ branchId: string; 
     );
 
     if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-      const sortedBuilds = response.data.sort((a: any, b: any) => {
-        return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
-      });
-      
-      return sortedBuilds[0].id;
+      return getLatestBuildIdFromSorted(response.data);
     }
     return null;
   } catch (error) {
