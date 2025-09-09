@@ -269,6 +269,40 @@ export async function uploadArtifact(options: OptionsType<{ message: string; app
   return uploadResponse.data;
 }
 
+async function putUploadWithRetry(url: string, file: fs.ReadStream, headers: any, maxRetries = 5) {
+  let attempt = 0;
+  let delay = 1000;
+
+  while (true) {
+    try {
+      return await axios.put(url, file, {
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        headers,
+        transformRequest: [(d) => d],
+        responseType: 'arraybuffer',
+      });
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const retryable =
+        status === 503 ||
+        error?.code === 'ECONNRESET' ||
+        error?.message?.includes('socket hang up');
+
+      if (!retryable || attempt >= maxRetries) {
+        throw error;
+      }
+      attempt++;
+      const jitter = Math.floor(Math.random() * 300);
+
+      await new Promise((resolve) => setTimeout(resolve, delay + jitter)); // SLEEP
+
+      delay *= 2;
+    }
+  }
+
+}
+
 export async function uploadArtifactWithSignedUrl(
   options: OptionsType<{ app: string; uploadInfo: FileUploadInformation }>
 ) {
@@ -291,15 +325,9 @@ export async function uploadArtifactWithSignedUrl(
   
   if (uploadMethod === 'PUT') {
     const file = fs.createReadStream(app);
-    return axios.put(uploadUrl, file, {
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      headers: {
+    return putUploadWithRetry(uploadUrl,file, {
         'Content-Length': stats.size,
-        'Content-Type': 'application/octet-stream',
-      },
-      transformRequest: [(d) => d],
-      responseType: 'arraybuffer',
+        'Content-Type': 'application/octet-stream',  
     });
   }
 
