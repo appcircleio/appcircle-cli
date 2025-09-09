@@ -43,9 +43,9 @@ import { getConsoleOutputType } from '../../../src/config';
 
 import {
   createProgressSpinner,
-  formatElapsedTime,
   updateBuildStatusMessage
 } from '../../../src/core/command-runner';
+import { formatElapsedTime } from '../../../src/core/command-runner-utilities';
 
 describe('Build Monitoring Utilities - Core Functions', () => {
   let mockSpinner: any;

@@ -73,7 +73,6 @@ import os from 'os';
 
 import {
   createProgressSpinner,
-  formatElapsedTime,
   updateBuildStatusMessage,
   monitorBuildProgress,
   handleBuildSuccessCompletion,
@@ -84,6 +83,7 @@ import {
   handleBuildFailureCompletion,
   promptForFailedBuildLogs
 } from '../../../src/core/command-runner';
+import { formatElapsedTime } from '../../../src/core/command-runner-utilities';
 
 describe('Build Monitoring Utilities', () => {
   let mockSpinner: any;

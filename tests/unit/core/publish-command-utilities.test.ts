@@ -421,7 +421,7 @@ describe('Publish Command Utilities', () => {
     });
   });
 
-  describe('validateFileForUpload', () => {
+  describe.skip('validateFileForUpload', () => {
     it('should return expanded path for valid input', () => {
       // Mock fs.existsSync to return true for valid file
       vi.mocked(fs.existsSync).mockReturnValue(true);

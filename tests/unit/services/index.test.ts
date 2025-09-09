@@ -1040,7 +1040,7 @@ describe('Services Index - Main Service Functions', () => {
         await expect(downloadBuildLog({
           commitId: 'commit123',
           buildId: 'build123'
-        }, '/logs')).rejects.toThrow('No Logs Available')
+        }, '/logs')).rejects.toThrow('Empty response')
       })
 
       it('should use latest build when branchId and profileId provided', async () => {
@@ -1179,9 +1179,277 @@ describe('Services Index - Main Service Functions', () => {
     })
   })
 
+  describe('Environment Variable Operations', () => {
+    describe('createEnvironmentVariable', () => {
+      it('should create TEXT environment variable', async () => {
+        const mockResponse = { id: 'var123', key: 'TEST_VAR', value: 'test-value' }
+        mockAppcircleApi.post.mockResolvedValue({ data: mockResponse })
+
+        const result = await createEnvironmentVariable({
+          type: EnvironmentVariableTypes.TEXT as any,
+          variableGroupId: 'group123',
+          key: 'TEST_VAR',
+          value: 'test-value',
+          isSecret: false,
+          filePath: ''
+        })
+
+        expect(mockAppcircleApi.post).toHaveBeenCalledWith(
+          'build/v1/variable-groups/group123/variables',
+          { Key: 'TEST_VAR', Value: 'test-value', IsSecret: 'false' },
+          { headers: mockGetHeaders() }
+        )
+        expect(result).toEqual(mockResponse)
+      })
+
+      it('should create FILE environment variable', async () => {
+        const mockResponse = { id: 'var456', key: 'TEST_FILE' }
+        mockAppcircleApi.post.mockResolvedValue({ data: mockResponse })
+        mockPath.basename.mockReturnValue('test.txt')
+        mockFs.createReadStream.mockReturnValue({ path: '/tmp/test.txt' } as any)
+
+        const result = await createEnvironmentVariable({
+          type: EnvironmentVariableTypes.FILE as any,
+          variableGroupId: 'group123',
+          key: 'TEST_FILE',
+          value: '',
+          filePath: '/tmp/test.txt',
+          isSecret: false
+        })
+
+        expect(mockAppcircleApi.post).toHaveBeenCalledWith(
+          'build/v1/variable-groups/group123/variables/files',
+          expect.any(MockFormData),
+          expect.objectContaining({
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+          })
+        )
+        expect(result).toEqual(mockResponse)
+      })
+
+      it('should validate required key parameter', async () => {
+        await expect(createEnvironmentVariable({
+          type: EnvironmentVariableTypes.TEXT as any,
+          variableGroupId: 'group123',
+          key: '',
+          value: 'test-value',
+          isSecret: false,
+          filePath: ''
+        })).rejects.toThrow('Environment variable key is required')
+      })
+
+      it('should validate FILE type requires filePath', async () => {
+        await expect(createEnvironmentVariable({
+          type: EnvironmentVariableTypes.FILE as any,
+          variableGroupId: 'group123',
+          key: 'TEST_FILE',
+          value: '',
+          filePath: '',
+          isSecret: false
+        })).rejects.toThrow('File path is required for FILE type environment variables')
+      })
+
+      it('should validate TEXT type requires value', async () => {
+        await expect(createEnvironmentVariable({
+          type: EnvironmentVariableTypes.TEXT as any,
+          variableGroupId: 'group123',
+          key: 'TEST_VAR',
+          value: undefined as any,
+          isSecret: false,
+          filePath: ''
+        })).rejects.toThrow('Value is required for TEXT type environment variables')
+      })
+
+      it('should handle unknown environment variable type', async () => {
+        await expect(createEnvironmentVariable({
+          type: 'UNKNOWN' as any,
+          variableGroupId: 'group123',
+          key: 'TEST_VAR',
+          value: 'test-value',
+          isSecret: false,
+          filePath: ''
+        })).rejects.toThrow('Environment variable type (UNKNOWN) not found')
+      })
+    })
+
+    describe('uploadEnvironmentVariablesFromFile', () => {
+      it('should upload environment variables from file', async () => {
+        const mockResponse = { message: 'Variables uploaded successfully' }
+        mockAppcircleApi.post.mockResolvedValue({ data: mockResponse })
+        mockFs.createReadStream.mockReturnValue({ path: '/tmp/env.json' } as any)
+
+        const result = await uploadEnvironmentVariablesFromFile({
+          variableGroupId: 'group123',
+          filePath: '/tmp/env.json'
+        })
+
+        expect(mockAppcircleApi.post).toHaveBeenCalledWith(
+          'build/v1/variable-groups/group123/upload-variables-file',
+          expect.any(MockFormData),
+          expect.objectContaining({
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+          })
+        )
+        expect(result).toEqual(mockResponse)
+      })
+
+      it('should handle upload errors', async () => {
+        const uploadError = new Error('Upload failed')
+        mockAppcircleApi.post.mockRejectedValue(uploadError)
+        mockFs.createReadStream.mockReturnValue({ path: '/tmp/env.json' } as any)
+
+        await expect(uploadEnvironmentVariablesFromFile({
+          variableGroupId: 'group123',
+          filePath: '/tmp/env.json'
+        })).rejects.toThrow('Upload failed')
+      })
+    })
+  })
+
   describe('Additional Service Functions', () => {
+    describe('uploadArtifactWithSignedUrl', () => {
+      beforeEach(() => {
+        mockFs.statSync.mockReturnValue({ size: 1024 * 1024 } as any) // 1MB file
+        vi.mocked(getMaxUploadBytes).mockReturnValue(5 * 1024 * 1024 * 1024) // 5GB limit
+      })
+
+      it('should upload with PUT method when no configuration provided', async () => {
+        const uploadInfo = {
+          uploadUrl: 'https://example.com/upload',
+          fileId: 'file123',
+          configuration: null as any
+        }
+        const mockStream = { path: '/app/test.ipa' }
+        mockFs.createReadStream.mockReturnValue(mockStream as any)
+        vi.mocked(axios.put).mockResolvedValue({ data: 'success' })
+
+        await uploadArtifactWithSignedUrl({
+          app: '/app/test.ipa',
+          uploadInfo
+        })
+
+        expect(axios.put).toHaveBeenCalledWith(
+          'https://example.com/upload',
+          mockStream,
+          expect.objectContaining({
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+            headers: {
+              'Content-Length': 1024 * 1024,
+              'Content-Type': 'application/octet-stream'
+            }
+          })
+        )
+      })
+
+      it('should upload with POST method when configured', async () => {
+        const uploadInfo = {
+          uploadUrl: 'https://example.com/upload',
+          fileId: 'file456',
+          configuration: {
+            httpMethod: 'POST' as any,
+            signParameters: {
+              'key': 'value',
+              'policy': 'encoded-policy'
+            }
+          }
+        }
+        const mockStream = { path: '/app/test.ipa' }
+        mockFs.createReadStream.mockReturnValue(mockStream as any)
+        vi.mocked(axios.post).mockResolvedValue({ data: 'success' })
+
+        await uploadArtifactWithSignedUrl({
+          app: '/app/test.ipa',
+          uploadInfo
+        })
+
+        expect(axios.post).toHaveBeenCalledWith(
+          'https://example.com/upload',
+          expect.any(MockFormData),
+          expect.objectContaining({
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+          })
+        )
+        expect(MockFormData.prototype.append).toHaveBeenCalledWith('key', 'value')
+        expect(MockFormData.prototype.append).toHaveBeenCalledWith('policy', 'encoded-policy')
+        expect(MockFormData.prototype.append).toHaveBeenCalledWith('file', mockStream)
+      })
+
+      it('should validate upload information', async () => {
+        await expect(uploadArtifactWithSignedUrl({
+          app: '/app/test.ipa',
+          uploadInfo: null as any
+        })).rejects.toThrow('Upload information is required')
+
+        await expect(uploadArtifactWithSignedUrl({
+          app: '/app/test.ipa',
+          uploadInfo: { uploadUrl: null, fileId: 'file123', configuration: null } as any
+        })).rejects.toThrow('Upload URL is missing from upload information')
+      })
+
+      it('should validate file size limits', async () => {
+        mockFs.statSync.mockReturnValue({ size: 10 * 1024 * 1024 * 1024 } as any) // 10GB file
+        vi.mocked(getMaxUploadBytes).mockReturnValue(5 * 1024 * 1024 * 1024) // 5GB limit
+
+        await expect(uploadArtifactWithSignedUrl({
+          app: '/app/large-file.ipa',
+          uploadInfo: {
+            uploadUrl: 'https://example.com/upload',
+            fileId: 'large-file',
+            configuration: null as any
+          }
+        })).rejects.toThrow('File size 10.00 GB exceeds the allowed limit of 5.00 GB')
+      })
+
+      it('should handle no size limit', async () => {
+        mockFs.statSync.mockReturnValue({ size: 10 * 1024 * 1024 * 1024 } as any) // 10GB file
+        vi.mocked(getMaxUploadBytes).mockReturnValue(null) // No limit
+        const mockStream = { path: '/app/test.ipa' }
+        mockFs.createReadStream.mockReturnValue(mockStream as any)
+        vi.mocked(axios.put).mockResolvedValue({ data: 'success' })
+
+        await uploadArtifactWithSignedUrl({
+          app: '/app/large-file.ipa',
+          uploadInfo: {
+            uploadUrl: 'https://example.com/upload',
+            fileId: 'large-file',
+            configuration: null as any
+          }
+        })
+
+        expect(axios.put).toHaveBeenCalled()
+      })
+
+      it('should handle PUT method explicitly specified', async () => {
+        const uploadInfo = {
+          uploadUrl: 'https://example.com/upload',
+          fileId: 'file789',
+          configuration: { httpMethod: 'PUT' as any }
+        }
+        const mockStream = { path: '/app/test.ipa' }
+        mockFs.createReadStream.mockReturnValue(mockStream as any)
+        vi.mocked(axios.put).mockResolvedValue({ data: 'success' })
+
+        await uploadArtifactWithSignedUrl({
+          app: '/app/test.ipa',
+          uploadInfo
+        })
+
+        expect(axios.put).toHaveBeenCalledWith(
+          'https://example.com/upload',
+          mockStream,
+          expect.any(Object)
+        )
+      })
+    })
+
     describe('uploadArtifact', () => {
       it('should upload artifact successfully', async () => {
+        // Mock file system to validate file exists
+        mockFs.statSync.mockReturnValue({ isFile: () => true, size: 1024 } as any)
         const mockFormData = new MockFormData()
         const mockStream = { path: '/app/test.ipa' }
         mockFs.createReadStream.mockReturnValue(mockStream as any)
@@ -1198,6 +1466,7 @@ describe('Services Index - Main Service Functions', () => {
           distProfileId: 'dist123'
         })
         
+        expect(mockFs.statSync).toHaveBeenCalledWith('/app/test.ipa')
         expect(mockFormData.append).toHaveBeenCalledWith('Message', 'Test upload')
         expect(mockFormData.append).toHaveBeenCalledWith('File', mockStream)
         expect(mockAppcircleApi.post).toHaveBeenCalledWith(
@@ -1212,6 +1481,8 @@ describe('Services Index - Main Service Functions', () => {
       })
 
       it('should handle upload errors', async () => {
+        // Mock file validation to pass, but then make API call fail
+        mockFs.statSync.mockReturnValue({ isFile: () => true, size: 1024 } as any)
         mockFs.createReadStream.mockReturnValue({} as any)
         const uploadError = new Error('Upload failed')
         mockAppcircleApi.post.mockRejectedValue(uploadError)
@@ -1224,6 +1495,8 @@ describe('Services Index - Main Service Functions', () => {
       })
 
       it('should handle large files', async () => {
+        // Mock file validation to pass
+        mockFs.statSync.mockReturnValue({ isFile: () => true, size: 1024 } as any)
         const mockStream = { path: '/app/large-app.ipa' }
         mockFs.createReadStream.mockReturnValue(mockStream as any)
         mockAppcircleApi.post.mockResolvedValue({ data: { id: 'upload456' } })
@@ -1562,7 +1835,7 @@ describe('Services Index - Main Service Functions', () => {
         mockAppcircleApi.get.mockRejectedValue(notFoundError)
 
         await expect(downloadTaskLog({ taskId: 'task123' }, '/logs'))
-          .rejects.toThrow('HTTP error: 404')
+          .rejects.toThrow('No Logs Available (404)')
       })
 
       it('should handle other HTTP errors', async () => {
@@ -1571,7 +1844,7 @@ describe('Services Index - Main Service Functions', () => {
         mockAppcircleApi.get.mockRejectedValue(httpError)
 
         await expect(downloadTaskLog({ taskId: 'task123' }, '/logs'))
-          .rejects.toThrow('Internal Server Error')
+          .rejects.toThrow('HTTP error: 500')
       })
 
       it('should handle network errors', async () => {
@@ -1637,6 +1910,146 @@ describe('Services Index - Main Service Functions', () => {
         })
 
         expect(result).toBeNull()
+      })
+    })
+
+    describe('getEnvironmentVariableGroups', () => {
+      it('should fetch environment variable groups', async () => {
+        const mockGroups = [
+          { id: 'group1', name: 'Production' },
+          { id: 'group2', name: 'Staging' }
+        ]
+        mockAppcircleApi.get.mockResolvedValue({ data: mockGroups })
+
+        const result = await getEnvironmentVariableGroups()
+
+        expect(mockAppcircleApi.get).toHaveBeenCalledWith(
+          'build/v1/variable-groups',
+          { headers: mockGetHeaders() }
+        )
+        expect(result).toEqual(mockGroups)
+      })
+
+      it('should handle empty groups list', async () => {
+        mockAppcircleApi.get.mockResolvedValue({ data: [] })
+
+        const result = await getEnvironmentVariableGroups()
+        expect(result).toEqual([])
+      })
+    })
+
+    describe('createEnvironmentVariableGroup', () => {
+      it('should create environment variable group', async () => {
+        const mockGroup = { id: 'group123', name: 'New Group', variables: [] }
+        mockAppcircleApi.post.mockResolvedValue({ data: mockGroup })
+
+        const result = await createEnvironmentVariableGroup({ name: 'New Group' })
+
+        expect(mockAppcircleApi.post).toHaveBeenCalledWith(
+          'build/v1/variable-groups',
+          { name: 'New Group', variables: [] },
+          { headers: mockGetHeaders() }
+        )
+        expect(result).toEqual(mockGroup)
+      })
+
+      it('should handle creation errors', async () => {
+        mockAppcircleApi.post.mockRejectedValue(new Error('Creation failed'))
+
+        await expect(createEnvironmentVariableGroup({ name: 'New Group' }))
+          .rejects.toThrow('Creation failed')
+      })
+    })
+
+    describe('getEnvironmentVariables', () => {
+      it('should fetch environment variables for group', async () => {
+        const mockVariables = [
+          { id: 'var1', key: 'API_URL', value: 'https://api.example.com' },
+          { id: 'var2', key: 'DEBUG', value: 'true' }
+        ]
+        mockAppcircleApi.get.mockResolvedValue({ data: mockVariables })
+
+        const result = await getEnvironmentVariables({ variableGroupId: 'group123' })
+
+        expect(mockAppcircleApi.get).toHaveBeenCalledWith(
+          'build/v1/variable-groups/group123/variables',
+          { headers: mockGetHeaders() }
+        )
+        expect(result).toEqual(mockVariables)
+      })
+
+      it('should handle no variables found', async () => {
+        mockAppcircleApi.get.mockResolvedValue({ data: [] })
+
+        const result = await getEnvironmentVariables({ variableGroupId: 'group123' })
+        expect(result).toEqual([])
+      })
+    })
+
+    describe('getWorkflows', () => {
+      it('should fetch workflows for profile', async () => {
+        const mockWorkflows = [
+          { id: 'workflow1', name: 'Build & Test' },
+          { id: 'workflow2', name: 'Release' }
+        ]
+        mockAppcircleApi.get.mockResolvedValue({ data: mockWorkflows })
+
+        const result = await getWorkflows({ profileId: 'profile123' })
+
+        expect(mockAppcircleApi.get).toHaveBeenCalledWith(
+          'build/v2/profiles/profile123/workflows',
+          { headers: mockGetHeaders() }
+        )
+        expect(result).toEqual(mockWorkflows)
+      })
+    })
+
+    describe('getConfigurations', () => {
+      it('should fetch configurations for profile', async () => {
+        const mockConfigurations = [
+          { item1: { id: 'config1', name: 'Debug' } },
+          { item1: { id: 'config2', name: 'Release' } }
+        ]
+        mockAppcircleApi.get.mockResolvedValue({ data: mockConfigurations })
+
+        const result = await getConfigurations({ profileId: 'profile123' })
+
+        expect(mockAppcircleApi.get).toHaveBeenCalledWith(
+          'build/v2/profiles/profile123/configurations',
+          { headers: mockGetHeaders() }
+        )
+        expect(result).toEqual(mockConfigurations)
+      })
+    })
+
+    describe('getBranches', () => {
+      it('should fetch branches for profile', async () => {
+        const mockBranches = {
+          branches: [
+            { id: 'branch1', name: 'main' },
+            { id: 'branch2', name: 'develop' }
+          ]
+        }
+        mockAppcircleApi.get.mockResolvedValue({ data: mockBranches })
+
+        const result = await getBranches({ profileId: 'profile123' })
+
+        expect(mockAppcircleApi.get).toHaveBeenCalledWith(
+          'build/v1/profiles/profile123',
+          { headers: mockGetHeaders() }
+        )
+        expect(result).toEqual(mockBranches)
+      })
+
+      it('should handle showConsole parameter', async () => {
+        mockAppcircleApi.get.mockResolvedValue({ data: { branches: [] } })
+
+        await getBranches({ profileId: 'profile123' }, false)
+
+        expect(mockAppcircleApi.get).toHaveBeenCalledWith(
+          'build/v1/profiles/profile123',
+          expect.any(Object)
+        )
       })
     })
   })

@@ -701,14 +701,16 @@ describe('writer', () => {
 
         commandWriter(CommandTypes.PUBLISH, testData)
 
-        expect(mockConsoleTable).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({
-              'App Version Id': 'version1',
-              'Last Step': 'Not Started'
-            })
-          ])
-        )
+        expect(mockConsoleTable).toHaveBeenCalledWith([
+          {
+            'App Version Id': 'version1',
+            'Version/App Name': '1.0.0(1) - 1.0.0',
+            'Release Candidate': '-',
+            'File Size': '-',
+            'Binary Received': '01/01/2024',
+            'Last Step': 'No previous builds'
+          }
+        ])
       })
     })
 
@@ -756,14 +758,15 @@ describe('writer', () => {
 
         commandWriter(CommandTypes.SIGNING_IDENTITY, testData)
 
-        expect(mockConsoleTable).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({
-              'Certificate Id': 'cert1',
-              'Stored By': undefined
-            })
-          ])
-        )
+        expect(mockConsoleTable).toHaveBeenCalledWith([
+          {
+            'Certificate Id': 'cert1',
+            'Certificate Name': 'Unknown Certificate',
+            'Stored By': '-',
+            'Extension': '.p12',
+            'Expire Date': '01/01/2025'
+          }
+        ])
       })
 
       it('should handle build list with proper data structure', () => {
@@ -1000,15 +1003,20 @@ describe('writer', () => {
 
         commandWriter(CommandTypes.ENTERPRISE_APP_STORE, testData)
 
-        expect(mockConsoleTable).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({
-              'Profile Name': 'Test App',
-              'Version': '1.0.0',
-              'Downloads': 50
-            })
-          ])
-        )
+        expect(mockConsoleTable).toHaveBeenCalledWith([
+          {
+            'Version Name': 'Test App',
+            'Version': '1.0.0',
+            'Version Code': 1,
+            'Downloads': 50,
+            'Summary': 'Test Summary',
+            'Publish Type': 'Beta',
+            'Target Platform': 'iOS',
+            'Created': '01/01/2024',
+            'Updated': '01/02/2024',
+            'Latest Publish': '01/01/2024'
+          }
+        ])
       })
 
       it('should handle enterprise app store version notify with empty data', () => {
