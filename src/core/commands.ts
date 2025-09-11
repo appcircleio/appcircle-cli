@@ -113,7 +113,7 @@ LEARN MORE
         arguments: [
           {
             name: 'key',
-            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN]',
+            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, AC_ACCESS_TOKEN]',
             type: CommandParameterTypes.SELECT,
             params: Object.keys(DefaultEnvironmentVariables),
           },
@@ -128,7 +128,7 @@ USAGE
   appcircle config set <key> <value>
 
 REQUIRED ARGUMENTS
-  <key>    Configuration key (API_HOSTNAME, AUTH_HOSTNAME, or AC_ACCESS_TOKEN)
+  <key>    Configuration key (API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, or AC_ACCESS_TOKEN)
   <value>  New value for the configuration property
 
 DESCRIPTION
@@ -137,7 +137,8 @@ DESCRIPTION
 
 EXAMPLES
   appcircle config set API_HOSTNAME "https://api.appcircle.io"
-  appcircle config set AUTH_HOSTNAME "https://auth.appcircle.io" 
+  appcircle config set AUTH_HOSTNAME "https://auth.appcircle.io"
+  appcircle config set HOOK_HOSTNAME "https://hook.appcircle.io"
   appcircle config set AC_ACCESS_TOKEN "your-access-token-here"
 
 LEARN MORE
@@ -148,7 +149,7 @@ LEARN MORE
         arguments: [
           {
             name: 'key',
-            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN]',
+            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, AC_ACCESS_TOKEN]',
             type: CommandParameterTypes.SELECT,
             params: Object.keys(DefaultEnvironmentVariables),
           },

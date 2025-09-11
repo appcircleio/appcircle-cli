@@ -98,6 +98,8 @@ appcircle <command> <subcommand> ... <subcommand> [options] -o json
 
 - `AUTH_HOSTNAME`: Specifies the host where your IAM (identity access management) server endpoint is located. [See also](#configuring-your-appcircle-cli-environment) for more details.
 
+- `HOOK_HOSTNAME`: Specifies the host where the webhook endpoint is located. [See also](#configuring-your-appcircle-cli-environment) for more details.
+
 ## Interactive Mode
 
 Appcircle CLI incorporates a GUI that allows users to interactively access its features. To view all features in interactive mode, execute the following command:
