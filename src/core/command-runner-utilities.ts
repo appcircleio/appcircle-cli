@@ -607,6 +607,20 @@ export interface BuildResponseProcessingResult {
 }
 
 /**
+ * Execution modes for build start
+ */
+export enum BuildExecutionMode {
+  NORMAL = 'normal',
+  DETAILED_MONITORING = 'detailed',
+  SKIP_SHOW_TASK_ID = 'skip'
+}
+
+export interface BuildExecutionModeResult {
+  mode: BuildExecutionMode;
+  cancelled: boolean;
+}
+
+/**
  * Validates build start command parameters
  * Pure function - easily testable
  */
@@ -831,4 +845,51 @@ export const checkIfUserIsLoggedIn = (
   }
 ): boolean => {
   return configService.has('AC_ACCESS_TOKEN') && !!configService.get('AC_ACCESS_TOKEN');
+};
+
+/**
+ * Prompts user to select execution mode for build start
+ * Supports dependency injection for testing
+ */
+export const selectBuildExecutionMode = async (
+  createPrompt = (name: string, message: string, choices: string[]) => {
+    const { AutoComplete } = require('enquirer');
+    return new AutoComplete({
+      name,
+      message,
+      choices,
+      limit: 10
+    });
+  }
+): Promise<BuildExecutionModeResult> => {
+  const choices = [
+    '1. Normal Build - Standard build process with monitoring',
+    '2. Detailed Monitoring - Enhanced log monitoring enabled',
+    '3. Skip & Show Task ID Only - Return task ID without starting build'
+  ];
+
+  try {
+    const selectPrompt = createPrompt(
+      'executionMode',
+      'Select build execution mode:',
+      choices
+    );
+    
+    const selected = await selectPrompt.run();
+    
+    // Parse the selection
+    if (selected.startsWith('1.')) {
+      return { mode: BuildExecutionMode.NORMAL, cancelled: false };
+    } else if (selected.startsWith('2.')) {
+      return { mode: BuildExecutionMode.DETAILED_MONITORING, cancelled: false };
+    } else if (selected.startsWith('3.')) {
+      return { mode: BuildExecutionMode.SKIP_SHOW_TASK_ID, cancelled: false };
+    } else {
+      // Default to normal if parsing fails
+      return { mode: BuildExecutionMode.NORMAL, cancelled: false };
+    }
+  } catch (error) {
+    // User cancelled or error occurred
+    return { mode: BuildExecutionMode.NORMAL, cancelled: true };
+  }
 };

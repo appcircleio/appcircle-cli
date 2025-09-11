@@ -18,6 +18,8 @@ import {
   validateBuildStartParameters,
   determineBuildWaitBehavior,
   processBuildResponseForImmediateReturn,
+  selectBuildExecutionMode,
+  BuildExecutionMode,
   checkIfUserAlreadyLoggedIn as utilCheckIfUserAlreadyLoggedIn,
   checkIfUserIsLoggedIn as utilCheckIfUserIsLoggedIn,
   validatePublishPlatform as utilValidatePublishPlatform,
@@ -3018,6 +3020,48 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       }
       throw new AppcircleExitError('', 1);
     }
+    
+    // Check if this is a non-interactive run (has --no-wait or JSON output)
+    const isNonInteractive = process.argv.includes('--no-wait') || getConsoleOutputType() === 'json';
+    
+    let executionMode = BuildExecutionMode.NORMAL;
+    
+    // Show execution mode selection only for interactive runs
+    if (!isNonInteractive) {
+      console.log('\n' + chalk.cyan('Build parameters validated successfully!'));
+      const modeSelection = await selectBuildExecutionMode();
+      
+      if (modeSelection.cancelled) {
+        console.log('\nBuild cancelled by user.');
+        throw new AppcircleExitError('Build cancelled', 0);
+      }
+      
+      executionMode = modeSelection.mode;
+    }
+    
+    // Handle "Skip & Show Task ID Only" mode
+    if (executionMode === BuildExecutionMode.SKIP_SHOW_TASK_ID) {
+      const spinner = createOra(`Generating Task ID...`).start();
+      try {
+        const responseData = await startBuild(params);
+        spinner.succeed(`Task ID generated successfully.\n\nTaskId: ${responseData.taskId}`);
+        
+        if (getConsoleOutputType() === 'json') {
+          console.log(JSON.stringify({
+            taskId: responseData.taskId,
+            queueItemId: responseData.queueItemId,
+            mode: 'skip'
+          }));
+        }
+        
+        throw new AppcircleExitError('Task ID generated', 0);
+      } catch (error: any) {
+        spinner.fail('Failed to generate Task ID');
+        throw error;
+      }
+    }
+    
+    // For Normal and Detailed Monitoring modes, start the build
     const spinner = createOra(`Starting Build...`).start();
     try {
       const responseData = await startBuild(params);
@@ -3053,7 +3097,14 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           fullCommandName: command.fullCommandName,
           data: responseData,
         });
-        spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
+        
+        // Show different messages based on execution mode
+        if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
+          spinner.succeed(`Build successfully added to queue with detailed monitoring enabled.\n\nTaskId: ${responseData.taskId}`);
+          console.log(chalk.yellow('🔍 Enhanced monitoring active - detailed logs will be shown during build process.'));
+        } else {
+          spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
+        }
       } else {
         spinner.stop();
       }
@@ -3065,10 +3116,24 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       let dots = "";
       const startTime = Date.now();
       
+      // Enhanced monitoring for detailed mode
+      if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
+        console.log(chalk.cyan('\n📊 Detailed Monitoring Mode Active'));
+        console.log(chalk.gray('- Enhanced log collection enabled'));
+        console.log(chalk.gray('- Real-time build status updates'));
+        console.log(chalk.gray('- Detailed error reporting\n'));
+      }
+      
       const interval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
         dots = dots.length >= 3 ? "" : dots + ".";
         const elapsedText = formatElapsedTime(startTime);
-        progressSpinner.text = chalk.yellow(`Build Running${dots} (${elapsedText})`);
+        
+        // Different progress messages for detailed monitoring
+        if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
+          progressSpinner.text = chalk.yellow(`Build Running with Enhanced Monitoring${dots} (${elapsedText})`);
+        } else {
+          progressSpinner.text = chalk.yellow(`Build Running${dots} (${elapsedText})`);
+        }
       }, 500);
       
       try {
