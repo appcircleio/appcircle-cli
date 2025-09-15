@@ -80,16 +80,18 @@ describe('Critical Command E2E Tests', () => {
       if (existsSync(tempConfigFile)) {
         unlinkSync(tempConfigFile);
       }
-      
+
       // Force environment variable to be set correctly for this test
       process.env.AC_CONFIG_PATH = tempConfigFile;
-      
+
       // Test logout without authentication (should fail gracefully)
       const result = await runCommand(['logout']);
-      
+
       // Should fail with non-zero exit code
       expect(result.exitCode).toBeGreaterThan(0);
-      expect(result.stderr).toContain('You are not currently logged in');
+      // Check both stderr and stdout for the error message since console.error might write to different streams
+      const errorOutput = result.stderr + result.stdout;
+      expect(errorOutput).toContain('You are not currently logged in');
     });
     it('should handle invalid command gracefully', async () => {
       const result = await runCommand(['invalid-command-xyz']);

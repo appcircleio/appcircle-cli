@@ -297,11 +297,24 @@ describe('Command Runner Enterprise & Organization Utilities', () => {
         const services = await import('../../../src/services');
         const writer = await import('../../../src/core/writer');
         const mockCommand = { fullCommandName: 'appcircle-enterprise-app-store-version-publish' };
-        const params = { entVersionId: 'v1' };
+        const params = {
+          entProfileId: 'profile-1',
+          entVersionId: 'v1',
+          summary: 'Test summary',
+          releaseNotes: 'Test release notes',
+          publishType: '1'
+        };
 
         await handleEnterpriseVersionPublish(mockCommand as any, params);
-        
-        expect(services.publishEnterpriseAppVersion).toHaveBeenCalledWith(params);
+
+        // Check that publishEnterpriseAppVersion was called with correct mapped parameters
+        expect(services.publishEnterpriseAppVersion).toHaveBeenCalledWith({
+          entProfileId: 'profile-1',
+          entVersionId: 'v1',
+          summary: 'Test summary',
+          releaseNotes: 'Test release notes',
+          publishType: '1'
+        });
         expect(writer.commandWriter).toHaveBeenCalled();
       });
     });

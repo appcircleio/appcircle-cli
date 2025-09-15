@@ -1136,9 +1136,12 @@ describe('Command Runner - Comprehensive Tests', () => {
     });
 
     it('should handle enterprise-app-store-version-publish command', async () => {
-      const params = { 
+      const params = {
         entProfileId: 'profile1',
-        entVersionId: 'version1'
+        entVersionId: 'version1',
+        summary: 'Test summary',
+        releaseNotes: 'Test release notes',
+        publishType: '1'
       };
       const command = createMockCommand('appcircle-enterprise-app-store-version-publish', params, CommandTypes.ENTERPRISE_APP_STORE);
       command.name = vi.fn().mockReturnValue('version-publish');

@@ -343,12 +343,26 @@ describe('Enterprise Command Utilities', () => {
   describe('handleEnterpriseVersionPublish', () => {
     it('should publish enterprise app version successfully', async () => {
       const mockResponse = { taskId: 'task-123', status: 'success' };
-      
+      const publishParams = {
+        entProfileId: 'profile-123',
+        entVersionId: 'version-456',
+        summary: 'Test summary',
+        releaseNotes: 'Test release notes',
+        publishType: '1'
+      };
+
       (publishEnterpriseAppVersion as any).mockResolvedValue(mockResponse);
 
-      await handleEnterpriseVersionPublish(mockCommand, mockParams);
-      
-      expect(publishEnterpriseAppVersion).toHaveBeenCalledWith(mockParams);
+      await handleEnterpriseVersionPublish(mockCommand, publishParams);
+
+      // Check that publishEnterpriseAppVersion was called with correct mapped parameters
+      expect(publishEnterpriseAppVersion).toHaveBeenCalledWith({
+        entProfileId: 'profile-123',
+        entVersionId: 'version-456',
+        summary: 'Test summary',
+        releaseNotes: 'Test release notes',
+        publishType: '1'
+      });
       expect(commandWriter).toHaveBeenCalledWith(CommandTypes.ENTERPRISE_APP_STORE, {
         fullCommandName: mockCommand.fullCommandName,
         data: mockResponse,
