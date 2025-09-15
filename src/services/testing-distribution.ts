@@ -26,7 +26,7 @@ export async function getDistributionProfileById(options: OptionsType<{ distProf
 export async function getLatestAppVersionId(options: OptionsType<{ distProfileId: string }>) {
     const profile = await getDistributionProfileById(options);
     if (profile && profile.appVersions && profile.appVersions.length > 0) {
-        const sortedVersions = [...profile.appVersions].sort((a, b) => 
+        const sortedVersions = [...profile.appVersions].sort((a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         return sortedVersions[0].id;
