@@ -1123,7 +1123,33 @@ export const handleEnterpriseVersionList = async (command: ProgramCommand, param
 };
 
 export const handleEnterpriseVersionPublish = async (command: ProgramCommand, params: any) => {
-  const responseData = await publishEnterpriseAppVersion(params);
+  // Validate required parameters
+  if (!params.entProfileId) {
+    throw new Error('Enterprise Profile ID (--entProfileId) is required');
+  }
+  if (!params.entVersionId) {
+    throw new Error('Enterprise Version ID (--entVersionId) is required');
+  }
+  if (!params.summary) {
+    throw new Error('Summary (--summary) is required');
+  }
+  if (!params.releaseNotes) {
+    throw new Error('Release Notes (--releaseNotes) is required');
+  }
+  if (!params.publishType) {
+    throw new Error('Publish Type (--publishType) is required');
+  }
+
+  // Map parameters correctly
+  const publishParams = {
+    entProfileId: params.entProfileId,
+    entVersionId: params.entVersionId,
+    summary: params.summary,
+    releaseNotes: params.releaseNotes,
+    publishType: params.publishType
+  };
+
+  const responseData = await publishEnterpriseAppVersion(publishParams);
   commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
     fullCommandName: command.fullCommandName,
     data: responseData,

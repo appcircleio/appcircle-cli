@@ -4183,22 +4183,22 @@ EXAMPLES
             longDescription: `Publish an enterprise app version
 
 USAGE
-  appcircle enterprise-app-store version publish --entProfileId <uuid> --entVersionId <uuid> [--summary <text>] [--releaseNotes <text>] [--publishType <type>]
+  appcircle enterprise-app-store version publish --entProfileId <uuid> --entVersionId <uuid> --summary <text> --releaseNotes <text> --publishType <type>
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
   --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --entVersionId <uuid>   App Version ID (UUID format)
   --entVersion <string>   App version name (alternative to --entVersionId)
-  --summary <text>        (Optional) Summary text
-  --releaseNotes <text>   (Optional) Release notes
-  --publishType <type>    (Optional) 0=None, 1=Beta, 2=Live
+  --summary <text>        Summary text
+  --releaseNotes <text>   Release notes
+  --publishType <type>    Publish type: 0=None, 1=Beta, 2=Live
 
 DESCRIPTION
   Publish a specific app version to the enterprise app store profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version publish --entProfile "Internal Apps" --entVersion "v1.2.3" --publishType 2`,
+  appcircle enterprise-app-store version publish --entProfile "Internal Apps" --entVersion "v1.2.3" --summary "New release" --releaseNotes "Bug fixes and improvements" --publishType 2`,
             params: [
               {
                 name: 'entProfileId',
@@ -4239,12 +4239,14 @@ EXAMPLES
                 description: 'Summary',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
+                required: true,
               },
               {
                 name: 'releaseNotes',
                 description: 'Release Notes',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
+                required: true,
               },
               {
                 name: 'publishType',
@@ -4266,6 +4268,7 @@ EXAMPLES
                   },
                 ],
                 valueType: 'number',
+                required: true,
               },
             ],
           },
