@@ -511,6 +511,141 @@ describe('Testing Distribution Service', () => {
           expect.any(Object)
         )
       })
+
+      it('should handle very long release notes messages', async () => {
+        const mockResponse = { success: true }
+        mockAppcircleApi.patch.mockResolvedValue({ data: mockResponse })
+
+        const longMessage = 'Release notes: ' + 'A'.repeat(5000) + ' End of notes.'
+
+        await updateTestingDistributionReleaseNotes({
+          distProfileId: 'profile-1',
+          versionId: 'version-123',
+          message: longMessage
+        })
+
+        expect(mockAppcircleApi.patch).toHaveBeenCalledWith(
+          expect.stringContaining('distribution/v1/profiles/profile-1/app-versions/version-123'),
+          { message: longMessage },
+          expect.objectContaining({
+            headers: expect.any(Object)
+          })
+        )
+      })
+
+      it('should handle multiline release notes', async () => {
+        const mockResponse = { success: true }
+        mockAppcircleApi.patch.mockResolvedValue({ data: mockResponse })
+
+        const multilineMessage = `Version 1.2.0 Release Notes
+
+Features:
+- Added new user authentication system
+- Improved performance by 20%
+- Enhanced UI/UX design
+
+Bug Fixes:
+- Fixed crash on startup
+- Resolved memory leak in background processing
+- Fixed UI rendering issues on small screens
+
+Known Issues:
+- Minor compatibility issue with iOS 14`
+
+        await updateTestingDistributionReleaseNotes({
+          distProfileId: 'profile-1',
+          versionId: 'version-123',
+          message: multilineMessage
+        })
+
+        expect(mockAppcircleApi.patch).toHaveBeenCalledWith(
+          expect.any(String),
+          { message: multilineMessage },
+          expect.any(Object)
+        )
+      })
+
+      it('should handle special markdown characters', async () => {
+        const mockResponse = { success: true }
+        mockAppcircleApi.patch.mockResolvedValue({ data: mockResponse })
+
+        const markdownMessage = `# Release Notes v2.0
+
+## New Features
+- **Authentication**: OAuth 2.0 support
+- *Performance*: 30% faster loading
+- ~~Old feature~~ replaced with new implementation
+
+### Technical Changes
+\`\`\`javascript
+// Code example
+const newFeature = () => console.log('Hello World');
+\`\`\`
+
+> Important: Breaking changes in API
+
+[Documentation](https://docs.example.com)`
+
+        await updateTestingDistributionReleaseNotes({
+          distProfileId: 'profile-1',
+          versionId: 'version-123',
+          message: markdownMessage
+        })
+
+        expect(mockAppcircleApi.patch).toHaveBeenCalledWith(
+          expect.any(String),
+          { message: markdownMessage },
+          expect.any(Object)
+        )
+      })
+
+      it('should handle null or undefined versionId gracefully', async () => {
+        const mockResponse = { success: false, error: 'Invalid version ID' }
+        mockAppcircleApi.patch.mockResolvedValue({ data: mockResponse })
+
+        await updateTestingDistributionReleaseNotes({
+          distProfileId: 'profile-1',
+          versionId: null as any,
+          message: 'Test message'
+        })
+
+        expect(mockAppcircleApi.patch).toHaveBeenCalledWith(
+          expect.stringContaining('/null'),
+          { message: 'Test message' },
+          expect.any(Object)
+        )
+      })
+
+      it('should handle update conflicts (409 error)', async () => {
+        const conflictError = new Error('Conflict: Version was modified by another user')
+        conflictError.name = 'AxiosError'
+        ;(conflictError as any).response = {
+          status: 409,
+          data: { message: 'Version was modified by another user' }
+        }
+
+        mockAppcircleApi.patch.mockRejectedValue(conflictError)
+
+        await expect(updateTestingDistributionReleaseNotes({
+          distProfileId: 'profile-1',
+          versionId: 'version-123',
+          message: 'New release notes'
+        })).rejects.toThrow('Conflict: Version was modified by another user')
+      })
+
+      it('should handle version not found (404 error)', async () => {
+        const notFoundError = new Error('Version not found')
+        notFoundError.name = 'AxiosError'
+        ;(notFoundError as any).response = { status: 404 }
+
+        mockAppcircleApi.patch.mockRejectedValue(notFoundError)
+
+        await expect(updateTestingDistributionReleaseNotes({
+          distProfileId: 'profile-1',
+          versionId: 'non-existent-version',
+          message: 'Test message'
+        })).rejects.toThrow('Version not found')
+      })
     })
   })
 
