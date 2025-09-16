@@ -3,10 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import FormData from 'form-data';
 import axios from 'axios';
+import chalk from 'chalk';
 import { CountriesList, EnvironmentVariableTypes } from '../constant';
-import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
+import { AUTH_HOSTNAME, HOOK_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
 import { ProgramError } from '../core/ProgramError';
-import os from 'os';
 import { FileUploadInformation } from '../types/file-upload';
 import { getMaxUploadBytes } from '../utils/size-limit';
 import {
@@ -38,6 +38,136 @@ import {
   determineUploadMethod,
   validateFileSize
 } from './index-utilities';
+
+export class DetailedMonitoringError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public originalError?: Error
+  ) {
+    super(message);
+    this.name = 'DetailedMonitoringError';
+  }
+}
+
+export const ErrorCodes = {
+  E_HOOK_AUTH_FAILED: 'E_HOOK_AUTH_FAILED',
+  E_SSE_CONNECT_FAILED: 'E_SSE_CONNECT_FAILED',
+  E_TOKEN_MALFORMED: 'E_TOKEN_MALFORMED',
+  E_TOKEN_DECODE_FAILED: 'E_TOKEN_DECODE_FAILED',
+  E_CLAIM_MISSING_SUB: 'E_CLAIM_MISSING_SUB',
+  E_CLAIM_MISSING_ORG: 'E_CLAIM_MISSING_ORG',
+  E_IDENTITY_RESOLVE_FAILED: 'E_IDENTITY_RESOLVE_FAILED',
+} as const;
+
+// Retry utility for API calls
+async function retryApiCall<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 2,
+  timeoutMs: number = 15000
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
+      });
+      
+      return await Promise.race([operation(), timeoutPromise]);
+    } catch (error: any) {
+      lastError = error;
+      
+      // Don't retry on 4xx errors (client errors)
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        throw error;
+      }
+      
+      // Don't retry on the last attempt
+      if (attempt === maxRetries) {
+        break;
+      }
+      
+      // Wait before retry (exponential backoff)
+      const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError || new Error('Max retries exceeded');
+}
+
+// JWT Decoding utilities
+function base64UrlDecode(input: string): string {
+  input = input.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = input.length % 4 ? 4 - (input.length % 4) : 0;
+  const padded = input + '='.repeat(pad);
+  return Buffer.from(padded, 'base64').toString('utf8');
+}
+
+/**
+ * Decodes JWT payload without signature verification
+ * @param token JWT token string
+ * @returns Decoded payload as object
+ */
+export function decodeJwtPayload(token: string): Record<string, any> {
+  const parts = token.split('.');
+  if (parts.length < 2) {
+    throw new Error('E_TOKEN_MALFORMED');
+  }
+  
+  try {
+    const payloadJson = base64UrlDecode(parts[1]);
+    const payload = JSON.parse(payloadJson);    
+    return payload;
+  } catch (error) {
+    throw new Error('E_TOKEN_DECODE_FAILED');
+  }
+}
+
+/**
+ * Extracts identity claims from JWT access token
+ * @param accessToken JWT access token
+ * @returns Object with sub and currentOrganizationId
+ */
+export function resolveIdentityFromToken(accessToken: string): { sub: string; currentOrganizationId: string } {  
+  try {
+    const payload = decodeJwtPayload(accessToken);
+    
+    // Extract sub claim
+    const sub = payload.sub;
+    if (!sub || typeof sub !== 'string' || sub.trim() === '') {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_CLAIM_MISSING_SUB,
+        'Missing or invalid "sub" claim in access token. Please re-authenticate.'
+      );
+    }
+    
+    // Extract organization claim (with configurable key)
+    const orgClaimKey = process.env.CLAIM_ORG_KEY || 'currentOrganizationId';
+    const currentOrganizationId = payload[orgClaimKey];
+    
+    if (!currentOrganizationId || typeof currentOrganizationId !== 'string' || currentOrganizationId.trim() === '') {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_CLAIM_MISSING_ORG,
+        `Missing or invalid "${orgClaimKey}" claim in access token. Please ensure you have access to an organization.`
+      );
+    }
+     
+    return { sub, currentOrganizationId };
+    
+  } catch (error: any) {
+    if (error instanceof DetailedMonitoringError) {
+      throw error;
+    }
+    
+    throw new DetailedMonitoringError(
+      ErrorCodes.E_IDENTITY_RESOLVE_FAILED,
+      'Unable to extract identity from access token. Consider re-authenticating.',
+      error
+    );
+  }
+}
 
 export async function getToken(options: OptionsType<{ pat: string }>) {
   const authData = createPATAuthData(options.pat);
@@ -485,6 +615,335 @@ export const getUserInfo = async () => {
     headers: getHeaders(),
   });
   return userInfo.data;
+};
+
+
+/**
+ * Trigger build logs streaming
+ */
+export const triggerBuildLogsStreaming = async (params: {
+  apiHostname: string;
+  hookHostname?: string;
+  accessToken: string;
+  taskId: string;
+  browserId: string;
+  userId: string;
+  organizationId: string;
+}): Promise<void> => {
+  const { apiHostname, accessToken, taskId, browserId } = params;
+  
+  // Use hook hostname with query parameters (as shown in the curl example)
+  const triggerUrl = `${params.hookHostname || apiHostname}/build/log/trigger-events-receiving`;
+  
+  try {
+    const url = new URL(triggerUrl);
+    url.searchParams.set('taskId', taskId);
+    url.searchParams.set('browserId', browserId);
+    url.searchParams.set('userId', params.userId);
+    url.searchParams.set('organizationId', params.organizationId);
+    
+    const response = await axios.post(url.toString(), null, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      },
+      timeout: 15000
+    });
+  } catch (error: any) {
+    console.error(chalk.red(`❌ Trigger API Failed: ${error.message}`));
+    if (error.response) {
+      console.error(chalk.red(`   Status: ${error.response.status} ${error.response.statusText}`));
+      console.error(chalk.red(`   Response: ${JSON.stringify(error.response.data)}`));
+    }
+  }
+};
+
+/**
+ * Stops build logs streaming by calling the stop endpoint
+ */
+export const triggerStopBuildLogsStreaming = async (params: {
+  hookHostname: string;
+  accessToken: string;
+  taskId: string;
+  browserId: string;
+  userId: string;
+  organizationId: string;
+}): Promise<void> => {
+  const { hookHostname, accessToken, taskId, browserId } = params;
+  
+  const stopUrl = `${hookHostname}/build/log/trigger-stop-events-receiving`;
+  
+  try {
+    const url = new URL(stopUrl);
+    url.searchParams.set('taskId', taskId);
+    url.searchParams.set('browserId', browserId);
+    url.searchParams.set('userId', params.userId);
+    url.searchParams.set('organizationId', params.organizationId);
+    
+    const response = await axios.post(url.toString(), null, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': '*/*'
+      },
+      timeout: 10000
+    });
+    
+  } catch (error: any) {
+    console.error(chalk.yellow(`⚠️ Stop API Warning: ${error.message}`));
+    if (error.response) {
+      console.error(chalk.yellow(`   Status: ${error.response.status} ${error.response.statusText}`));
+    }
+    // Don't throw - this is cleanup, not critical
+  }
+};
+
+/**
+ * Obtains a short-lived hook token from the hook service
+ */
+export const getHookAccessToken = async (accessToken: string): Promise<string> => {
+  try {
+    const response = await retryApiCall(async () => {
+      return await axios.post(`${HOOK_HOSTNAME}/auth/token`, {}, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    }, 2, 15000);
+    
+    const { access_token: hookToken, expires_in } = response.data;
+    
+    if (!hookToken || typeof hookToken !== 'string' || hookToken.trim() === '') {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_HOOK_AUTH_FAILED,
+        'Invalid or empty access token received from hook service. Please re-login and try again.'
+      );
+    }
+    
+    return hookToken;
+  } catch (error: any) {
+    if (error instanceof DetailedMonitoringError) {
+      throw error;
+    }
+    
+    if (error.response) {
+      const status = error.response.status;
+      if (status === 401) {
+        throw new DetailedMonitoringError(
+          ErrorCodes.E_HOOK_AUTH_FAILED,
+          'Authentication failed with hook service. Please re-login to refresh your credentials.',
+          error
+        );
+      } else if (status === 403) {
+        throw new DetailedMonitoringError(
+          ErrorCodes.E_HOOK_AUTH_FAILED,
+          'Access denied to hook service. Please ensure you have the required permissions.',
+          error
+        );
+      } else {
+        throw new DetailedMonitoringError(
+          ErrorCodes.E_HOOK_AUTH_FAILED,
+          `Hook authentication failed: ${status} - ${error.response.statusText}. Please check your network connection.`,
+          error
+        );
+      }
+    } else if (error.request || error.message.includes('timeout')) {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_HOOK_AUTH_FAILED,
+        'Hook authentication failed: Network error or timeout. Please check your network connection or proxy settings.',
+        error
+      );
+    } else {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_HOOK_AUTH_FAILED,
+        `Hook authentication failed: ${error.message}`,
+        error
+      );
+    }
+  }
+};
+
+// SSE connection interface for type safety
+export interface SSEConnection {
+  stream: NodeJS.ReadableStream;
+  browserId: string;
+  close: () => void;
+  onMessage: (callback: (data: string) => void) => void;
+  onError: (callback: (error: Error) => void) => void;
+  onClose: (callback: () => void) => void;
+}
+
+/**
+ * Opens a Server-Sent Events connection to the hook service
+ */
+export const openHookSSE = async (params: {
+  hookHostname: string;
+  userId: string;
+  organizationId: string;
+  token: string;
+}): Promise<SSEConnection> => {
+  const { hookHostname, userId, organizationId, token } = params;
+  
+  // Construct the URL with query parameters
+  // Try multiple possible endpoints for build logs
+  const url = `${hookHostname}/v2/hooks`;
+  
+  // Use a consistent browser ID for CLI (as shown in curl example)
+  const browserId = 'cli-' + Math.random().toString(36).substring(2, 15);
+  
+  const queryParams = new URLSearchParams({
+    userId,
+    organizationId,
+    token,
+    browserId // Add browser ID to track this specific connection
+  });
+  const fullUrl = `${url}?${queryParams}`;
+  
+  // SSE connection setup
+  
+  let lastError: Error | null = null;
+  const maxRetries = 3;
+  const retryDelays = [1000, 2000, 5000]; // 1s, 2s, 5s
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await axios({
+        method: 'get',
+        url: fullUrl,
+        headers: {
+          'accept': 'text/event-stream',
+          'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+          'cache-control': 'no-cache',
+        },
+        responseType: 'stream',
+        timeout: 15000,
+      });
+      
+      if (response.status !== 200) {
+        throw new Error(`SSE connection failed with status: ${response.status}`);
+      }
+      
+      const stream = response.data;
+      let isClosed = false;
+      const messageCallbacks: ((data: string) => void)[] = [];
+      const errorCallbacks: ((error: Error) => void)[] = [];
+      const closeCallbacks: (() => void)[] = [];
+      
+      // Handle stream data and parse SSE format
+      let buffer = '';
+      let currentEvent: string | null = null;
+      let currentData: string[] = [];
+      
+      stream.on('data', (chunk: Buffer) => {
+        const chunkStr = chunk.toString();
+        buffer += chunkStr;
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        
+        // Process each line and handle SSE format properly
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            currentEvent = line.substring(6).trim();
+            currentData = [];
+          } else if (line.startsWith('data:')) {
+            const data = line.substring(5);
+            currentData.push(data);
+          } else if (line.trim() === '') {
+            // Empty line indicates end of SSE event
+            if (currentEvent && currentData.length > 0) {
+              const eventData = currentData.join('\n');
+              
+              // Only process build-log events
+              if (currentEvent === 'build-log') {
+                messageCallbacks.forEach(callback => {
+                  try {
+                    callback(eventData);
+                  } catch (error) {
+                    console.error('Error in SSE message callback:', error);
+                  }
+                });
+              }
+              // Reset for next event
+              currentEvent = null;
+              currentData = [];
+            }
+          }
+          // Ignore other line types (id:, retry:, etc.)
+        }
+      });
+      
+      stream.on('error', (error: Error) => {
+        if (!isClosed) {
+          errorCallbacks.forEach(callback => {
+            try {
+              callback(error);
+            } catch (err) {
+              console.error('Error in SSE error callback:', err);
+            }
+          });
+        }
+      });
+      
+      stream.on('end', () => {
+        if (!isClosed) {
+          isClosed = true;
+          closeCallbacks.forEach(callback => {
+            try {
+              callback();
+            } catch (error) { }
+          });
+        }
+      });
+      
+      stream.on('close', () => {
+        // Stream closed - no logging needed
+      });
+      
+      // Return SSE connection interface
+      return {
+        stream,
+        browserId, // Return the browser ID for triggering logs
+        close: () => {
+          if (!isClosed) {
+            isClosed = true;
+            stream.destroy();
+            closeCallbacks.forEach(callback => {
+              try {
+                callback();
+              } catch (error) { }
+            });
+          }
+        },
+        onMessage: (callback: (data: string) => void) => {
+          messageCallbacks.push(callback);
+        },
+        onError: (callback: (error: Error) => void) => {
+          errorCallbacks.push(callback);
+        },
+        onClose: (callback: () => void) => {
+          closeCallbacks.push(callback);
+        }
+      };
+      
+    } catch (error: any) {
+      lastError = error;
+      
+      // Don't retry on the last attempt
+      if (attempt === maxRetries) {
+        break;
+      }
+      
+      // Wait before retry
+      const delay = retryDelays[attempt] || 5000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  // All retries failed
+  throw new DetailedMonitoringError(
+    ErrorCodes.E_SSE_CONNECT_FAILED,
+    `Failed to establish SSE connection after ${maxRetries + 1} attempts. Please check your network connection and hook service availability.`,
+    lastError || undefined
+  );
 };
 
 

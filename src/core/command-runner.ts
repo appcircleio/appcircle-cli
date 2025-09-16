@@ -146,7 +146,12 @@ import {
   downloadTaskLog,
   createSubOrganization,
   getLatestBuildByBranch,
-  getLatestBuildId
+  getLatestBuildId,
+  resolveIdentityFromToken,
+  getHookAccessToken,
+  openHookSSE,
+  triggerBuildLogsStreaming,
+  triggerStopBuildLogsStreaming
 } from '../services';
 import { appcircleApi, getHeaders, OptionsType } from '../services/api';
 import { commandWriter, configWriter } from './writer';
@@ -158,6 +163,309 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 import { AppcircleExitError } from './AppcircleExitError';
 import { Commands, CommandType } from './commands';
+
+/**
+ * Step status enum for tracking step state
+ */
+enum StepStatus {
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed'
+}
+
+/**
+ * Create a clean terminal UX formatter that manages step state and ephemeral status
+ */
+function createCleanTerminalFormatter() {
+  const stepStates = new Map<string, {
+    status: StepStatus;
+    startTime: number;
+    hasErrors: boolean;
+  }>();
+  
+  let currentActiveStep = '';
+  let ephemeralStatusLine = '';
+  let buildCompleted = false;
+  let completionCallback: (() => void) | null = null;
+  let sseConnection: any = null;
+  
+  function clearEphemeralStatus() {
+    if (ephemeralStatusLine) {
+      // Clear the ephemeral line by writing to stderr
+      process.stderr.write('\r' + ' '.repeat(ephemeralStatusLine.length) + '\r');
+      ephemeralStatusLine = '';
+    }
+  }
+  
+  function writeEphemeralStatus(text: string) {
+    clearEphemeralStatus();
+    ephemeralStatusLine = text;
+    process.stderr.write(text);
+  }
+  
+  function writePersistentLog(text: string) {
+    clearEphemeralStatus();
+    console.log(text); // This goes to stdout
+    if (ephemeralStatusLine) {
+      process.stderr.write(ephemeralStatusLine); // Restore ephemeral status
+    }
+  }
+  
+  function updateStepStatus(stepName: string, status: StepStatus) {
+    const state = stepStates.get(stepName);
+    if (state) {
+      state.status = status;
+      
+      // Calculate duration
+      const elapsed = Math.round((Date.now() - state.startTime) / 1000);
+      const timeStr = elapsed === 0 ? '0s' : elapsed < 1 ? '<1s' : `${elapsed}s`;
+      
+      // Choose icon and color based on status
+      let icon = '';
+      let color = chalk.white;
+      
+      switch (status) {
+        case StepStatus.COMPLETED:
+          icon = state.hasErrors ? '✗' : '✓';
+          color = state.hasErrors ? chalk.red : chalk.green;
+          break;
+        case StepStatus.FAILED:
+          icon = '✗';
+          color = chalk.red;
+          state.hasErrors = true;
+          break;
+        case StepStatus.RUNNING:
+          icon = '●';
+          color = chalk.yellow;
+          break;
+      }
+      
+      clearEphemeralStatus();
+      writePersistentLog(color(`${icon} ${stepName} (${timeStr})`));
+      
+      if (status !== StepStatus.RUNNING) {
+        currentActiveStep = '';
+        
+        // Check if this is the final "Completing workflow" step
+        if (stepName === 'Completing workflow' && status === StepStatus.COMPLETED && !buildCompleted) {
+          // Build completion already handled in @@[section:end] processing
+          // Just trigger completion callback
+          if (completionCallback) {
+            try {
+              completionCallback();
+            } catch (error) {
+              console.error('Error in completion callback:', error);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  return {
+    processMessage(buildLogEvent: any): void {
+      // Skip all messages if build is already completed
+      if (buildCompleted) {
+        return;
+      }
+      
+      const rawMessage = buildLogEvent.message || '';
+      const stepName = buildLogEvent.stepName;
+      const uiOnly = buildLogEvent.uiOnly === true;
+      
+      // Clean message: remove \r\n and trim
+      const message = rawMessage.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      
+      // Skip uiOnly messages that are just step names (avoid duplication)
+      if (uiOnly && (message.trim() === stepName || message.trim() === currentActiveStep)) {
+        return;
+      }
+      
+      // Handle step changes - show step header only when step changes
+      if (stepName && stepName !== currentActiveStep) {
+        // Only show step header if we're starting a new step
+        if (!message.includes('@@[section:begin]')) {
+          currentActiveStep = stepName;
+          clearEphemeralStatus();
+          writePersistentLog(chalk.yellow(`● ${stepName}`));
+        }
+      }
+      
+      // Handle section begin
+      if (message.includes('@@[section:begin]')) {
+        // Handle both patterns: "@@[section:begin] ... Step started: StepName" and "@@[section:begin] ... Starting workflow"
+        const stepStartedMatch = message.match(/@@\[section:begin\]\s*(.+?)\s*Step started:\s*(.+)/);
+        if (stepStartedMatch) {
+          const step = stepStartedMatch[2];
+          
+          // Initialize step state
+          stepStates.set(step, {
+            status: StepStatus.RUNNING,
+            startTime: Date.now(),
+            hasErrors: false
+          });
+          
+          currentActiveStep = step;
+          
+          // Show step header and section begin message
+          clearEphemeralStatus();
+          writePersistentLog(chalk.yellow(`● ${step}`));
+          writePersistentLog(chalk.blue(message.trim()));
+        } else {
+          // Handle simple format: "@@[section:begin] ... Starting workflow"
+          const simpleMatch = message.match(/@@\[section:begin\]\s*(.+?)\s*(.+)/);
+          if (simpleMatch) {
+            const step = simpleMatch[2] || stepName;
+            
+            // Initialize step state
+            stepStates.set(step, {
+              status: StepStatus.RUNNING,
+              startTime: Date.now(),
+              hasErrors: false
+            });
+            
+            currentActiveStep = step;
+            
+            // Show step header and section begin message
+            clearEphemeralStatus();
+            writePersistentLog(chalk.yellow(`● ${step}`));
+            writePersistentLog(chalk.blue(message.trim()));
+          }
+        }
+        return;
+      }
+      
+      // Handle multi-line messages that contain @@[section:end] 
+      if (message.includes('@@[section:end]')) {
+        // Split message: everything before @@[section:end] is regular content, everything after is section end
+        const parts = message.split('@@[section:end]');
+        const contentPart = parts[0];
+        const sectionEndPart = '@@[section:end]' + (parts[1] || '');
+        
+        // First, process the content part if it has meaningful content
+        if (contentPart.trim() && currentActiveStep && !uiOnly) {
+          const lines = contentPart.split('\n').filter((line: string) => line.trim());
+          for (const line of lines) {
+            if (line.trim()) {
+              let formattedMessage = line.trim();
+              
+              // Color URLs
+              formattedMessage = formattedMessage.replace(
+                /(https?:\/\/[^\s]+)/g, 
+                chalk.blue('$1')
+              );
+              
+              writePersistentLog(formattedMessage);
+            }
+          }
+        }
+        
+        // Then handle the section end
+        let stepToComplete = currentActiveStep;
+        
+        const stepCompletedMatch = sectionEndPart.match(/@@\[section:end\]\s*(.+?)\s*Step completed:\s*(.+?),\s*Ver:\s*(.+)/);
+        if (stepCompletedMatch) {
+          stepToComplete = stepCompletedMatch[2];
+        } else {
+          // Simple format: "@@[section:end] Starting workflow"
+          const simpleMatch = sectionEndPart.match(/@@\[section:end\]\s*(.+)/);
+          if (simpleMatch) {
+            stepToComplete = simpleMatch[1].trim();
+          }
+        }
+        
+        // Show the section end message
+        if (sectionEndPart.trim() && !uiOnly) {
+          writePersistentLog(chalk.blue(sectionEndPart.trim()));
+        }
+        
+        if (stepToComplete) {
+          // SPECIAL CASE: If this is "Completing workflow" completion, set build completed immediately
+          if (stepToComplete === 'Completing workflow' && !buildCompleted) {
+            buildCompleted = true;
+            
+            // Immediately close SSE connection
+            if (sseConnection && sseConnection.close) {
+              sseConnection.close();
+            }
+          }
+          
+          updateStepStatus(stepToComplete, StepStatus.COMPLETED);
+          
+          // Check if build is completed after updating step status
+          if (buildCompleted) {
+            return;
+          }
+        }
+        return;
+      }
+      
+      // Handle errors
+      if (message.includes('@@[error]') && currentActiveStep) {
+        const state = stepStates.get(currentActiveStep);
+        if (state) {
+          state.hasErrors = true;
+          writePersistentLog(chalk.red(`${message.replace('@@[error]', '').trim()}`));
+        }
+        return;
+      }
+      
+      // Handle commands
+      if (message.includes('@@[command]') && currentActiveStep) {
+        writePersistentLog(chalk.cyan(`@@[command] ${message.replace('@@[command]', '').trim()}`));
+        return;
+      }
+      
+      // Handle regular messages for current step
+      if (message.trim() && currentActiveStep && !message.includes('@@[section')) {
+        // Skip uiOnly messages that are just duplicates
+        if (uiOnly) {
+          return;
+        }
+        
+        // Process multi-line messages (split by \n and show each line)
+        const lines = message.split('\n').filter((line: string) => line.trim());
+        for (const line of lines) {
+          if (line.trim()) {
+            let formattedMessage = line.trim();
+            
+            // Color URLs
+            formattedMessage = formattedMessage.replace(
+              /(https?:\/\/[^\s]+)/g, 
+              chalk.blue('$1')
+            );
+            
+            writePersistentLog(formattedMessage);
+          }
+        }
+      }
+    },
+    
+    setEphemeralStatus(status: string): void {
+      writeEphemeralStatus(chalk.gray(status));
+    },
+    
+    clearEphemeralStatus(): void {
+      clearEphemeralStatus();
+    },
+    
+    finish(): void {
+      clearEphemeralStatus();
+    },
+    
+    setCompletionCallback(callback: () => void): void {
+      completionCallback = callback;
+    },
+    
+    isBuildCompleted(): boolean {
+      return buildCompleted;
+    },
+    
+    setSSEConnection(connection: any): void {
+      sseConnection = connection;
+    }
+  };
+}
 
 /**
  * Prompts the user for a file path with a default value
@@ -894,6 +1202,11 @@ export const downloadBuildLogsWithSpinner = async (commitId: string, buildId: st
 };
 
 export const promptForDownloadActions = async (finalStatusResponse: any, latestBuildId: string | null, params: any, defaultDownloadDir: string, downloadArtifact: Function, downloadBuildLogs: Function, responseData: any) => {
+  // Ensure SSE connection is closed before showing the prompt
+  if (params.sseConnection && params.sseConnection.close) {
+    params.sseConnection.close();
+  }
+  
   console.log(chalk.cyan('\nWhat would you like to do next?'));
   
   try {
@@ -3011,6 +3324,13 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
   }
 
   if (command.fullCommandName === `${PROGRAM_NAME}-build-start`) {
+    // Declare monitoring variables at top scope for entire build command
+    let sseConnection: any = null;
+    let logProcessor: any = null;
+    let renderer: any = null;
+    let progressTracker: any = null;
+    let monitoringContext: any = null;
+    
     // Use extracted validation function
     const validation = validateBuildStartParameters(params, command.fullCommandName);
     if (!validation.isValid) {
@@ -3028,7 +3348,6 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     
     // Show execution mode selection only for interactive runs
     if (!isNonInteractive) {
-      console.log('\n' + chalk.cyan('Build parameters validated successfully!'));
       const modeSelection = await selectBuildExecutionMode();
       
       if (modeSelection.cancelled) {
@@ -3061,7 +3380,60 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       }
     }
     
-    // For Normal and Detailed Monitoring modes, start the build
+    // For Detailed Monitoring mode, setup SSE BEFORE starting build
+    if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
+      try {
+        // Step 1: Setup SSE connection BEFORE build starts
+        const accessToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
+        const { sub: userId, currentOrganizationId: organizationId } = resolveIdentityFromToken(accessToken);
+        const hookToken = await getHookAccessToken(accessToken);
+        const hookHostname = readEnviromentConfigVariable(EnvironmentVariables.HOOK_HOSTNAME);
+        
+        sseConnection = await openHookSSE({
+          hookHostname,
+          userId,
+          organizationId,
+          token: hookToken
+        });
+        
+        console.log(chalk.green(`✓ SSE connection established with browserId: ${sseConnection.browserId}`));
+        
+        // Step 2: Initialize monitoring components
+        const { LogProcessor } = await import('../utils/LogProcessor');
+        const { TerminalRenderer } = await import('../utils/TerminalRenderer');
+        const { ProgressTracker } = await import('../utils/ProgressTracker');
+        
+        const buildLogOptions = {
+          timestamps: false,
+          noColor: getConsoleOutputType() === 'json',
+          enableProgress: process.stdout.isTTY
+        };
+        
+        renderer = new TerminalRenderer(buildLogOptions);
+        progressTracker = new ProgressTracker(buildLogOptions.enableProgress);
+        logProcessor = new LogProcessor((message) => {
+          if (progressTracker) progressTracker.updateProgress(message);
+          if (renderer) {
+            const formattedMessage = renderer.renderMessage(message);
+            console.log(formattedMessage);
+          }
+        });
+        
+        // Store context for later trigger call
+        monitoringContext = {
+          accessToken,
+          userId,
+          organizationId,
+          hookHostname,
+          browserId: sseConnection.browserId
+        };
+      } catch (error: any) {
+        console.error(chalk.red(`❌ Failed to setup enhanced monitoring: ${error.message}`));
+        // Continue with normal build
+      }
+    }
+    
+    // Now start the build
     const spinner = createOra(`Starting Build...`).start();
     try {
       const responseData = await startBuild(params);
@@ -3101,7 +3473,101 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         // Show different messages based on execution mode
         if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
           spinner.succeed(`Build successfully added to queue with detailed monitoring enabled.\n\nTaskId: ${responseData.taskId}`);
-          console.log(chalk.yellow('🔍 Enhanced monitoring active - detailed logs will be shown during build process.'));
+          
+          // NOW trigger build logs streaming - SSE connection is already ready
+          if (monitoringContext && sseConnection) {
+            const taskId = responseData.taskId || responseData.queueItemId;
+            try {
+              await triggerBuildLogsStreaming({
+                apiHostname: readEnviromentConfigVariable(EnvironmentVariables.API_HOSTNAME),
+                hookHostname: monitoringContext.hookHostname,
+                accessToken: monitoringContext.accessToken,
+                taskId,
+                browserId: monitoringContext.browserId,
+                userId: monitoringContext.userId,
+                organizationId: monitoringContext.organizationId
+              });
+              
+              // Setup clean terminal formatter
+              const terminalFormatter = createCleanTerminalFormatter();
+              let buildLogReceived = false;
+              const buildStartTime = Date.now();
+              
+              // Give formatter access to SSE connection for immediate closure
+              terminalFormatter.setSSEConnection(sseConnection);
+              
+              // Set completion callback to handle build completion
+              terminalFormatter.setCompletionCallback(async () => {
+                console.log(chalk.green('\n🎉 Build completed! Finalizing logs...'));
+                
+                // Show build summary immediately (SSE already closed by formatter)
+                const totalDuration = Math.round((Date.now() - buildStartTime) / 1000);
+                console.log(chalk.cyan('\n📊 Build Summary:'));
+                console.log(chalk.gray(`   Task ID: ${taskId}`));
+                console.log(chalk.gray(`   Duration: ${totalDuration}s`));
+                console.log(chalk.green('   Status: ✓ Completed Successfully'));
+                
+                // Call stop endpoint asynchronously (non-blocking)
+                triggerStopBuildLogsStreaming({
+                  hookHostname: monitoringContext.hookHostname,
+                  accessToken: monitoringContext.accessToken,
+                  taskId,
+                  browserId: monitoringContext.browserId,
+                  userId: monitoringContext.userId,
+                  organizationId: monitoringContext.organizationId
+                }).catch((error: any) => {
+                  console.error(chalk.yellow(`⚠️ Warning during cleanup: ${error.message}`));
+                });
+              });
+              
+              // Show initial ephemeral status
+              terminalFormatter.setEphemeralStatus('⏳ Connecting to build logs...');
+              
+              sseConnection.onMessage((data: string) => {
+                try {
+                  // Parse the build-log event data
+                  const parsed = JSON.parse(data);
+                  const buildLogEvents = Array.isArray(parsed) ? parsed : [parsed];
+                  
+                  for (const buildLogEvent of buildLogEvents) {
+                    if (!buildLogReceived) {
+                      terminalFormatter.clearEphemeralStatus();
+                      console.log(chalk.green('✓ Build logs started streaming!'));
+                      console.log(''); // Empty line for better separation
+                      buildLogReceived = true;
+                    }
+                    
+                    // Process message with clean formatter
+                    terminalFormatter.processMessage(buildLogEvent);
+                    
+                    // Process the build log event through our processors
+                    if (logProcessor) {
+                      logProcessor.processMessage(buildLogEvent);
+                    }
+                  }
+                } catch (error: any) {
+                  terminalFormatter.clearEphemeralStatus();
+                  console.error(chalk.red('Error parsing build log data:'), error.message);
+                }
+              });
+              
+              sseConnection.onClose(() => {
+                terminalFormatter.clearEphemeralStatus();
+                if (progressTracker) {
+                  const stats = progressTracker.getBuildStats();
+                  if (renderer) renderer.renderSummary(stats);
+                  progressTracker.stop();
+                }
+                terminalFormatter.finish();
+              });
+              
+            } catch (triggerError: any) {
+              console.error(chalk.red(`❌ Failed to trigger build logs: ${triggerError.message}`));
+              console.log(chalk.yellow('Continuing with standard monitoring...'));
+            }
+          } else {
+            console.log(chalk.red(`❌ SSE connection not ready for detailed monitoring`));
+          }
         } else {
           spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
         }
@@ -3112,29 +3578,21 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
 
       
 
-      const progressSpinner = createProgressSpinner(`Checking Build Status...`);
-      let dots = "";
+      // Only create progress spinner for non-detailed monitoring modes
+      let progressSpinner: any = null;
+      let interval: NodeJS.Timeout | null = null;
       const startTime = Date.now();
       
-      // Enhanced monitoring for detailed mode
-      if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
-        console.log(chalk.cyan('\n📊 Detailed Monitoring Mode Active'));
-        console.log(chalk.gray('- Enhanced log collection enabled'));
-        console.log(chalk.gray('- Real-time build status updates'));
-        console.log(chalk.gray('- Detailed error reporting\n'));
-      }
-      
-      const interval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
-        dots = dots.length >= 3 ? "" : dots + ".";
-        const elapsedText = formatElapsedTime(startTime);
+      if (executionMode !== BuildExecutionMode.DETAILED_MONITORING) {
+        progressSpinner = createProgressSpinner(`Checking Build Status...`);
+        let dots = "";
         
-        // Different progress messages for detailed monitoring
-        if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
-          progressSpinner.text = chalk.yellow(`Build Running with Enhanced Monitoring${dots} (${elapsedText})`);
-        } else {
+        interval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
+          dots = dots.length >= 3 ? "" : dots + ".";
+          const elapsedText = formatElapsedTime(startTime);
           progressSpinner.text = chalk.yellow(`Build Running${dots} (${elapsedText})`);
-        }
-      }, 500);
+        }, 500);
+      }
       
       try {
         const taskId = responseData.queueItemId;
@@ -3143,20 +3601,27 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         const monitoringResult = await monitorBuildProgress(taskId, params, getBuildStatusFromQueue, getLatestBuildId);
         const { buildCompleted, buildSuccess, finalStatusResponse, latestBuildId, timedOut } = monitoringResult;
         
-        // Update spinner with status messages during monitoring
-        const monitoringInterval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
-          if (finalStatusResponse) {
-            const elapsedText = formatElapsedTime(startTime);
-            const hasWarning = finalStatusResponse.hasWarning === true;
-            updateBuildStatusMessage(finalStatusResponse.buildStatus, elapsedText, progressSpinner, hasWarning);
-          }
-        }, 500);
+        // Update spinner with status messages during monitoring (only for non-detailed mode)
+        let monitoringInterval: NodeJS.Timeout | null = null;
+        if (executionMode !== BuildExecutionMode.DETAILED_MONITORING) {
+          monitoringInterval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
+            if (finalStatusResponse) {
+              const elapsedText = formatElapsedTime(startTime);
+              const hasWarning = finalStatusResponse.hasWarning === true;
+              updateBuildStatusMessage(finalStatusResponse.buildStatus, elapsedText, progressSpinner, hasWarning);
+            }
+          }, 500);
+        }
         
         if (monitoringInterval) clearInterval(monitoringInterval);
         if (interval) clearInterval(interval);
         
         if (timedOut) {
-          progressSpinner.fail(chalk.red(`Build monitoring timed out after ${300 * 3} seconds.`));
+          if (progressSpinner) {
+            progressSpinner.fail(chalk.red(`Build monitoring timed out after ${300 * 3} seconds.`));
+          } else {
+            console.error(chalk.red(`Build monitoring timed out after ${300 * 3} seconds.`));
+          }
           throw new AppcircleExitError('Build monitoring timed out', 1);
         }
 
@@ -3165,14 +3630,27 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             try {
               const hasWarning = finalStatusResponse && finalStatusResponse.hasWarning === true;
               const elapsedText = formatElapsedTime(startTime);
-              if (hasWarning) {
-                progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️ - Total time: ${elapsedText}`);
-                progressSpinner.succeed();
+              if (progressSpinner) {
+                if (hasWarning) {
+                  progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️ - Total time: ${elapsedText}`);
+                  progressSpinner.succeed();
+                } else {
+                  progressSpinner.succeed(`Build completed successfully ✅ - Total time: ${elapsedText}`);
+                }
               } else {
-                progressSpinner.succeed(`Build completed successfully ✅ - Total time: ${elapsedText}`);
+                // For detailed monitoring mode, show completion message directly
+                if (hasWarning) {
+                  console.log(chalk.hex('#FFA500')(`✔ Build completed with warnings ⚠️ - Total time: ${elapsedText}`));
+                } else {
+                  console.log(chalk.green(`✔ Build completed successfully ✅ - Total time: ${elapsedText}`));
+                }
               }
             } catch (e) {
-              progressSpinner.succeed(`Build completed successfully ✅`);
+              if (progressSpinner) {
+                progressSpinner.succeed(`Build completed successfully ✅`);
+              } else {
+                console.log(chalk.green(`✔ Build completed successfully ✅`));
+              }
             }
             
             const homeDir = os.homedir();
@@ -3243,6 +3721,12 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
               }
               throw new AppcircleExitError('Build completed', 0);
             }
+            
+            // For detailed monitoring mode, we still show the prompt but handle it differently
+            // Ensure SSE connection is closed before showing the prompt
+            if (sseConnection && sseConnection.close) {
+              sseConnection.close();
+            }
                 
             console.log(chalk.cyan('\nWhat would you like to do next?'));
              
@@ -3308,6 +3792,12 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     await downloadBuildLogs(responseData.queueItemId, buildLogPath);
                   }
                   console.log(chalk.green('Build completed successfully with logs downloaded.'));
+                  
+                  // For detailed monitoring mode, exit immediately after log download
+                  if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
+                    throw new AppcircleExitError('', 0);
+                  }
+                  
                   throw new AppcircleExitError('', 0);
                 } catch (error: any) {
                   if (error instanceof AppcircleExitError) {
@@ -3325,6 +3815,11 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                 }
               } else {
                 console.log(chalk.gray('Build completed successfully.'));
+                
+                // For detailed monitoring mode, exit immediately after continue
+                if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
+                  throw new AppcircleExitError('', 0);
+                }
               }
               throw new AppcircleExitError('Build completed', 0);
             } catch (err) {
@@ -3340,24 +3835,48 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                 finalStatusResponse.buildStatus : null;
               
               if (buildStatus === null || buildStatus === undefined) {
-                progressSpinner.fail(chalk.red(`Build completed but status information is unavailable.`));
+                if (progressSpinner) {
+                  progressSpinner.fail(chalk.red(`Build completed but status information is unavailable.`));
+                } else {
+                  console.log(chalk.red(`✗ Build completed but status information is unavailable.`));
+                }
               } else {
                 switch (buildStatus) {
                   case 1: // FAILED
-                    progressSpinner.fail(chalk.red(`Build completed, but failed.`));
+                    if (progressSpinner) {
+                      progressSpinner.fail(chalk.red(`Build completed, but failed.`));
+                    } else {
+                      console.log(chalk.red(`✗ Build completed, but failed.`));
+                    }
                     break;
                   case 2: // CANCELED
-                    progressSpinner.fail(chalk.hex('#FF8C32')(`Build was canceled.`));
+                    if (progressSpinner) {
+                      progressSpinner.fail(chalk.hex('#FF8C32')(`Build was canceled.`));
+                    } else {
+                      console.log(chalk.hex('#FF8C32')(`✗ Build was canceled.`));
+                    }
                     break;
                   case 3: // TIMEOUT
-                    progressSpinner.fail(chalk.red(`Build timed out.`));
+                    if (progressSpinner) {
+                      progressSpinner.fail(chalk.red(`Build timed out.`));
+                    } else {
+                      console.log(chalk.red(`✗ Build timed out.`));
+                    }
                     break;
                   default:
-                    progressSpinner.fail(chalk.red(`Build completed with status code: ${buildStatus}.`));
+                    if (progressSpinner) {
+                      progressSpinner.fail(chalk.red(`Build completed with status code: ${buildStatus}.`));
+                    } else {
+                      console.log(chalk.red(`✗ Build completed with status code: ${buildStatus}.`));
+                    }
                 }
               }
             } catch (e) {
-              progressSpinner.fail(chalk.red(`Build completed unsuccessfully.`));
+              if (progressSpinner) {
+                progressSpinner.fail(chalk.red(`Build completed unsuccessfully.`));
+              } else {
+                console.log(chalk.red(`✗ Build completed unsuccessfully.`));
+              }
             }
             
             // Skip interactive prompt for JSON output mode
