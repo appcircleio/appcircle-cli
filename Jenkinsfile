@@ -4,8 +4,43 @@ pipeline {
         NPM_AUTH_TOKEN = credentials('Appcircle-CLI-NPM-Cred')
     }
     stages {
+        stage('PR Validation') {
+            when {
+                changeRequest()
+            }
+            steps {
+                sh '''#!/bin/bash
+                # shellcheck shell=bash
+                set -x
+                set -euo pipefail
+                
+                echo "Building Docker image for PR validation..."
+                docker image build -t ac-cli-pr .
+                
+                echo "Running unit tests with coverage..."
+                testStatus=0
+                if ! docker run --rm ac-cli-pr sh -c "npm test"; then
+                    echo "Unit tests failed or coverage threshold not met"
+                    testStatus=1
+                fi
+                
+                echo "Cleaning up Docker image..."
+                docker image rm ac-cli-pr
+                
+                if [ $testStatus -eq 1 ]; then
+                    echo "PR validation failed - tests must pass and coverage must be >= 75%"
+                    exit 1
+                fi
+                
+                echo "PR validation passed - all tests pass and coverage >= 75%"
+                '''
+            }
+        }
 
         stage('Publish') {
+            when {
+                not { changeRequest() }
+            }
             steps {
                 sh '''#!/bin/bash
                 # shellcheck shell=bash
