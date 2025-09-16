@@ -17,7 +17,7 @@ pipeline {
                 echo "🔨 Starting PR Validation Pipeline 🔨"
                 echo "=================================="
                 
-                echo "📦 Installing dependencies..."
+                echo "📦 Installing dependencies.. ."
                 yarn install
                 
                 echo "⚙️  Running TypeScript compilation..."
