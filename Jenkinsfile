@@ -40,6 +40,9 @@ pipeline {
                 # shellcheck shell=bash
                 set -x
                 set -euo pipefail
+                # Ensure all tags are available
+                git fetch --tags --force
+
                 tag=$(git describe --tags --abbrev=0)
                 echo "Tag: ${tag}"
 
