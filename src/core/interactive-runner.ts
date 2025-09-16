@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import moment from 'moment';
 //@ts-ignore https://github.com/enquirer/enquirer/issues/212
-import { prompt, Select, AutoComplete, BooleanPrompt, Input } from 'enquirer';
+import { prompt, Select, AutoComplete, BooleanPrompt, Input, Editor } from 'enquirer';
 import { runCommand } from './command-runner';
 import { Commands, CommandParameterTypes, CommandType } from './commands';
 import { APPCIRCLE_COLOR, OperatingSystems, UNKNOWN_PARAM_VALUE } from '../constant';
@@ -45,6 +45,52 @@ import os from 'os';
 import minimist from 'minimist';
 import { AppcircleExitError } from './AppcircleExitError';
 
+// Simple multiline input using readline for copy-paste support
+import * as readline from 'readline';
+
+const getSimpleMultilineInput = async (message: string): Promise<string> => {
+  console.log(chalk.cyan('?'), message);
+
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      terminal: true
+    });
+
+    let lines: string[] = [];
+    let emptyLineCount = 0;
+
+    const onLine = (line: string) => {
+      if (line.trim() === '') {
+        emptyLineCount++;
+        if (emptyLineCount >= 2) {
+          // Two empty lines = finish
+          rl.close();
+          resolve(lines.join('\n').trim());
+          return;
+        }
+      } else {
+        emptyLineCount = 0;
+      }
+
+      lines.push(line);
+    };
+
+    rl.on('line', onLine);
+    rl.on('close', () => {
+      resolve(lines.join('\n').trim());
+    });
+
+    // Handle Ctrl+C gracefully
+    rl.on('SIGINT', () => {
+      console.log('\nInput cancelled.');
+      rl.close();
+      resolve('');
+    });
+  });
+};
+
 interface NavigationState {
   command: CommandType;
   preparedCommand?: ProgramCommand;
@@ -79,12 +125,24 @@ export const validateFilePathForParam = (value: string, paramName: string): stri
   return true;
 };
 
-export const createParameterPromptConfig = (param: any) => ({
-  type: param.type,
-  name: param.name,
-  message: param.description,
-  validate: (value: string) => validateFilePathForParam(value, param.name),
-});
+export const createParameterPromptConfig = (param: any) => {
+  const config: any = {
+    type: param.type,
+    name: param.name,
+    message: param.description,
+    validate: (value: string) => validateFilePathForParam(value, param.name),
+  };
+
+  // Special handling for release notes - use simple multiline input
+  if (param.name === 'message' && param.description && param.description.toLowerCase().includes('release notes')) {
+    config.isSimpleMultilineInput = true;
+    config.message = param.description;
+    config.required = param.required;
+    config.validate = undefined; // Remove file path validation
+  }
+
+  return config;
+};
 
 export const processParameterValue = (paramName: string, value: any): any => {
   if (paramName === 'filePath') {
@@ -495,10 +553,17 @@ const handleInteractiveParamsOrArguments = async (
           };
         }
         
-        const stringPrompt = await prompt([promptConfig]);
-        let value = (stringPrompt as any)[Object.keys(stringPrompt)[0]];
-        value = processParameterValue(param.name, value);
-        (params as any)[param.name] = value;
+        // Special handling for simple multiline release notes input
+        if ((promptConfig as any).isSimpleMultilineInput) {
+          let value = await getSimpleMultilineInput(promptConfig.message);
+          value = processParameterValue(param.name, value);
+          (params as any)[param.name] = value;
+        } else {
+          const stringPrompt = await prompt([promptConfig]);
+          let value = (stringPrompt as any)[Object.keys(stringPrompt)[0]];
+          value = processParameterValue(param.name, value);
+          (params as any)[param.name] = value;
+        }
       } else if (param.type === CommandParameterTypes.BOOLEAN) {
         // Skip boolean prompts for parameters that should be skipped in interactive mode
         if (param.skipForInteractiveMode) {
@@ -1983,8 +2048,26 @@ export const handleAuthenticationSubMenu = async (
   if (authSelected === '1. Login') {
     const currentToken = readToken();
     if (currentToken) {
-      console.error('You are already logged in. Use "Logout" to logout first.');
-      return { shouldShowMainMenuAgain: true };
+      // Validate if the current token is still valid
+      try {
+        const { validateCurrentTokenIsValid } = await import('./command-runner');
+        const isTokenValid = await validateCurrentTokenIsValid();
+
+        if (isTokenValid) {
+          // Token is still valid, show already logged in message
+          console.error('You are already logged in. Use "Logout" to logout first.');
+          return { shouldShowMainMenuAgain: true };
+        } else {
+          // Token is expired/invalid, clear it and proceed with new login
+          console.log('Current token is expired or invalid. Clearing stored token and proceeding with new login...');
+          const { clearStoredToken } = await import('./command-runner');
+          clearStoredToken();
+        }
+      } catch (error) {
+        // If token validation fails due to network issues, assume token is valid
+        console.error('You are already logged in. Use "Logout" to logout first.');
+        return { shouldShowMainMenuAgain: true };
+      }
     }
     return { selectedCommand: findCommand('login') };
   } else if (authSelected === '2. Logout') {

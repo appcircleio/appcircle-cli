@@ -4,13 +4,55 @@ pipeline {
         NPM_AUTH_TOKEN = credentials('Appcircle-CLI-NPM-Cred')
     }
     stages {
-
-        stage('Publish') {
+        stage('PR Validation') {
+            when {
+                changeRequest()
+            }
             steps {
                 sh '''#!/bin/bash
                 # shellcheck shell=bash
                 set -x
                 set -euo pipefail
+                
+                node --version
+                
+                echo "🔨 Starting PR Validation Pipeline 🔨"
+                echo "=================================="
+                
+                echo "📦 Installing dependencies.. ."
+                yarn install
+                
+                echo "⚙️  Running TypeScript compilation..."
+                if ! npm run build; then
+                    echo "❌ TypeScript compilation failed! 😢"
+                    exit 1
+                fi
+                echo "✅ TypeScript compilation successful! 🎉"
+                
+                echo "🧪 Running unit tests..."
+                if ! npm test; then
+                    echo "❌ Unit tests failed! 💔"
+                    exit 1
+                fi
+                echo "✅ Unit tests passed! 🌟"
+                
+                echo "=================================="
+                echo "🎯 PR validation complete - All checks passed! 🚀"
+                '''
+            }
+        }
+
+        stage('Publish') {
+            when {
+                not { changeRequest() }
+            }
+            steps {
+                sh '''#!/bin/bash
+                # shellcheck shell=bash
+                set -x
+                set -euo pipefail
+                
+                git fetch --tags --force
                 tag=$(git describe --tags --abbrev=0)
                 echo "Tag: ${tag}"
 

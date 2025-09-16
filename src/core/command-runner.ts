@@ -142,6 +142,7 @@ import {
   commitEnterpriseFileUpload,
   updateTestingDistributionReleaseNotes,
   getLatestAppVersionId,
+  getLatestAppVersionIdAfterUpload,
   getBuildStatusFromQueue,
   downloadTaskLog,
   createSubOrganization,
@@ -501,6 +502,23 @@ export const checkIfUserAlreadyLoggedIn = (): boolean => {
   });
 };
 
+// Helper function to validate if current token is still valid
+export const validateCurrentTokenIsValid = async (): Promise<boolean> => {
+  try {
+    // Use a simple API call to test token validity
+    const { getBuildProfiles } = await import('../services');
+    await getBuildProfiles();
+    return true;
+  } catch (error: any) {
+    // If we get a 401 error, token is expired/invalid
+    if (error.response?.status === 401) {
+      return false;
+    }
+    // For other errors, assume token is valid but there's a network/server issue
+    return true;
+  }
+};
+
 // Helper function to handle already logged in case
 export const handleAlreadyLoggedIn = (): void => {
   console.error('You are already logged in. Use "logout" to logout first.');
@@ -571,8 +589,18 @@ export const handleUnknownLoginCommand = (command: ProgramCommand): void => {
 const handleLoginCommand = async (command: ProgramCommand, params: any) => {
   // Check if user is already logged in
   if (checkIfUserAlreadyLoggedIn()) {
-    handleAlreadyLoggedIn();
-    return;
+    // Validate if the current token is still valid
+    const isTokenValid = await validateCurrentTokenIsValid();
+
+    if (isTokenValid) {
+      // Token is still valid, show already logged in message
+      handleAlreadyLoggedIn();
+      return;
+    } else {
+      // Token is expired/invalid, clear it and proceed with new login
+      console.log('Current token is expired or invalid. Clearing stored token and proceeding with new login...');
+      clearStoredToken();
+    }
   }
 
   if (command.fullCommandName === `${PROGRAM_NAME}-login-pat`) {
@@ -1438,7 +1466,33 @@ export const handleEnterpriseVersionList = async (command: ProgramCommand, param
 };
 
 export const handleEnterpriseVersionPublish = async (command: ProgramCommand, params: any) => {
-  const responseData = await publishEnterpriseAppVersion(params);
+  // Validate required parameters
+  if (!params.entProfileId) {
+    throw new Error('Enterprise Profile ID (--entProfileId) is required');
+  }
+  if (!params.entVersionId) {
+    throw new Error('Enterprise Version ID (--entVersionId) is required');
+  }
+  if (!params.summary) {
+    throw new Error('Summary (--summary) is required');
+  }
+  if (!params.releaseNotes) {
+    throw new Error('Release Notes (--releaseNotes) is required');
+  }
+  if (!params.publishType) {
+    throw new Error('Publish Type (--publishType) is required');
+  }
+
+  // Map parameters correctly
+  const publishParams = {
+    entProfileId: params.entProfileId,
+    entVersionId: params.entVersionId,
+    summary: params.summary,
+    releaseNotes: params.releaseNotes,
+    publishType: params.publishType
+  };
+
+  const responseData = await publishEnterpriseAppVersion(publishParams);
   commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
     fullCommandName: command.fullCommandName,
     data: responseData,
@@ -1713,17 +1767,86 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
     try {
       await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
       const commitFileResponse = await commitTestingDistributionFileUpload({
-        fileId: uploadResponse.fileId, 
+        fileId: uploadResponse.fileId,
         fileName,
-        distProfileId: params.distProfileId, 
-        releaseNote: params.message
+        distProfileId: params.distProfileId
       });
-      
+
+      // Update release notes if message is provided
+      if (params.message) {
+        spinner.text = 'Upload completed. Updating release notes...';
+
+        // First, try to get version ID directly from commitFileResponse
+        let versionIdToUpdate = null;
+
+        // Check various possible fields in the response that might contain the version ID
+        if (commitFileResponse.versionId) {
+          versionIdToUpdate = commitFileResponse.versionId;
+        } else if (commitFileResponse.id) {
+          versionIdToUpdate = commitFileResponse.id;
+        } else if (commitFileResponse.appVersionId) {
+          versionIdToUpdate = commitFileResponse.appVersionId;
+        }
+
+        // If we couldn't get version ID from response, use the specialized function for post-upload scenarios
+        if (!versionIdToUpdate) {
+          spinner.text = 'Searching for uploaded app version...';
+
+          try {
+            versionIdToUpdate = await getLatestAppVersionIdAfterUpload({
+              distProfileId: params.distProfileId,
+              expectedFileSize: stats.size,
+              fileName: fileName
+            });
+          } catch (error: any) {
+            console.warn('Could not retrieve version ID using enhanced method, falling back to basic method');
+          }
+
+          // Final fallback to the basic method if enhanced method fails
+          if (!versionIdToUpdate) {
+            let attempts = 0;
+            const maxAttempts = 3;
+            const retryDelay = 2000; // 2 seconds
+
+            while (!versionIdToUpdate && attempts < maxAttempts) {
+              attempts++;
+              spinner.text = `Getting version ID (fallback attempt ${attempts}/${maxAttempts})...`;
+
+              if (attempts > 1) {
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+              }
+
+              try {
+                versionIdToUpdate = await getLatestAppVersionId({
+                  distProfileId: params.distProfileId
+                });
+              } catch (error: any) {
+                // Retry silently
+              }
+            }
+          }
+        }
+
+        if (versionIdToUpdate) {
+          spinner.text = 'Version ID found. Updating release notes...';
+          await updateTestingDistributionReleaseNotes({
+            distProfileId: params.distProfileId,
+            versionId: versionIdToUpdate,
+            message: params.message
+          });
+          spinner.text = `App uploaded and release notes updated successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+        } else {
+          spinner.text = `App uploaded successfully but could not update release notes.\n\nTaskId: ${commitFileResponse.taskId}`;
+          console.warn('Warning: Could not retrieve version ID to update release notes. The app was uploaded successfully.');
+        }
+      } else {
+        spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+      }
+
       commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
         fullCommandName: command.fullCommandName,
         data: commitFileResponse,
       });
-      spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
       spinner.succeed();
     } catch (uploadError: any) {
       handleUploadError(uploadError, spinner);

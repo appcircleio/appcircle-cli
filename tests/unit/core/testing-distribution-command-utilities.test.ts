@@ -391,8 +391,7 @@ describe('Testing Distribution Command Utilities', () => {
       expect(commitTestingDistributionFileUpload).toHaveBeenCalledWith({
         fileId: 'file-123',
         fileName: 'app.ipa',
-        distProfileId: 'profile-123',
-        releaseNote: 'Release notes'
+        distProfileId: 'profile-123'
       });
       expect(mockSpinner.succeed).toHaveBeenCalled();
     });
