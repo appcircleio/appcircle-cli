@@ -14,19 +14,30 @@ pipeline {
                 set -x
                 set -euo pipefail
                 
-                echo "Running TypeScript compilation..."
+                node --version
+                
+                echo "🔨 Starting PR Validation Pipeline 🔨"
+                echo "=================================="
+                
+                echo "📦 Installing dependencies.. ."
+                yarn install
+                
+                echo "⚙️  Running TypeScript compilation..."
                 if ! npm run build; then
-                    echo "TypeScript compilation failed"
+                    echo "❌ TypeScript compilation failed! 😢"
                     exit 1
                 fi
+                echo "✅ TypeScript compilation successful! 🎉"
                 
-                echo "Running unit tests..."
+                echo "🧪 Running unit tests..."
                 if ! npm test; then
-                    echo "Unit tests failed"
+                    echo "❌ Unit tests failed! 💔"
                     exit 1
                 fi
+                echo "✅ Unit tests passed! 🌟"
                 
-                echo "PR validation passed - compilation and tests successful"
+                echo "=================================="
+                echo "🎯 PR validation complete - All checks passed! 🚀"
                 '''
             }
         }
@@ -40,9 +51,8 @@ pipeline {
                 # shellcheck shell=bash
                 set -x
                 set -euo pipefail
-                # Ensure all tags are available
+                
                 git fetch --tags --force
-
                 tag=$(git describe --tags --abbrev=0)
                 echo "Tag: ${tag}"
 
