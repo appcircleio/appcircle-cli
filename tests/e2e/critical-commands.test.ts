@@ -95,9 +95,72 @@ describe('Critical Command E2E Tests', () => {
     });
     it('should handle invalid command gracefully', async () => {
       const result = await runCommand(['invalid-command-xyz']);
-      
+
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain('command');
+    });
+
+    it('should handle invalid PAT token gracefully', async () => {
+      const result = await runCommand(['login', 'pat', '--token', 'invalid-token-123']);
+
+      // Should fail with authentication error
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr.length).toBeGreaterThan(0);
+    });
+
+    it('should validate login command with missing token parameter', async () => {
+      const result = await runCommand(['login', 'pat', '--token']);
+
+      // Should fail when token parameter is provided but empty
+      expect(result.exitCode).not.toBe(0);
+    });
+
+    it('should handle login with empty token string', async () => {
+      const result = await runCommand(['login', 'pat', '--token', '']);
+
+      // Should fail with empty token
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr).toContain('Invalid PAT format provided');
+    });
+
+    it('should handle logout when already logged out multiple times', async () => {
+      // Ensure clean state
+      if (existsSync(tempConfigFile)) {
+        unlinkSync(tempConfigFile);
+      }
+
+      // Try logout twice - both should fail gracefully
+      const result1 = await runCommand(['logout']);
+      expect(result1.exitCode).toBeGreaterThan(0);
+      expect(result1.stderr).toContain('You are not currently logged in');
+
+      const result2 = await runCommand(['logout']);
+      expect(result2.exitCode).toBeGreaterThan(0);
+      expect(result2.stderr).toContain('You are not currently logged in');
+    });
+
+    it('should handle login command with invalid subcommand', async () => {
+      const result = await runCommand(['login', 'invalid-method']);
+
+      // Should fail with invalid subcommand
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr).toContain('command');
+    });
+
+    it('should handle logout command consistency', async () => {
+      // Ensure clean state
+      if (existsSync(tempConfigFile)) {
+        unlinkSync(tempConfigFile);
+      }
+
+      // Test logout behavior consistency
+      const result1 = await runCommand(['logout']);
+      const result2 = await runCommand(['logout']);
+
+      // Both should fail with the same error and exit code
+      expect(result1.exitCode).toBe(result2.exitCode);
+      expect(result1.stderr).toBe(result2.stderr);
+      expect(result1.stderr).toContain('You are not currently logged in');
     });
   });
   describe('⚙️ Configuration Commands', () => {
