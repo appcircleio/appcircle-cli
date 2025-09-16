@@ -191,6 +191,23 @@ export const checkIfUserAlreadyLoggedIn = (): boolean => {
   });
 };
 
+// Helper function to validate if current token is still valid
+export const validateCurrentTokenIsValid = async (): Promise<boolean> => {
+  try {
+    // Use a simple API call to test token validity
+    const { getBuildProfiles } = await import('../services');
+    await getBuildProfiles();
+    return true;
+  } catch (error: any) {
+    // If we get a 401 error, token is expired/invalid
+    if (error.response?.status === 401) {
+      return false;
+    }
+    // For other errors, assume token is valid but there's a network/server issue
+    return true;
+  }
+};
+
 // Helper function to handle already logged in case
 export const handleAlreadyLoggedIn = (): void => {
   console.error('You are already logged in. Use "logout" to logout first.');
@@ -261,8 +278,18 @@ export const handleUnknownLoginCommand = (command: ProgramCommand): void => {
 const handleLoginCommand = async (command: ProgramCommand, params: any) => {
   // Check if user is already logged in
   if (checkIfUserAlreadyLoggedIn()) {
-    handleAlreadyLoggedIn();
-    return;
+    // Validate if the current token is still valid
+    const isTokenValid = await validateCurrentTokenIsValid();
+
+    if (isTokenValid) {
+      // Token is still valid, show already logged in message
+      handleAlreadyLoggedIn();
+      return;
+    } else {
+      // Token is expired/invalid, clear it and proceed with new login
+      console.log('Current token is expired or invalid. Clearing stored token and proceeding with new login...');
+      clearStoredToken();
+    }
   }
 
   if (command.fullCommandName === `${PROGRAM_NAME}-login-pat`) {

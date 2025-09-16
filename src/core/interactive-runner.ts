@@ -1983,8 +1983,26 @@ export const handleAuthenticationSubMenu = async (
   if (authSelected === '1. Login') {
     const currentToken = readToken();
     if (currentToken) {
-      console.error('You are already logged in. Use "Logout" to logout first.');
-      return { shouldShowMainMenuAgain: true };
+      // Validate if the current token is still valid
+      try {
+        const { validateCurrentTokenIsValid } = await import('./command-runner');
+        const isTokenValid = await validateCurrentTokenIsValid();
+
+        if (isTokenValid) {
+          // Token is still valid, show already logged in message
+          console.error('You are already logged in. Use "Logout" to logout first.');
+          return { shouldShowMainMenuAgain: true };
+        } else {
+          // Token is expired/invalid, clear it and proceed with new login
+          console.log('Current token is expired or invalid. Clearing stored token and proceeding with new login...');
+          const { clearStoredToken } = await import('./command-runner');
+          clearStoredToken();
+        }
+      } catch (error) {
+        // If token validation fails due to network issues, assume token is valid
+        console.error('You are already logged in. Use "Logout" to logout first.');
+        return { shouldShowMainMenuAgain: true };
+      }
     }
     return { selectedCommand: findCommand('login') };
   } else if (authSelected === '2. Logout') {
