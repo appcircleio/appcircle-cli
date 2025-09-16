@@ -18,7 +18,7 @@ pipeline {
                 echo "=================================="
                 
                 echo "📦 Installing dependencies..."
-                npm install
+                yarn install
                 
                 echo "⚙️  Running TypeScript compilation..."
                 if ! npm run build; then
