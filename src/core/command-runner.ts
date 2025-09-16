@@ -140,6 +140,7 @@ import {
   commitEnterpriseFileUpload,
   updateTestingDistributionReleaseNotes,
   getLatestAppVersionId,
+  getLatestAppVersionIdAfterUpload,
   getBuildStatusFromQueue,
   downloadTaskLog,
   createSubOrganization,
@@ -1460,40 +1461,68 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
       if (params.message) {
         spinner.text = 'Upload completed. Updating release notes...';
 
-        // Wait a bit for the upload to be processed and then retry getting version ID
-        let latestVersionId = null;
-        let attempts = 0;
-        const maxAttempts = 5;
-        const retryDelay = 2000; // 2 seconds
+        // First, try to get version ID directly from commitFileResponse
+        let versionIdToUpdate = null;
 
-        while (!latestVersionId && attempts < maxAttempts) {
-          attempts++;
-          spinner.text = `Upload completed. Getting version ID (attempt ${attempts}/${maxAttempts})...`;
+        // Check various possible fields in the response that might contain the version ID
+        if (commitFileResponse.versionId) {
+          versionIdToUpdate = commitFileResponse.versionId;
+        } else if (commitFileResponse.id) {
+          versionIdToUpdate = commitFileResponse.id;
+        } else if (commitFileResponse.appVersionId) {
+          versionIdToUpdate = commitFileResponse.appVersionId;
+        }
 
-          if (attempts > 1) {
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-          }
+        // If we couldn't get version ID from response, use the specialized function for post-upload scenarios
+        if (!versionIdToUpdate) {
+          spinner.text = 'Searching for uploaded app version...';
 
           try {
-            latestVersionId = await getLatestAppVersionId({
-              distProfileId: params.distProfileId
+            versionIdToUpdate = await getLatestAppVersionIdAfterUpload({
+              distProfileId: params.distProfileId,
+              expectedFileSize: stats.size,
+              fileName: fileName
             });
           } catch (error: any) {
-            // Retry silently
+            console.warn('Could not retrieve version ID using enhanced method, falling back to basic method');
+          }
+
+          // Final fallback to the basic method if enhanced method fails
+          if (!versionIdToUpdate) {
+            let attempts = 0;
+            const maxAttempts = 3;
+            const retryDelay = 2000; // 2 seconds
+
+            while (!versionIdToUpdate && attempts < maxAttempts) {
+              attempts++;
+              spinner.text = `Getting version ID (fallback attempt ${attempts}/${maxAttempts})...`;
+
+              if (attempts > 1) {
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+              }
+
+              try {
+                versionIdToUpdate = await getLatestAppVersionId({
+                  distProfileId: params.distProfileId
+                });
+              } catch (error: any) {
+                // Retry silently
+              }
+            }
           }
         }
 
-        if (latestVersionId) {
+        if (versionIdToUpdate) {
           spinner.text = 'Version ID found. Updating release notes...';
           await updateTestingDistributionReleaseNotes({
             distProfileId: params.distProfileId,
-            versionId: latestVersionId,
+            versionId: versionIdToUpdate,
             message: params.message
           });
           spinner.text = `App uploaded and release notes updated successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
         } else {
-          spinner.text = `App uploaded successfully, but could not update release notes (version ID not found after ${maxAttempts} attempts).\n\nTaskId: ${commitFileResponse.taskId}`;
+          spinner.text = `App uploaded successfully but could not update release notes.\n\nTaskId: ${commitFileResponse.taskId}`;
+          console.warn('Warning: Could not retrieve version ID to update release notes. The app was uploaded successfully.');
         }
       } else {
         spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
