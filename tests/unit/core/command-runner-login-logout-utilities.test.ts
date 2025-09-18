@@ -85,16 +85,11 @@ describe('Command Runner Login/Logout Utilities', () => {
 
     it('should handle PAT login with empty token', async () => {
       const mockParams = { token: '' };
-      const mockResponse = { access_token: 'jwt-access-token' };
-      (getToken as any).mockResolvedValue(mockResponse);
 
-      await handlePatLogin(mockParams);
+      await expect(handlePatLogin(mockParams)).rejects.toThrow('Invalid PAT format provided');
 
-      expect(getToken).toHaveBeenCalledWith({ pat: '' });
-      expect(writeEnviromentConfigVariable).toHaveBeenCalledWith(
-        EnvironmentVariables.AC_ACCESS_TOKEN,
-        'jwt-access-token'
-      );
+      expect(getToken).not.toHaveBeenCalled();
+      expect(writeEnviromentConfigVariable).not.toHaveBeenCalled();
     });
 
     it('should handle PAT login API error', async () => {

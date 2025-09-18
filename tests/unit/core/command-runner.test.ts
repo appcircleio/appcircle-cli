@@ -511,19 +511,10 @@ describe('Command Runner - Comprehensive Tests', () => {
       const config = await import('../../../src/config');
       vi.mocked(config.readEnviromentConfigVariable).mockReturnValue(''); // No token
 
-      const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
       const params = {};
       const command = createMockCommand('appcircle-logout', params, CommandTypes.LOGOUT);
 
-      await runCommand(command);
-
-      expect(consoleSpy).toHaveBeenCalledWith('You are not currently logged in.');
-      expect(mockProcessExit).toHaveBeenCalledWith(1);
-
-      mockProcessExit.mockRestore();
-      consoleSpy.mockRestore();
+      await expect(runCommand(command)).rejects.toThrow('You are not currently logged in');
     });
   });
 

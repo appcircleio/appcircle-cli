@@ -1063,6 +1063,11 @@ export const handleAlreadyLoggedIn = (): void => {
 
 // Helper function to handle PAT login
 export const handlePatLogin = async (params: any): Promise<void> => {
+  // Validate token parameter
+  if (!params.token || params.token.trim() === '') {
+    throw new ProgramError('Invalid PAT format provided');
+  }
+
   const responseData = await getToken({ pat: params.token });
   writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
   commandWriter(CommandTypes.LOGIN, responseData);
@@ -1172,12 +1177,14 @@ export const displayLogoutSuccessMessage = (): void => {
 };
 
 const handleLogoutCommand = async (command: ProgramCommand, params: any) => {
-  // Check if user is already logged in
-  validateUserIsLoggedIn();
-  
+  // Check if user is logged in first
+  if (!checkIfUserIsLoggedIn()) {
+    throw new ProgramError('You are not currently logged in');
+  }
+
   // Clear the stored token (no API call needed)
   clearStoredToken();
-  
+
   displayLogoutSuccessMessage();
 };
 
