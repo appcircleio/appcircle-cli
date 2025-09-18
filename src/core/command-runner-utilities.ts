@@ -612,6 +612,7 @@ export interface BuildResponseProcessingResult {
 export enum BuildExecutionMode {
   NORMAL = 'normal',
   DETAILED_MONITORING = 'detailed',
+  STEP_SUMMARY = 'step-summary',
   SKIP_SHOW_TASK_ID = 'skip'
 }
 
@@ -864,8 +865,9 @@ export const selectBuildExecutionMode = async (
 ): Promise<BuildExecutionModeResult> => {
   const choices = [
     '1. Normal Build - Standard build process with monitoring',
-    '2. Detailed Monitoring - Enhanced log monitoring enabled',
-    '3. Skip & Show Task ID Only - Return task ID without starting build'
+    '2. Step Summary - Show only build steps and durations',
+    '3. Detailed Monitoring - Enhanced log monitoring enabled',
+    '4. Skip & Show Task ID Only - Return task ID without starting build'
   ];
 
   try {
@@ -881,8 +883,10 @@ export const selectBuildExecutionMode = async (
     if (selected.startsWith('1.')) {
       return { mode: BuildExecutionMode.NORMAL, cancelled: false };
     } else if (selected.startsWith('2.')) {
-      return { mode: BuildExecutionMode.DETAILED_MONITORING, cancelled: false };
+      return { mode: BuildExecutionMode.STEP_SUMMARY, cancelled: false };
     } else if (selected.startsWith('3.')) {
+      return { mode: BuildExecutionMode.DETAILED_MONITORING, cancelled: false };
+    } else if (selected.startsWith('4.')) {
       return { mode: BuildExecutionMode.SKIP_SHOW_TASK_ID, cancelled: false };
     } else {
       // Default to normal if parsing fails

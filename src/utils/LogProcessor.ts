@@ -27,7 +27,6 @@ export class LogProcessor {
     // Check if logs should start (gate logic)
     if (!this.logsStarted && this.shouldStartLogs(rawMessage)) {
       this.logsStarted = true;
-      console.log('🚀 Build logs started - processing buffered messages');
       
       // Process buffered messages
       this.flushBuffer();
