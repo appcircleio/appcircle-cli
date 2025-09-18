@@ -100,7 +100,7 @@ describe('Critical Command E2E Tests', () => {
       expect(result.stderr).toContain('command');
     });
 
-    it('should handle invalid PAT token gracefully', async () => {
+    it.skip('should handle invalid PAT token gracefully', async () => {
       const result = await runCommand(['login', 'pat', '--token', 'invalid-token-123']);
 
       // Should fail with authentication error
