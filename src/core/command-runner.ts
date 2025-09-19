@@ -4011,18 +4011,28 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     // Check if this is a non-interactive run (has --no-wait or JSON output)
     const isNonInteractive = process.argv.includes('--no-wait') || getConsoleOutputType() === 'json';
     
+    // Parse execution mode from command line parameter
     let executionMode = BuildExecutionMode.NORMAL;
+    const executionModeParam = command.opts()['execution-mode'];
     
-    // Show execution mode selection only for interactive runs
-    if (!isNonInteractive) {
-      const modeSelection = await selectBuildExecutionMode();
-      
-      if (modeSelection.cancelled) {
-        console.log('\nBuild cancelled by user.');
-        throw new AppcircleExitError('Build cancelled', 0);
+    if (executionModeParam) {
+      switch (executionModeParam.toLowerCase()) {
+        case 'normal':
+          executionMode = BuildExecutionMode.NORMAL;
+          break;
+        case 'detailed':
+          executionMode = BuildExecutionMode.DETAILED_MONITORING;
+          break;
+        case 'step-summary':
+          executionMode = BuildExecutionMode.STEP_SUMMARY;
+          break;
+        case 'skip':
+          executionMode = BuildExecutionMode.SKIP_SHOW_TASK_ID;
+          break;
+        default:
+          console.warn(`Warning: Unknown execution mode '${executionModeParam}'. Using 'normal' mode.`);
+          executionMode = BuildExecutionMode.NORMAL;
       }
-      
-      executionMode = modeSelection.mode;
     }
     
     // Handle "Skip & Show Task ID Only" mode

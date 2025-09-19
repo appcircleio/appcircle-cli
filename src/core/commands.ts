@@ -449,6 +449,7 @@ OPTIONAL OPTIONS
   --download-logs           Automatically download build logs after completion
   --download-artifacts      Automatically download build artifacts after completion
   --path <string>           Download path for logs and artifacts (default: ~/Downloads)
+  --execution-mode <mode>   Build execution mode: normal (default), detailed, step-summary, or skip
 
 EXAMPLES
   appcircle build start --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --workflowId 6ba7b811-9dad-11d1-80b4-00c04fd430c8
@@ -590,6 +591,17 @@ LEARN MORE
             required: false,
             requriedForInteractiveMode: false,
             skipForInteractiveMode: true,
+            params: [],
+          },
+          {
+            name: 'execution-mode',
+            description: "Build execution mode: normal (default), detailed, step-summary, or skip",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            defaultValue: 'normal',
             params: [],
           },
         ],

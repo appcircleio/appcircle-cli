@@ -32,6 +32,7 @@ appcircle build start [options]
   --download-logs           Automatically download build logs after completion
   --download-artifacts      Automatically download build artifacts after completion
   --path <string>           Download path for logs and artifacts (default: ~/Downloads)
+  --execution-mode <mode>   Build execution mode: normal (default), detailed, step-summary, or skip
 ```
 
 ## Options inherited from parent commands
@@ -74,6 +75,19 @@ appcircle build start --profileId <uuid> --branch "main" --workflowId <uuid>
 ### Configuration Selection
 - **Optional**: If not provided, uses the first available configuration for the profile
 - **Example**: `--configurationId <uuid>` or `--configuration "Debug Configuration"`
+
+### Execution Mode Selection
+The `--execution-mode` parameter controls how the build process is monitored and displayed:
+
+- **`normal`** (default): Standard build process with basic monitoring and real-time log streaming
+- **`detailed`**: Enhanced monitoring with detailed log processing and progress tracking
+- **`step-summary`**: Shows only build steps and their durations in a clean table format
+- **`skip`**: Returns task ID immediately without starting the build monitoring
+
+**Real-time Log Features:**
+- All execution modes (except `skip`) provide real-time log streaming from the build process
+- Logs are displayed as they are generated, providing immediate feedback on build progress
+- The system automatically handles log formatting and step transitions for better readability
 
 ## Usage Examples
 
@@ -121,6 +135,21 @@ appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> -
 appcircle build start --profile "My Android App" --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --workflow "Default Push Workflow"
 ```
 
+#### 9. Build with Different Execution Modes
+```bash
+# Normal mode (default) - standard monitoring with real-time logs
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid>
+
+# Detailed mode - enhanced monitoring with detailed progress tracking
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --execution-mode detailed
+
+# Step summary mode - clean table showing only steps and durations
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --execution-mode step-summary
+
+# Skip mode - return task ID immediately without monitoring
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --execution-mode skip
+```
+
 ## Common Scenarios
 
 ### Scenario 1: Build Latest Commit from Branch
@@ -147,6 +176,15 @@ appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> -
 appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --download-logs --download-artifacts
 ```
 
+### Scenario 5: Real-time Build Monitoring
+```bash
+# For development - watch build progress in real-time with detailed logs
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --execution-mode detailed
+
+# For CI/CD - get clean step summary without verbose logs
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --execution-mode step-summary
+```
+
 ## Notes
 
 - **Commit vs Branch**: When you provide `--commitId`, the system doesn't need branch information since the commit is already specified. When you provide `--branchId`, the system automatically uses the latest commit from that branch.
@@ -156,6 +194,10 @@ appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> -
 - **No Wait**: The `--no-wait` parameter is useful for automation scenarios where you don't want to wait for build completion. The command returns immediately with task information.
 
 - **Auto Download**: The `--download-logs` and `--download-artifacts` parameters automatically download files after build completion. Use `--path` to specify a custom download location.
+
+- **Execution Modes**: The `--execution-mode` parameter allows you to control how build progress is displayed. The default `normal` mode provides real-time log streaming, while `detailed` mode offers enhanced monitoring, `step-summary` shows a clean table format, and `skip` returns only the task ID.
+
+- **Real-time Logs**: All execution modes (except `skip`) provide real-time log streaming, allowing you to monitor build progress as it happens. The system automatically formats logs and handles step transitions for better readability.
 
 ## Learn More
 
