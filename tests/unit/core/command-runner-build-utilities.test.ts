@@ -9,7 +9,9 @@ import {
   decodeJwtToken,
   validateOrganizationId,
   checkIfUserAlreadyLoggedIn,
-  checkIfUserIsLoggedIn
+  checkIfUserIsLoggedIn,
+  selectBuildExecutionMode,
+  BuildExecutionMode
 } from '../../../src/core/command-runner-utilities';
 
 describe('Command Runner Build Utilities', () => {
@@ -584,6 +586,93 @@ describe('Command Runner Build Utilities', () => {
       const result = checkIfUserIsLoggedIn(mockConfigService);
       
       expect(result).toBe(false);
+    });
+  });
+
+  describe('selectBuildExecutionMode', () => {
+    let mockPrompt: any;
+
+    beforeEach(() => {
+      mockPrompt = {
+        run: vi.fn()
+      };
+    });
+
+    it('should return NORMAL mode when user selects option 1', async () => {
+      mockPrompt.run.mockResolvedValue('1. Normal Build - Standard build process with monitoring');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.NORMAL);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return STEP_SUMMARY mode when user selects option 2', async () => {
+      mockPrompt.run.mockResolvedValue('2. Step Summary - Show only build steps and durations');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.STEP_SUMMARY);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return DETAILED_MONITORING mode when user selects option 3', async () => {
+      mockPrompt.run.mockResolvedValue('3. Detailed Monitoring - Enhanced log monitoring enabled');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.DETAILED_MONITORING);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return SKIP_SHOW_TASK_ID mode when user selects option 4', async () => {
+      mockPrompt.run.mockResolvedValue('4. Skip & Show Task ID Only - Return task ID without starting build');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.SKIP_SHOW_TASK_ID);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return NORMAL mode as default when parsing fails', async () => {
+      mockPrompt.run.mockResolvedValue('Invalid selection');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.NORMAL);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return cancelled=true when prompt throws error', async () => {
+      mockPrompt.run.mockRejectedValue(new Error('User cancelled'));
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.NORMAL);
+      expect(result.cancelled).toBe(true);
+    });
+
+    it('should create prompt with correct parameters', async () => {
+      let capturedPrompt: any;
+      const createPrompt = vi.fn().mockImplementation((name, message, choices) => {
+        capturedPrompt = { name, message, choices };
+        return mockPrompt;
+      });
+      
+      mockPrompt.run.mockResolvedValue('1. Normal Build - Standard build process with monitoring');
+      
+      await selectBuildExecutionMode(createPrompt);
+      
+      expect(createPrompt).toHaveBeenCalledWith(
+        'executionMode',
+        'Select build execution mode:',
+        [
+          '1. Normal Build - Standard build process with monitoring',
+          '2. Step Summary - Show only build steps and durations',
+          '3. Detailed Monitoring - Enhanced log monitoring enabled',
+          '4. Skip & Show Task ID Only - Return task ID without starting build'
+        ]
+      );
     });
   });
 });
