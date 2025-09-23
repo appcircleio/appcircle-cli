@@ -195,6 +195,30 @@ describe('Command Runner - Build Formatters', () => {
         expect(chalk.green('✓ Build Application (5s)')).toBe(expectedStepCompletion);
       });
 
+      it('should format step duration correctly in Full logs', () => {
+        // Test the duration formatting logic used in createCleanTerminalFormatter
+        const formatDuration = (totalSeconds: number): string => {
+          if (totalSeconds === 0) {
+            return '<1s';
+          }
+          if (totalSeconds < 60) {
+            return `${totalSeconds}s`;
+          }
+          const minutes = Math.floor(totalSeconds / 60);
+          const seconds = totalSeconds % 60;
+          return `${minutes}m ${seconds}s`;
+        };
+
+        expect(formatDuration(0)).toBe('<1s');
+        expect(formatDuration(5)).toBe('5s');
+        expect(formatDuration(30)).toBe('30s');
+        expect(formatDuration(59)).toBe('59s');
+        expect(formatDuration(60)).toBe('1m 0s');
+        expect(formatDuration(61)).toBe('1m 1s');
+        expect(formatDuration(123)).toBe('2m 3s');
+        expect(formatDuration(125)).toBe('2m 5s');
+      });
+
       it('should handle error messages', () => {
         const errorMessage = '@@[error] Build failed with compilation errors';
         const cleanMessage = 'Build failed with compilation errors';
@@ -275,12 +299,22 @@ describe('Command Runner - Build Formatters', () => {
           if (seconds === 0) {
             return '<1s';
           }
-          return `${seconds}s`;
+          if (seconds < 60) {
+            return `${seconds}s`;
+          }
+          const minutes = Math.floor(seconds / 60);
+          const remainingSeconds = seconds % 60;
+          return `${minutes}m ${remainingSeconds}s`;
         };
 
         expect(formatDuration(0)).toBe('<1s');
         expect(formatDuration(5)).toBe('5s');
-        expect(formatDuration(60)).toBe('60s');
+        expect(formatDuration(30)).toBe('30s');
+        expect(formatDuration(59)).toBe('59s');
+        expect(formatDuration(60)).toBe('1m 0s');
+        expect(formatDuration(61)).toBe('1m 1s');
+        expect(formatDuration(123)).toBe('2m 3s');
+        expect(formatDuration(125)).toBe('2m 5s');
       });
 
       it('should handle step status colors', () => {

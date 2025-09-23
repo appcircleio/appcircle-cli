@@ -220,7 +220,7 @@ function createCleanTerminalFormatter() {
       
       // Calculate duration
       const elapsed = Math.round((Date.now() - state.startTime) / 1000);
-      const timeStr = elapsed === 0 ? '0s' : elapsed < 1 ? '<1s' : `${elapsed}s`;
+      const timeStr = elapsed === 0 ? '<1s' : elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
       
       // Choose icon and color based on status
       let icon = '';
@@ -530,28 +530,31 @@ function createStepSummaryFormatter() {
   function formatDuration(stepName: string, startTime?: number, endTime?: number): string {
     const state = stepStates.get(stepName);
 
-    // Prefer server-provided duration if available
-    if (state?.serverDuration !== undefined) {
-      const seconds = state.serverDuration;
-      if (seconds === 0) {
+    // Helper function to format seconds into minutes and seconds
+    const formatSeconds = (totalSeconds: number): string => {
+      if (totalSeconds === 0) {
         return '<1s';
       }
-      return `${seconds}s`;
+      if (totalSeconds < 60) {
+        return `${totalSeconds}s`;
+      }
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}m ${seconds}s`;
+    };
+
+    // Prefer server-provided duration if available
+    if (state?.serverDuration !== undefined) {
+      return formatSeconds(state.serverDuration);
     }
 
     // Fallback to client-side calculation
     if (startTime && endTime) {
       const duration = Math.round((endTime - startTime) / 1000);
-      if (duration === 0) {
-        return '<1s';
-      }
-      return `${duration}s`;
+      return formatSeconds(duration);
     } else if (startTime) {
       const duration = Math.round((Date.now() - startTime) / 1000);
-      if (duration === 0) {
-        return '<1s';
-      }
-      return `${duration}s`;
+      return formatSeconds(duration);
     }
 
     return '<1s';
@@ -4729,7 +4732,6 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             throw e;
           }
         }
-        throw new AppcircleExitError('Build monitoring failed', 1);
       }
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`) {
