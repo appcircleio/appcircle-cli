@@ -749,8 +749,9 @@ describe('Build Monitoring Utilities', () => {
         commitId: 'commit-123',
         buildId: 'build-789',
         branchId: 'branch-123',
-        profileId: 'profile-456'
-      }, '/download/path');
+        profileId: 'profile-456',
+        path: '/download/path'
+      });
       expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Build completed successfully with logs downloaded.'));
     });
 

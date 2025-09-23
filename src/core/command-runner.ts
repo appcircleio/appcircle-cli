@@ -1835,10 +1835,11 @@ export const downloadBuildLogsInteractive = async (finalStatusResponse: any, lat
         commitId, 
         buildId,
         branchId: params.branchId,
-        profileId: params.profileId
-      }, buildLogPath);
+        profileId: params.profileId,
+        path: buildLogPath
+      });
     } else {
-      await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+      await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
     }
     console.log(chalk.green('Build completed successfully with logs downloaded.'));
     throw new AppcircleExitError('', 0);
@@ -1848,7 +1849,7 @@ export const downloadBuildLogsInteractive = async (finalStatusResponse: any, lat
     }
     console.log(chalk.yellow(`Build failed and log download also failed: ${error.message}`));
     try {
-      await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+      await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
       console.log(chalk.yellow('Build failed but logs downloaded successfully.'));
       throw new AppcircleExitError('Build failed', 1);
     } catch (fallbackError: any) {
@@ -4485,10 +4486,11 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                       commitId, 
                       buildId,
                       branchId: params.branchId,
-                      profileId: params.profileId
-                    }, buildLogPath);
+                      profileId: params.profileId,
+                      path: buildLogPath
+                    });
                   } else {
-                    await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+                    await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                   }
                   console.log(chalk.green('Build completed successfully with logs downloaded.'));
                   
@@ -4504,7 +4506,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }
                   console.log(chalk.yellow(`Build failed and log download also failed: ${error.message}`));
                   try {
-                    await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+                    await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                     console.log(chalk.yellow('Build failed but logs downloaded successfully.'));
                     throw new AppcircleExitError('Build failed', 1);
                   } catch (fallbackError: any) {
@@ -4687,10 +4689,11 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                       commitId, 
                       buildId,
                       branchId: params.branchId,
-                      profileId: params.profileId
-                    }, buildLogPath);
+                      profileId: params.profileId,
+                      path: buildLogPath
+                    });
                   } else {
-                    await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+                    await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                   }
                   console.log(chalk.green('Build completed successfully with logs downloaded.'));
                   throw new AppcircleExitError('', 0);
@@ -4700,7 +4703,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }
                   console.log(chalk.yellow(`Build failed and log download also failed: ${error.message}`));
                   try {
-                    await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+                    await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                     console.log(chalk.yellow('Build failed but logs downloaded successfully.'));
                     throw new AppcircleExitError('Build failed', 1);
                   } catch (fallbackError: any) {
@@ -5454,7 +5457,7 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
   const progressSpinner = createOra('Preparing to download Build Logs...').start();
   
   let effectiveTaskId: string | null = null;
-  let providedPath = params?.path;
+  let providedPath = params?.path || (typeof taskIdOrParams === 'object' ? taskIdOrParams.path : undefined);
   let fileNameFromParams = params?.fileName;
   let commitId, buildId, branchId, profileId;
   let wasCanceled = params?.wasCanceled || false;
