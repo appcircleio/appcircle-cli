@@ -4076,7 +4076,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         const accessToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
         const { sub: userId, currentOrganizationId: organizationId } = resolveIdentityFromToken(accessToken);
         const hookToken = await getHookAccessToken(accessToken);
-        const hookHostname = readEnviromentConfigVariable(EnvironmentVariables.HOOK_HOSTNAME);
+        const hookHostname = readEnviromentConfigVariable(EnvironmentVariables.HOOK_HOSTNAME) || "https://hook.appcircle.io";
         
         sseConnection = await openHookSSE({
           hookHostname,
