@@ -32,7 +32,7 @@ appcircle build start [options]
   --download-logs           Automatically download build logs after completion
   --download-artifacts      Automatically download build artifacts after completion
   --path <string>           Download path for logs and artifacts (default: ~/Downloads)
-  --execution-mode <mode>   Build execution mode: normal (default), detailed, step-summary, or skip
+  --execution-mode <mode>   Build monitoring preference: normal (default), detailed, step-summary, or skip
 ```
 
 ## Options inherited from parent commands
@@ -195,7 +195,7 @@ appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> -
 
 - **Auto Download**: The `--download-logs` and `--download-artifacts` parameters automatically download files after build completion. Use `--path` to specify a custom download location.
 
-- **Execution Modes**: The `--execution-mode` parameter allows you to control how build progress is displayed. The default `normal` mode provides real-time log streaming, while `detailed` mode offers enhanced monitoring, `step-summary` shows a clean table format, and `skip` returns only the task ID.
+- **Monitoring Preferences**: The `--execution-mode` parameter allows you to control how build progress is displayed. The default `normal` mode provides real-time build status and duration, while `detailed` mode offers full verbose log streaming, `step-summary` shows step-by-step progress, and `skip` returns only the task ID.
 
 - **Real-time Logs**: All execution modes (except `skip`) provide real-time log streaming, allowing you to monitor build progress as it happens. The system automatically formats logs and handles step transitions for better readability.
 

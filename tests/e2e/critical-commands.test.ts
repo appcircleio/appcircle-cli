@@ -287,7 +287,7 @@ describe('Critical Command E2E Tests', () => {
 
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('--execution-mode');
-      expect(result.stdout).toContain('Build execution mode: normal (default), detailed, step-summary, or skip');
+      expect(result.stdout).toContain('Build monitoring preference: normal (default), detailed, step-summary, or skip');
     });
 
     it('should handle invalid execution mode parameter', async () => {

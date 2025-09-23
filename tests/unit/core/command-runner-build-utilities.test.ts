@@ -598,8 +598,8 @@ describe('Command Runner Build Utilities', () => {
       };
     });
 
-    it('should return NORMAL mode when user selects option 1', async () => {
-      mockPrompt.run.mockResolvedValue('1. Normal Build - Standard build process with monitoring');
+    it('should return NORMAL mode when user selects Summary only', async () => {
+      mockPrompt.run.mockResolvedValue('Summary only - Real-time build status and duration');
       
       const result = await selectBuildExecutionMode(() => mockPrompt);
       
@@ -607,8 +607,8 @@ describe('Command Runner Build Utilities', () => {
       expect(result.cancelled).toBe(false);
     });
 
-    it('should return STEP_SUMMARY mode when user selects option 2', async () => {
-      mockPrompt.run.mockResolvedValue('2. Step Summary - Show only build steps and durations');
+    it('should return STEP_SUMMARY mode when user selects Step-by-step', async () => {
+      mockPrompt.run.mockResolvedValue('Step-by-step - Real-time progress for each build step');
       
       const result = await selectBuildExecutionMode(() => mockPrompt);
       
@@ -616,8 +616,8 @@ describe('Command Runner Build Utilities', () => {
       expect(result.cancelled).toBe(false);
     });
 
-    it('should return DETAILED_MONITORING mode when user selects option 3', async () => {
-      mockPrompt.run.mockResolvedValue('3. Detailed Monitoring - Enhanced log monitoring enabled');
+    it('should return DETAILED_MONITORING mode when user selects Full logs', async () => {
+      mockPrompt.run.mockResolvedValue('Full logs - Real-time verbose build output streaming');
       
       const result = await selectBuildExecutionMode(() => mockPrompt);
       
@@ -625,8 +625,8 @@ describe('Command Runner Build Utilities', () => {
       expect(result.cancelled).toBe(false);
     });
 
-    it('should return SKIP_SHOW_TASK_ID mode when user selects option 4', async () => {
-      mockPrompt.run.mockResolvedValue('4. Skip & Show Task ID Only - Return task ID without starting build');
+    it('should return SKIP_SHOW_TASK_ID mode when user selects Task ID only', async () => {
+      mockPrompt.run.mockResolvedValue('Task ID only - No monitoring, returns task ID for async tracking');
       
       const result = await selectBuildExecutionMode(() => mockPrompt);
       
@@ -659,18 +659,18 @@ describe('Command Runner Build Utilities', () => {
         return mockPrompt;
       });
       
-      mockPrompt.run.mockResolvedValue('1. Normal Build - Standard build process with monitoring');
+      mockPrompt.run.mockResolvedValue('Summary only - Real-time build status and duration');
       
       await selectBuildExecutionMode(createPrompt);
       
       expect(createPrompt).toHaveBeenCalledWith(
         'executionMode',
-        'Select build execution mode:',
+        'Select build monitoring preference:',
         [
-          '1. Normal Build - Standard build process with monitoring',
-          '2. Step Summary - Show only build steps and durations',
-          '3. Detailed Monitoring - Enhanced log monitoring enabled',
-          '4. Skip & Show Task ID Only - Return task ID without starting build'
+          'Summary only - Real-time build status and duration',
+          'Step-by-step - Real-time progress for each build step',
+          'Full logs - Real-time verbose build output streaming',
+          'Task ID only - No monitoring, returns task ID for async tracking'
         ]
       );
     });

@@ -864,29 +864,29 @@ export const selectBuildExecutionMode = async (
   }
 ): Promise<BuildExecutionModeResult> => {
   const choices = [
-    '1. Normal Build - Standard build process with monitoring',
-    '2. Step Summary - Show only build steps and durations',
-    '3. Detailed Monitoring - Enhanced log monitoring enabled',
-    '4. Skip & Show Task ID Only - Return task ID without starting build'
+    'Summary only - Real-time build status and duration',
+    'Step-by-step - Real-time progress for each build step',
+    'Full logs - Real-time verbose build output streaming',
+    'Task ID only - No monitoring, returns task ID for async tracking'
   ];
 
   try {
     const selectPrompt = createPrompt(
       'executionMode',
-      'Select build execution mode:',
+      'Select build monitoring preference:',
       choices
     );
     
     const selected = await selectPrompt.run();
     
     // Parse the selection
-    if (selected.startsWith('1.')) {
+    if (selected.includes('Summary only')) {
       return { mode: BuildExecutionMode.NORMAL, cancelled: false };
-    } else if (selected.startsWith('2.')) {
+    } else if (selected.includes('Step-by-step')) {
       return { mode: BuildExecutionMode.STEP_SUMMARY, cancelled: false };
-    } else if (selected.startsWith('3.')) {
+    } else if (selected.includes('Full logs')) {
       return { mode: BuildExecutionMode.DETAILED_MONITORING, cancelled: false };
-    } else if (selected.startsWith('4.')) {
+    } else if (selected.includes('Task ID only')) {
       return { mode: BuildExecutionMode.SKIP_SHOW_TASK_ID, cancelled: false };
     } else {
       // Default to normal if parsing fails
