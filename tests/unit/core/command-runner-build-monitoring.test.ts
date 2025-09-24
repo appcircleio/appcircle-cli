@@ -551,7 +551,7 @@ describe('Command Runner Build Monitoring', () => {
       );
     });
 
-    it('should handle download failure', async () => {
+    it('should handle download failure with failed build status', async () => {
       const mockSpinner = {
         start: vi.fn().mockReturnThis(),
         succeed: vi.fn(),
@@ -564,7 +564,7 @@ describe('Command Runner Build Monitoring', () => {
       const mockDownloadArtifact = vi.fn().mockRejectedValue(downloadError);
       const params = { branchId: 'branch-123', profileId: 'profile-123' };
 
-      const promise = downloadBuildArtifactsWithSpinner('commit-123', 'build-123', params, '/downloads', mockDownloadArtifact);
+      const promise = downloadBuildArtifactsWithSpinner('commit-123', 'build-123', params, '/downloads', mockDownloadArtifact, 1); // FAILED status
       
       vi.advanceTimersByTime(10000);
       await promise;
@@ -572,7 +572,7 @@ describe('Command Runner Build Monitoring', () => {
       expect(mockSpinner.fail).toHaveBeenCalledWith('Cannot download artifact since the build failed: Download failed');
     });
 
-    it('should handle download failure without error message', async () => {
+    it('should handle download failure without error message and unknown status', async () => {
       const mockSpinner = {
         start: vi.fn().mockReturnThis(),
         succeed: vi.fn(),
@@ -584,12 +584,12 @@ describe('Command Runner Build Monitoring', () => {
       const mockDownloadArtifact = vi.fn().mockRejectedValue({ message: undefined });
       const params = { branchId: 'branch-123', profileId: 'profile-123' };
 
-      const promise = downloadBuildArtifactsWithSpinner('commit-123', 'build-123', params, '/downloads', mockDownloadArtifact);
+      const promise = downloadBuildArtifactsWithSpinner('commit-123', 'build-123', params, '/downloads', mockDownloadArtifact, null); // Unknown status
       
       vi.advanceTimersByTime(10000);
       await promise;
 
-      expect(mockSpinner.fail).toHaveBeenCalledWith('Cannot download artifact since the build failed: undefined');
+      expect(mockSpinner.fail).toHaveBeenCalledWith('No artifacts were found for this build.');
     });
 
     it('should generate unique artifact filename with timestamp', async () => {

@@ -964,3 +964,81 @@ export const selectBuildExecutionMode = async (
     return { mode: BuildExecutionMode.NORMAL, cancelled: true };
   }
 };
+
+/**
+ * Build status constants for better readability
+ */
+export const BuildStatus = {
+  SUCCESS: 0,
+  FAILED: 1,
+  CANCELED: 2,
+  TIMEOUT: 3,
+  WAITING: 90,
+  RUNNING: 91,
+  COMPLETING: 92
+} as const;
+
+/**
+ * Determines if a build status indicates failure
+ * @param buildStatus The build status code
+ * @returns True if the build failed, canceled, or timed out
+ */
+export const isBuildFailed = (buildStatus: number | null | undefined): boolean => {
+  return buildStatus === BuildStatus.FAILED || 
+         buildStatus === BuildStatus.CANCELED || 
+         buildStatus === BuildStatus.TIMEOUT;
+};
+
+/**
+ * Determines if a build status indicates success
+ * @param buildStatus The build status code
+ * @returns True if the build succeeded
+ */
+export const isBuildSuccessful = (buildStatus: number | null | undefined): boolean => {
+  return buildStatus === BuildStatus.SUCCESS;
+};
+
+/**
+ * Determines if build status is unknown or unavailable
+ * @param buildStatus The build status code
+ * @returns True if build status is null, undefined, or unknown
+ */
+export const isBuildStatusUnknown = (buildStatus: number | null | undefined): boolean => {
+  return buildStatus === null || buildStatus === undefined;
+};
+
+/**
+ * Generates appropriate artifact download error message based on build status
+ * @param buildStatus The build status code
+ * @param originalError The original error message
+ * @param buildId Optional build ID for context
+ * @param hasWarning Optional warning flag to provide more context
+ * @returns User-friendly error message
+ */
+export const generateArtifactErrorMessage = (
+  buildStatus: number | null | undefined,
+  originalError: string,
+  buildId?: string,
+  hasWarning?: boolean
+): string => {
+  // If build actually failed, keep the original message
+  if (isBuildFailed(buildStatus)) {
+    return `Cannot download artifact since the build failed: ${originalError}`;
+  }
+  
+  // If build succeeded but no artifacts found
+  if (isBuildSuccessful(buildStatus)) {
+    if (hasWarning) {
+      return 'Build completed with warnings, but no artifacts were found.';
+    }
+    return 'Build succeeded, but no artifacts were found.';
+  }
+  
+  // If build status is unknown and no artifacts found
+  if (isBuildStatusUnknown(buildStatus)) {
+    return 'No artifacts were found for this build.';
+  }
+  
+  // Fallback to original message for any other status
+  return `Cannot download artifact since the build failed: ${originalError}`;
+};

@@ -22,6 +22,11 @@ import {
   selectBuildMonitorMode,
   BuildExecutionMode,
   BuildMonitorMode,
+  BuildStatus,
+  isBuildFailed,
+  isBuildSuccessful,
+  isBuildStatusUnknown,
+  generateArtifactErrorMessage,
   checkIfUserAlreadyLoggedIn as utilCheckIfUserAlreadyLoggedIn,
   checkIfUserIsLoggedIn as utilCheckIfUserIsLoggedIn,
   validatePublishPlatform as utilValidatePublishPlatform,
@@ -1859,7 +1864,9 @@ export const handleBuildSuccessCompletion = async (finalStatusResponse: any, lat
     const buildId = latestBuildId || finalStatusResponse?.buildId;
     
     if (shouldDownloadArtifacts && commitId && buildId) {
-      await downloadBuildArtifactsWithSpinner(commitId, buildId, params, downloadPath, downloadArtifact);
+      const buildStatus = finalStatusResponse?.buildStatus;
+      const hasWarning = finalStatusResponse?.hasWarning;
+      await downloadBuildArtifactsWithSpinner(commitId, buildId, params, downloadPath, downloadArtifact, buildStatus, hasWarning);
     }
     
     if (shouldDownloadLogs) {
@@ -1872,7 +1879,7 @@ export const handleBuildSuccessCompletion = async (finalStatusResponse: any, lat
   return await promptForDownloadActions(finalStatusResponse, latestBuildId, params, downloadPath, downloadArtifact, downloadBuildLogs, responseData);
 };
 
-export const downloadBuildArtifactsWithSpinner = async (commitId: string, buildId: string, params: any, downloadPath: string, downloadArtifact: Function) => {
+export const downloadBuildArtifactsWithSpinner = async (commitId: string, buildId: string, params: any, downloadPath: string, downloadArtifact: Function, buildStatus?: number | null, hasWarning?: boolean) => {
   const artifactSpinner = createOra('Waiting for artifacts to be ready...').start();
   await new Promise(resolve => setTimeout(resolve, 10000));
   artifactSpinner.text = 'Downloading artifacts...';
@@ -1886,7 +1893,8 @@ export const downloadBuildArtifactsWithSpinner = async (commitId: string, buildI
     }, downloadPath, artifactFileName);
     artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(downloadPath, artifactFileName))}`);
   } catch (e: any) {
-    artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
+    const errorMessage = generateArtifactErrorMessage(buildStatus, e.message, buildId, hasWarning);
+    artifactSpinner.fail(errorMessage);
   }
 };
 
@@ -1936,7 +1944,9 @@ export const promptForDownloadActions = async (finalStatusResponse: any, latestB
       const buildIdForArtifact = latestBuildId || finalStatusResponse?.buildId;
 
       if (commitIdForArtifact && buildIdForArtifact) {
-        await downloadBuildArtifactsWithSpinner(commitIdForArtifact, buildIdForArtifact, params, artifactDownloadPath, downloadArtifact);
+        const buildStatus = finalStatusResponse?.buildStatus;
+        const hasWarning = finalStatusResponse?.hasWarning;
+        await downloadBuildArtifactsWithSpinner(commitIdForArtifact, buildIdForArtifact, params, artifactDownloadPath, downloadArtifact, buildStatus, hasWarning);
       } else {
         console.log(chalk.yellow('Build completed successfully but could not get artifact information.'));
       }
@@ -4555,7 +4565,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }, downloadPath, artifactFileName);
                   artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(downloadPath, artifactFileName))}`);
                 } catch (e: any) {
-                  artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
+                  const buildStatus = finalStatusResponse?.buildStatus;
+                  const hasWarning = finalStatusResponse?.hasWarning;
+                  const errorMessage = generateArtifactErrorMessage(buildStatus, e.message, buildId, hasWarning);
+                  artifactSpinner.fail(errorMessage);
                 }
               }
               
@@ -4619,7 +4632,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     }, artifactDownloadPath, artifactFileName);
                     artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(artifactDownloadPath, artifactFileName))}`);
                   } catch (e: any) {
-                    artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
+                    const buildStatus = finalStatusResponse?.buildStatus;
+                    const hasWarning = finalStatusResponse?.hasWarning;
+                    const errorMessage = generateArtifactErrorMessage(buildStatus, e.message, buildIdForArtifact, hasWarning);
+                    artifactSpinner.fail(errorMessage);
                   }
                 } else {
                   console.log(chalk.yellow('Build completed successfully but could not get artifact information.'));
@@ -4779,7 +4795,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }, downloadPath, artifactFileName);
                   artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(downloadPath, artifactFileName))}`);
                 } catch (e: any) {
-                  artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
+                  const buildStatus = finalStatusResponse?.buildStatus;
+                  const hasWarning = finalStatusResponse?.hasWarning;
+                  const errorMessage = generateArtifactErrorMessage(buildStatus, e.message, buildId, hasWarning);
+                  artifactSpinner.fail(errorMessage);
                 }
               }
               
@@ -5121,7 +5140,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           const fullPath = path.join(downloadPath, artifactFileName);
           spinner.succeed(`The file ${artifactFileName} is downloaded successfully: file://${fullPath}`);
         } catch (e: any) {
-          spinner.fail(`Cannot download artifact since the build failed: ${e.message || 'Unknown error'}`);
+          const errorMessage = generateArtifactErrorMessage(null, e.message || 'Unknown error', params.buildId);
+          spinner.fail(errorMessage);
           
           try {
             const buildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
@@ -5139,7 +5159,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         spinner.fail(chalk.red('CommitId or BuildId information not found.'));
       }
     } catch (e: any) {
-      spinner.fail(`Cannot download artifact since the build failed: ${e.message || 'Unknown error'}`);
+      const errorMessage = generateArtifactErrorMessage(null, e.message || 'Unknown error');
+      spinner.fail(errorMessage);
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`) {
     // Check if this is an interactive mode call

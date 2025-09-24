@@ -83,7 +83,14 @@ import {
   handleBuildFailureCompletion,
   promptForFailedBuildLogs
 } from '../../../src/core/command-runner';
-import { formatElapsedTime } from '../../../src/core/command-runner-utilities';
+import { 
+  formatElapsedTime,
+  BuildStatus,
+  isBuildFailed,
+  isBuildSuccessful,
+  isBuildStatusUnknown,
+  generateArtifactErrorMessage
+} from '../../../src/core/command-runner-utilities';
 
 describe('Build Monitoring Utilities', () => {
   let mockSpinner: any;
@@ -427,13 +434,40 @@ describe('Build Monitoring Utilities', () => {
       expect(mockSpinner.succeed).toHaveBeenCalledWith(expect.stringContaining('Artifacts downloaded successfully'));
     });
 
-    it('should handle download errors', async () => {
+    it('should handle download errors with failed build status', async () => {
       mockDownloadArtifact.mockRejectedValue(new Error('Download failed'));
       const params = { branchId: 'branch-123', profileId: 'profile-456' };
 
-      await downloadBuildArtifactsWithSpinner('commit-123', 'build-456', params, '/download/path', mockDownloadArtifact);
+      await downloadBuildArtifactsWithSpinner('commit-123', 'build-456', params, '/download/path', mockDownloadArtifact, 1); // FAILED status
 
       expect(mockSpinner.fail).toHaveBeenCalledWith('Cannot download artifact since the build failed: Download failed');
+    });
+
+    it('should handle download errors with successful build status', async () => {
+      mockDownloadArtifact.mockRejectedValue(new Error('Build artifact not found for build ID: build-456'));
+      const params = { branchId: 'branch-123', profileId: 'profile-456' };
+
+      await downloadBuildArtifactsWithSpinner('commit-123', 'build-456', params, '/download/path', mockDownloadArtifact, 0); // SUCCESS status
+
+      expect(mockSpinner.fail).toHaveBeenCalledWith('Build succeeded, but no artifacts were found.');
+    });
+
+    it('should handle download errors with successful build status and warnings', async () => {
+      mockDownloadArtifact.mockRejectedValue(new Error('Build artifact not found for build ID: build-456'));
+      const params = { branchId: 'branch-123', profileId: 'profile-456' };
+
+      await downloadBuildArtifactsWithSpinner('commit-123', 'build-456', params, '/download/path', mockDownloadArtifact, 0, true); // SUCCESS status with warnings
+
+      expect(mockSpinner.fail).toHaveBeenCalledWith('Build completed with warnings, but no artifacts were found.');
+    });
+
+    it('should handle download errors with unknown build status', async () => {
+      mockDownloadArtifact.mockRejectedValue(new Error('Build artifact not found for build ID: build-456'));
+      const params = { branchId: 'branch-123', profileId: 'profile-456' };
+
+      await downloadBuildArtifactsWithSpinner('commit-123', 'build-456', params, '/download/path', mockDownloadArtifact, null); // Unknown status
+
+      expect(mockSpinner.fail).toHaveBeenCalledWith('No artifacts were found for this build.');
     });
   });
 
@@ -788,6 +822,115 @@ describe('Build Monitoring Utilities', () => {
       }).rejects.toThrow(new AppcircleExitError('Build failed', 1));
 
       expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Build failed and could not download logs.'));
+    });
+  });
+
+  describe('Build Status Utilities', () => {
+    describe('isBuildFailed', () => {
+      it('should return true for FAILED status', () => {
+        expect(isBuildFailed(BuildStatus.FAILED)).toBe(true);
+      });
+
+      it('should return true for CANCELED status', () => {
+        expect(isBuildFailed(BuildStatus.CANCELED)).toBe(true);
+      });
+
+      it('should return true for TIMEOUT status', () => {
+        expect(isBuildFailed(BuildStatus.TIMEOUT)).toBe(true);
+      });
+
+      it('should return false for SUCCESS status', () => {
+        expect(isBuildFailed(BuildStatus.SUCCESS)).toBe(false);
+      });
+
+      it('should return false for RUNNING status', () => {
+        expect(isBuildFailed(BuildStatus.RUNNING)).toBe(false);
+      });
+
+      it('should return false for null status', () => {
+        expect(isBuildFailed(null)).toBe(false);
+      });
+
+      it('should return false for undefined status', () => {
+        expect(isBuildFailed(undefined)).toBe(false);
+      });
+    });
+
+    describe('isBuildSuccessful', () => {
+      it('should return true for SUCCESS status', () => {
+        expect(isBuildSuccessful(BuildStatus.SUCCESS)).toBe(true);
+      });
+
+      it('should return false for FAILED status', () => {
+        expect(isBuildSuccessful(BuildStatus.FAILED)).toBe(false);
+      });
+
+      it('should return false for CANCELED status', () => {
+        expect(isBuildSuccessful(BuildStatus.CANCELED)).toBe(false);
+      });
+
+      it('should return false for null status', () => {
+        expect(isBuildSuccessful(null)).toBe(false);
+      });
+
+      it('should return false for undefined status', () => {
+        expect(isBuildSuccessful(undefined)).toBe(false);
+      });
+    });
+
+    describe('isBuildStatusUnknown', () => {
+      it('should return true for null status', () => {
+        expect(isBuildStatusUnknown(null)).toBe(true);
+      });
+
+      it('should return true for undefined status', () => {
+        expect(isBuildStatusUnknown(undefined)).toBe(true);
+      });
+
+      it('should return false for SUCCESS status', () => {
+        expect(isBuildStatusUnknown(BuildStatus.SUCCESS)).toBe(false);
+      });
+
+      it('should return false for FAILED status', () => {
+        expect(isBuildStatusUnknown(BuildStatus.FAILED)).toBe(false);
+      });
+    });
+
+    describe('generateArtifactErrorMessage', () => {
+      it('should return original message for failed build', () => {
+        const result = generateArtifactErrorMessage(BuildStatus.FAILED, 'Build artifact not found for build ID: build-123', 'build-123');
+        expect(result).toBe('Cannot download artifact since the build failed: Build artifact not found for build ID: build-123');
+      });
+
+      it('should return success message for successful build', () => {
+        const result = generateArtifactErrorMessage(BuildStatus.SUCCESS, 'Build artifact not found for build ID: build-123', 'build-123');
+        expect(result).toBe('Build succeeded, but no artifacts were found.');
+      });
+
+      it('should return warning message for successful build with warnings', () => {
+        const result = generateArtifactErrorMessage(BuildStatus.SUCCESS, 'Build artifact not found for build ID: build-123', 'build-123', true);
+        expect(result).toBe('Build completed with warnings, but no artifacts were found.');
+      });
+
+      it('should return unknown message for unknown status', () => {
+        const result = generateArtifactErrorMessage(null, 'Build artifact not found for build ID: build-123', 'build-123');
+        expect(result).toBe('No artifacts were found for this build.');
+      });
+
+      it('should return unknown message for undefined status', () => {
+        const result = generateArtifactErrorMessage(undefined, 'Build artifact not found for build ID: build-123', 'build-123');
+        expect(result).toBe('No artifacts were found for this build.');
+      });
+
+      it('should return original message for other status codes', () => {
+        const result = generateArtifactErrorMessage(99, 'Build artifact not found for build ID: build-123', 'build-123');
+        expect(result).toBe('Cannot download artifact since the build failed: Build artifact not found for build ID: build-123');
+      });
+
+      it('should work without buildId parameter', () => {
+        const result = generateArtifactErrorMessage(BuildStatus.SUCCESS, 'Build artifact not found for build ID: build-123');
+        expect(result).toBe('Build succeeded, but no artifacts were found.');
+      });
     });
   });
 });
