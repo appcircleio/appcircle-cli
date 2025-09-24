@@ -19,7 +19,9 @@ import {
   determineBuildWaitBehavior,
   processBuildResponseForImmediateReturn,
   selectBuildExecutionMode,
+  selectBuildMonitorMode,
   BuildExecutionMode,
+  BuildMonitorMode,
   checkIfUserAlreadyLoggedIn as utilCheckIfUserAlreadyLoggedIn,
   checkIfUserIsLoggedIn as utilCheckIfUserIsLoggedIn,
   validatePublishPlatform as utilValidatePublishPlatform,
@@ -4147,44 +4149,65 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     // Check if this is a non-interactive run (has --no-wait or JSON output)
     const isNonInteractive = process.argv.includes('--no-wait') || getConsoleOutputType() === 'json';
     
-    // Parse execution mode from command line parameter or prompt user in interactive mode
-    let executionMode = BuildExecutionMode.NORMAL;
-    const executionModeParam = command.opts()['executionMode'];
+    // Parse monitor mode from command line parameter or prompt user in interactive mode
+    let monitorMode = BuildMonitorMode.SUMMARY;
+    const monitorParam = command.opts()['monitor'];
+    const executionModeParam = command.opts()['executionMode']; // For backward compatibility
     
-    if (executionModeParam) {
-      // Command line parameter provided - use it
-      switch (executionModeParam.toLowerCase()) {
-        case 'normal':
-          executionMode = BuildExecutionMode.NORMAL;
+    // Check for new --monitor parameter first
+    if (monitorParam) {
+      // New monitor parameter provided - use it
+      switch (monitorParam.toLowerCase()) {
+        case 'none':
+          monitorMode = BuildMonitorMode.NONE;
           break;
-        case 'detailed':
-          executionMode = BuildExecutionMode.DETAILED_MONITORING;
+        case 'summary':
+          monitorMode = BuildMonitorMode.SUMMARY;
           break;
-        case 'step-summary':
-          executionMode = BuildExecutionMode.STEP_SUMMARY;
+        case 'steps':
+          monitorMode = BuildMonitorMode.STEPS;
           break;
-        case 'skip':
-          executionMode = BuildExecutionMode.SKIP_SHOW_TASK_ID;
+        case 'verbose':
+          monitorMode = BuildMonitorMode.VERBOSE;
           break;
         default:
-          console.warn(`Warning: Unknown execution mode '${executionModeParam}'. Using 'normal' mode.`);
-          executionMode = BuildExecutionMode.NORMAL;
+          console.warn(`Warning: Unknown monitor mode '${monitorParam}'. Using 'summary' mode.`);
+          monitorMode = BuildMonitorMode.SUMMARY;
+      }
+    } else if (executionModeParam) {
+      // Legacy --execution-mode parameter provided - map to new monitor modes
+      switch (executionModeParam.toLowerCase()) {
+        case 'normal':
+          monitorMode = BuildMonitorMode.SUMMARY;
+          break;
+        case 'detailed':
+          monitorMode = BuildMonitorMode.VERBOSE;
+          break;
+        case 'step-summary':
+          monitorMode = BuildMonitorMode.STEPS;
+          break;
+        case 'skip':
+          monitorMode = BuildMonitorMode.NONE;
+          break;
+        default:
+          console.warn(`Warning: Unknown execution mode '${executionModeParam}'. Using 'summary' mode.`);
+          monitorMode = BuildMonitorMode.SUMMARY;
       }
     } else if (!isNonInteractive) {
       // No command line parameter and interactive mode - prompt user
-      const modeSelection = await selectBuildExecutionMode();
+      const modeSelection = await selectBuildMonitorMode();
       
       if (modeSelection.cancelled) {
         console.log('\nBuild cancelled by user.');
         throw new AppcircleExitError('Build cancelled', 0);
       }
       
-      executionMode = modeSelection.mode;
+      monitorMode = modeSelection.mode;
     }
-    // If non-interactive and no parameter provided, use default (NORMAL)
+    // If non-interactive and no parameter provided, use default (SUMMARY)
     
-    // Handle "Skip & Show Task ID Only" mode
-    if (executionMode === BuildExecutionMode.SKIP_SHOW_TASK_ID) {
+    // Handle "None" monitor mode - just return Task/Build ID and exit
+    if (monitorMode === BuildMonitorMode.NONE) {
       const spinner = createOra(`Generating Task ID...`).start();
       try {
         const responseData = await startBuild(params);
@@ -4194,7 +4217,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           console.log(JSON.stringify({
             taskId: responseData.taskId,
             queueItemId: responseData.queueItemId,
-            mode: 'skip'
+            mode: 'none'
           }));
         }
         
@@ -4204,8 +4227,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       }
     }
     
-    // For Detailed Monitoring and Step Summary modes, setup SSE BEFORE starting build
-    if (executionMode === BuildExecutionMode.DETAILED_MONITORING || executionMode === BuildExecutionMode.STEP_SUMMARY) {
+    // For Steps and Verbose monitor modes, setup SSE BEFORE starting build
+    if (monitorMode === BuildMonitorMode.STEPS || monitorMode === BuildMonitorMode.VERBOSE) {
       try {
         // Step 1: Setup SSE connection BEFORE build starts
         const accessToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
@@ -4300,15 +4323,15 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           data: responseData,
         });
         
-        // Show different messages based on execution mode
-        if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
-          spinner.succeed(`Build successfully added to queue with detailed monitoring enabled.\n\nTaskId: ${responseData.taskId}`);
-        } else if (executionMode === BuildExecutionMode.STEP_SUMMARY) {
-          spinner.succeed(`Build successfully added to queue with step summary monitoring enabled.\n\nTaskId: ${responseData.taskId}`);
+        // Show different messages based on monitor mode
+        if (monitorMode === BuildMonitorMode.VERBOSE) {
+          spinner.succeed(`Build successfully added to queue with verbose monitoring enabled.\n\nTaskId: ${responseData.taskId}`);
+        } else if (monitorMode === BuildMonitorMode.STEPS) {
+          spinner.succeed(`Build successfully added to queue with step monitoring enabled.\n\nTaskId: ${responseData.taskId}`);
         }
 
         // NOW trigger build logs streaming - SSE connection is already ready (for enhanced monitoring modes)
-        if ((executionMode === BuildExecutionMode.DETAILED_MONITORING || executionMode === BuildExecutionMode.STEP_SUMMARY) && monitoringContext && sseConnection) {
+        if ((monitorMode === BuildMonitorMode.VERBOSE || monitorMode === BuildMonitorMode.STEPS) && monitoringContext && sseConnection) {
           const taskId = responseData.taskId || responseData.queueItemId;
           try {
             await triggerBuildLogsStreaming({
@@ -4321,8 +4344,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
               organizationId: monitoringContext.organizationId
             });
 
-            // Setup appropriate formatter based on execution mode
-            const terminalFormatter = executionMode === BuildExecutionMode.STEP_SUMMARY
+            // Setup appropriate formatter based on monitor mode
+            const terminalFormatter = monitorMode === BuildMonitorMode.STEPS
               ? createStepSummaryFormatter()
               : createCleanTerminalFormatter();
             let buildLogReceived = false;
@@ -4374,8 +4397,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     terminalFormatter.processMessage(buildLogEvent);
                     
                     // Process the build log event through our processors
-                    // Only if build is not completed and not in step summary mode (to prevent logs after Build Summary)
-                    if (logProcessor && !terminalFormatter.isBuildCompleted() && executionMode !== BuildExecutionMode.STEP_SUMMARY) {
+                    // Only if build is not completed and not in steps mode (to prevent logs after Build Summary)
+                    if (logProcessor && !terminalFormatter.isBuildCompleted() && monitorMode !== BuildMonitorMode.STEPS) {
                       logProcessor.processMessage(buildLogEvent);
                     }
                   }
@@ -4415,7 +4438,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       let interval: NodeJS.Timeout | null = null;
       const startTime = Date.now();
 
-      if (executionMode !== BuildExecutionMode.DETAILED_MONITORING && executionMode !== BuildExecutionMode.STEP_SUMMARY) {
+      if (monitorMode !== BuildMonitorMode.VERBOSE && monitorMode !== BuildMonitorMode.STEPS) {
         progressSpinner = createProgressSpinner(`Checking Build Status...`);
         let dots = "";
         
@@ -4433,9 +4456,9 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         const monitoringResult = await monitorBuildProgress(taskId, params, getBuildStatusFromQueue, getLatestBuildId);
         const { buildCompleted, buildSuccess, finalStatusResponse, latestBuildId, timedOut } = monitoringResult;
         
-        // Update spinner with status messages during monitoring (only for normal mode)
+        // Update spinner with status messages during monitoring (only for summary mode)
         let monitoringInterval: NodeJS.Timeout | null = null;
-        if (executionMode !== BuildExecutionMode.DETAILED_MONITORING && executionMode !== BuildExecutionMode.STEP_SUMMARY) {
+        if (monitorMode !== BuildMonitorMode.VERBOSE && monitorMode !== BuildMonitorMode.STEPS) {
           monitoringInterval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
             if (finalStatusResponse) {
               const elapsedText = formatElapsedTime(startTime);
@@ -4629,8 +4652,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }
                   console.log(chalk.green('Build completed successfully with logs downloaded.'));
                   
-                  // For detailed monitoring mode, exit immediately after log download
-                  if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
+                  // For verbose monitoring mode, exit immediately after log download
+                  if (monitorMode === BuildMonitorMode.VERBOSE) {
                     throw new AppcircleExitError('', 0);
                   }
                   
@@ -4652,8 +4675,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
               } else {
                 console.log(chalk.gray('Build completed successfully.'));
                 
-                // For detailed monitoring mode, exit immediately after continue
-                if (executionMode === BuildExecutionMode.DETAILED_MONITORING) {
+                // For verbose monitoring mode, exit immediately after continue
+                if (monitorMode === BuildMonitorMode.VERBOSE) {
                   throw new AppcircleExitError('', 0);
                 }
               }

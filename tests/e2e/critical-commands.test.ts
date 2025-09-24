@@ -282,31 +282,84 @@ describe('Critical Command E2E Tests', () => {
   });
 
   describe('Execution Mode Tests', () => {
-    it('should show help for build start command with execution mode parameter', async () => {
+    it('should show help for build start command with monitor parameter', async () => {
       const result = await runCommand(['build', 'start', '--help']);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('--execution-mode');
-      expect(result.stdout).toContain('Build monitoring preference: normal (default), detailed, step-summary, or skip');
+      expect(result.stdout).toContain('--monitor');
+      expect(result.stdout).toContain('Build monitoring preference: none, summary (default), steps, or verbose');
     });
 
-    it('should handle invalid execution mode parameter', async () => {
+    it('should handle invalid monitor parameter', async () => {
       const result = await runCommand([
         'build', 'start', 
         '--profileId', 'test-profile',
         '--workflowId', 'test-workflow',
-        '--execution-mode', 'invalid-mode'
+        '--monitor', 'invalid-mode'
       ]);
 
-      // Should show warning about unknown execution mode
-      expect(result.stderr).toContain('Warning: Unknown execution mode');
-      expect(result.stderr).toContain('Using \'normal\' mode');
+      // Should show warning about unknown monitor mode
+      expect(result.stderr).toContain('Warning: Unknown monitor mode');
+      expect(result.stderr).toContain('Using \'summary\' mode');
     });
 
-    it('should accept valid execution mode parameters', async () => {
-      const validModes = ['normal', 'detailed', 'step-summary', 'skip'];
+    it('should accept valid monitor parameters', async () => {
+      const validModes = ['none', 'summary', 'steps', 'verbose'];
       
       for (const mode of validModes) {
+        const result = await runCommand([
+          'build', 'start', 
+          '--profileId', 'test-profile',
+          '--workflowId', 'test-workflow',
+          '--monitor', mode
+        ]);
+
+        // Should not show warning for valid modes
+        expect(result.stderr).not.toContain('Warning: Unknown monitor mode');
+      }
+    });
+
+    it('should handle case insensitive monitor parameters', async () => {
+      const result = await runCommand([
+        'build', 'start', 
+        '--profileId', 'test-profile',
+        '--workflowId', 'test-workflow',
+        '--monitor', 'VERBOSE'
+      ]);
+
+      // Should not show warning for case insensitive valid modes
+      expect(result.stderr).not.toContain('Warning: Unknown monitor mode');
+    });
+
+    it('should default to summary mode when no monitor mode is specified', async () => {
+      const result = await runCommand([
+        'build', 'start', 
+        '--profileId', 'test-profile',
+        '--workflowId', 'test-workflow'
+      ]);
+
+      // Should not show warning when no monitor mode is specified
+      expect(result.stderr).not.toContain('Warning: Unknown monitor mode');
+    });
+
+    it('should work with monitor mode and other build parameters', async () => {
+      const result = await runCommand([
+        'build', 'start', 
+        '--profileId', 'test-profile',
+        '--workflowId', 'test-workflow',
+        '--monitor', 'steps',
+        '--download-logs',
+        '--no-wait'
+      ]);
+
+      // Should not show warning when monitor mode is combined with other parameters
+      expect(result.stderr).not.toContain('Warning: Unknown monitor mode');
+    });
+
+    it('should maintain backward compatibility with --execution-mode parameter', async () => {
+      const legacyModes = ['normal', 'detailed', 'step-summary', 'skip'];
+      
+      for (const mode of legacyModes) {
         const result = await runCommand([
           'build', 'start', 
           '--profileId', 'test-profile',
@@ -314,45 +367,22 @@ describe('Critical Command E2E Tests', () => {
           '--execution-mode', mode
         ]);
 
-        // Should not show warning for valid modes
+        // Should not show warning for legacy execution modes
         expect(result.stderr).not.toContain('Warning: Unknown execution mode');
       }
     });
 
-    it('should handle case insensitive execution mode parameters', async () => {
+    it('should prioritize --monitor over --execution-mode when both are provided', async () => {
       const result = await runCommand([
         'build', 'start', 
         '--profileId', 'test-profile',
         '--workflowId', 'test-workflow',
-        '--execution-mode', 'DETAILED'
+        '--monitor', 'verbose',
+        '--execution-mode', 'normal'
       ]);
 
-      // Should not show warning for case insensitive valid modes
-      expect(result.stderr).not.toContain('Warning: Unknown execution mode');
-    });
-
-    it('should default to normal mode when no execution mode is specified', async () => {
-      const result = await runCommand([
-        'build', 'start', 
-        '--profileId', 'test-profile',
-        '--workflowId', 'test-workflow'
-      ]);
-
-      // Should not show warning when no execution mode is specified
-      expect(result.stderr).not.toContain('Warning: Unknown execution mode');
-    });
-
-    it('should work with execution mode and other build parameters', async () => {
-      const result = await runCommand([
-        'build', 'start', 
-        '--profileId', 'test-profile',
-        '--workflowId', 'test-workflow',
-        '--execution-mode', 'step-summary',
-        '--download-logs',
-        '--no-wait'
-      ]);
-
-      // Should not show warning when execution mode is combined with other parameters
+      // Should not show warning and should use monitor mode
+      expect(result.stderr).not.toContain('Warning: Unknown monitor mode');
       expect(result.stderr).not.toContain('Warning: Unknown execution mode');
     });
   });

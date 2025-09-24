@@ -607,7 +607,17 @@ export interface BuildResponseProcessingResult {
 }
 
 /**
- * Execution modes for build start
+ * Monitor modes for build start
+ */
+export enum BuildMonitorMode {
+  NONE = 'none',
+  SUMMARY = 'summary',
+  STEPS = 'steps',
+  VERBOSE = 'verbose'
+}
+
+/**
+ * @deprecated Use BuildMonitorMode instead
  */
 export enum BuildExecutionMode {
   NORMAL = 'normal',
@@ -616,6 +626,14 @@ export enum BuildExecutionMode {
   SKIP_SHOW_TASK_ID = 'skip'
 }
 
+export interface BuildMonitorModeResult {
+  mode: BuildMonitorMode;
+  cancelled: boolean;
+}
+
+/**
+ * @deprecated Use BuildMonitorModeResult instead
+ */
 export interface BuildExecutionModeResult {
   mode: BuildExecutionMode;
   cancelled: boolean;
@@ -849,8 +867,57 @@ export const checkIfUserIsLoggedIn = (
 };
 
 /**
- * Prompts user to select execution mode for build start
+ * Prompts user to select monitor mode for build start
  * Supports dependency injection for testing
+ */
+export const selectBuildMonitorMode = async (
+  createPrompt = (name: string, message: string, choices: string[]) => {
+    const { AutoComplete } = require('enquirer');
+    return new AutoComplete({
+      name,
+      message,
+      choices,
+      limit: 10
+    });
+  }
+): Promise<BuildMonitorModeResult> => {
+  const choices = [
+    'None - No monitoring, just return Task/Build ID and exit',
+    'Summary - Wait until completion, show final status + total duration in one line',
+    'Steps - Wait until completion, show step-by-step progress (started/finished) minimally',
+    'Verbose - Wait until completion, stream detailed logs line by line in real-time'
+  ];
+
+  try {
+    const selectPrompt = createPrompt(
+      'monitorMode',
+      'Select build monitoring preference:',
+      choices
+    );
+    
+    const selected = await selectPrompt.run();
+    
+    // Parse the selection
+    if (selected.includes('None')) {
+      return { mode: BuildMonitorMode.NONE, cancelled: false };
+    } else if (selected.includes('Summary')) {
+      return { mode: BuildMonitorMode.SUMMARY, cancelled: false };
+    } else if (selected.includes('Steps')) {
+      return { mode: BuildMonitorMode.STEPS, cancelled: false };
+    } else if (selected.includes('Verbose')) {
+      return { mode: BuildMonitorMode.VERBOSE, cancelled: false };
+    } else {
+      // Default to summary if parsing fails
+      return { mode: BuildMonitorMode.SUMMARY, cancelled: false };
+    }
+  } catch (error) {
+    // User cancelled or error occurred
+    return { mode: BuildMonitorMode.SUMMARY, cancelled: true };
+  }
+};
+
+/**
+ * @deprecated Use selectBuildMonitorMode instead
  */
 export const selectBuildExecutionMode = async (
   createPrompt = (name: string, message: string, choices: string[]) => {
