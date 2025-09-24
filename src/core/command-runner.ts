@@ -1978,7 +1978,7 @@ export const downloadBuildLogsInteractive = async (finalStatusResponse: any, lat
     } else {
       await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
     }
-    console.log(chalk.green('Build completed successfully with logs downloaded.'));
+    console.log(chalk.green('Build log downloaded successfully.'));
     throw new AppcircleExitError('', 0);
   } catch (error: any) {
     if (error instanceof AppcircleExitError) {
@@ -4650,7 +4650,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   } else {
                     await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                   }
-                  console.log(chalk.green('Build completed successfully with logs downloaded.'));
+                  console.log(chalk.green('Build log downloaded successfully.'));
                   
                   // For verbose monitoring mode, exit immediately after log download
                   if (monitorMode === BuildMonitorMode.VERBOSE) {
@@ -4853,7 +4853,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   } else {
                     await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                   }
-                  console.log(chalk.green('Build completed successfully with logs downloaded.'));
+                  console.log(chalk.green('Build log downloaded successfully.'));
                   throw new AppcircleExitError('', 0);
                 } catch (error: any) {
                   if (error instanceof AppcircleExitError) {

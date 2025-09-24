@@ -752,7 +752,7 @@ describe('Build Monitoring Utilities', () => {
         profileId: 'profile-456',
         path: '/download/path'
       });
-      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Build completed successfully with logs downloaded.'));
+      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Build log downloaded successfully.'));
     });
 
     it('should handle canceled build status', async () => {
