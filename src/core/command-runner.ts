@@ -493,6 +493,7 @@ function createStepSummaryFormatter() {
   let hasRenderedTable = false;
   let stepOrder: string[] = []; // Track the order of steps
   let currentActiveStepIndex = -1; // Track which line to update
+  const displayedSteps = new Set<string>(); // Track which steps have been displayed to prevent duplicates
 
   // Extract duration from build log event
   function extractDurationFromEvent(buildLogEvent: any): number | null {
@@ -560,8 +561,15 @@ function createStepSummaryFormatter() {
     return '<1s';
   }
 
+  // Helper function to normalize step names (trim whitespace, handle variations)
+  function normalizeStepName(stepName: string): string {
+    if (!stepName) return '';
+    return stepName.trim();
+  }
+
   function getStepStatusColor(stepName: string): (text: string) => string {
-    const state = stepStates.get(stepName);
+    const normalizedName = normalizeStepName(stepName);
+    const state = stepStates.get(normalizedName);
     if (!state) return chalk.gray;
 
     switch (state.status) {
@@ -589,9 +597,22 @@ function createStepSummaryFormatter() {
   }
 
   function updateStepStatus(stepName: string, status: StepStatus, buildLogEvent?: any) {
-    const state = stepStates.get(stepName);
+    const normalizedName = normalizeStepName(stepName);
+    const state = stepStates.get(normalizedName);
     if (state) {
-      state.status = status;
+      // Don't downgrade status: FAILED > COMPLETED > RUNNING
+      let statusChanged = false;
+      if (state.status === StepStatus.FAILED && status !== StepStatus.FAILED) {
+        // Keep FAILED status, don't downgrade to COMPLETED or RUNNING
+        // But still update display and other properties
+      } else if (state.status === StepStatus.COMPLETED && status === StepStatus.RUNNING) {
+        // Keep COMPLETED status, don't downgrade to RUNNING
+        // But still update display and other properties
+      } else {
+        state.status = status;
+        statusChanged = true;
+      }
+      // Always update endTime and other properties for COMPLETED or FAILED status
       if (status === StepStatus.COMPLETED || status === StepStatus.FAILED) {
         state.endTime = Date.now();
 
@@ -621,15 +642,22 @@ function createStepSummaryFormatter() {
           clearInterval(updateTimer);
           updateTimer = null;
         }
+      }
 
-        // Update the step in-place if it's the current active step
-        if (stepName === currentActiveStep && currentActiveStepIndex >= 0) {
-          const duration = formatDuration(stepName, state.startTime, state.endTime);
-          const colorFn = getStepStatusColor(stepName);
-          const statusIcon = state.hasErrors ? '⚠️ ' : '✅';
+      // Always update the step display if this is a completion event
+      if (status === StepStatus.COMPLETED || status === StepStatus.FAILED) {
+        // Check if we've already displayed this step
+        if (!displayedSteps.has(normalizedName)) {
+          // First time displaying this step
+          displayedSteps.add(normalizedName);
+          
+          // Update the step display
+          const duration = formatDuration(normalizedName, state.startTime, state.endTime);
+          const colorFn = getStepStatusColor(normalizedName);
+          const statusIcon = state.status === StepStatus.FAILED ? '❌ ' : (state.hasErrors ? '⚠️ ' : '✅');
 
           // Format step display with consistent spacing for emoji alignment
-          const stepNamePart = `${stepName}`;
+          const stepNamePart = `${normalizedName}`;
           const paddedStepName = stepNamePart.padEnd(45); // Reserve space for emoji + space (2 chars)
           const stepDisplay = `${statusIcon} ${paddedStepName}`;
           const timeDisplay = `(${duration})`;
@@ -637,14 +665,49 @@ function createStepSummaryFormatter() {
           // Apply color to the step display
           const coloredStepDisplay = colorFn(stepDisplay);
 
-          // Move cursor up one line, clear it, and update
-          process.stdout.write('\x1b[1A'); // Move cursor up one line
-          process.stdout.write('\x1b[2K'); // Clear current line
-          process.stdout.write(`${coloredStepDisplay} ${timeDisplay}\n`);
+          // If this is the current active step, update in-place
+          if (normalizedName === currentActiveStep && currentActiveStepIndex >= 0) {
+            // Move cursor up one line, clear it, and update
+            process.stdout.write('\x1b[1A'); // Move cursor up one line
+            process.stdout.write('\x1b[2K'); // Clear current line
+            process.stdout.write(`${coloredStepDisplay} ${timeDisplay}\n`);
 
-          // Reset active step since it's completed
-          currentActiveStep = '';
-          currentActiveStepIndex = -1;
+            // Reset active step since it's completed
+            currentActiveStep = '';
+            currentActiveStepIndex = -1;
+          } else {
+            // For non-active steps, just print the completed step
+            process.stdout.write(`${coloredStepDisplay} ${timeDisplay}\n`);
+          }
+        } else {
+          // Step already displayed, check if we need to update it with a worse status
+          const currentDisplayedState = stepStates.get(normalizedName);
+          if (currentDisplayedState) {
+            // Only update if the new status is worse (FAILED > hasErrors > SUCCESS)
+            const shouldUpdate = (
+              (state.status === StepStatus.FAILED && currentDisplayedState.status !== StepStatus.FAILED) ||
+              (state.hasErrors && !currentDisplayedState.hasErrors && state.status !== StepStatus.FAILED)
+            );
+            
+            if (shouldUpdate) {
+              // Update the displayed step with worse status
+              const duration = formatDuration(normalizedName, state.startTime, state.endTime);
+              const colorFn = getStepStatusColor(normalizedName);
+              const statusIcon = state.status === StepStatus.FAILED ? '❌ ' : (state.hasErrors ? '⚠️ ' : '✅');
+
+              // Format step display with consistent spacing for emoji alignment
+              const stepNamePart = `${normalizedName}`;
+              const paddedStepName = stepNamePart.padEnd(45); // Reserve space for emoji + space (2 chars)
+              const stepDisplay = `${statusIcon} ${paddedStepName}`;
+              const timeDisplay = `(${duration})`;
+
+              // Apply color to the step display
+              const coloredStepDisplay = colorFn(stepDisplay);
+
+              // Print the updated step (we can't update in-place as we don't know the line number)
+              process.stdout.write(`${coloredStepDisplay} ${timeDisplay}\n`);
+            }
+          }
         }
       }
     }
@@ -688,105 +751,121 @@ function createStepSummaryFormatter() {
 
       // Handle step start - workflowStatus: 1 = StepStarted
       if (workflowStatus === 1 && stepName && stepName !== currentActiveStep) {
-        currentActiveStep = stepName;
-        stepStates.set(stepName, {
-          status: StepStatus.RUNNING,
-          startTime: Date.now(),
-          hasErrors: false
-        });
+        const normalizedName = normalizeStepName(stepName);
+        // Only start step if it's not already in stepStates (prevent duplicates)
+        if (!stepStates.has(normalizedName)) {
+          currentActiveStep = normalizedName;
+          stepStates.set(normalizedName, {
+            status: StepStatus.RUNNING,
+            startTime: Date.now(),
+            hasErrors: false
+          });
 
-        // Add to step order if not already present
-        if (!stepOrder.includes(stepName)) {
-          stepOrder.push(stepName);
+          // Add to step order if not already present
+          if (!stepOrder.includes(normalizedName)) {
+            stepOrder.push(normalizedName);
+          }
+
+          // Start update timer for real-time updates
+          startUpdateTimer();
+
+          // Render table header if first step
+          renderStepTable();
+
+          // Show the running step immediately (only if build not completed)
+          if (!buildCompleted) {
+            const paddedStepName = normalizedName.padEnd(45); // Reserve space for emoji + space (2 chars)
+            const stepDisplay = `🔄 ${paddedStepName}`;
+            const coloredStepDisplay = chalk.yellow(stepDisplay);
+            console.log(`${coloredStepDisplay} (0s)`);
+          }
+          currentActiveStepIndex = stepOrder.length - 1; // Track this line for updates
+        } else {
+          // Step already exists, just update currentActiveStep
+          currentActiveStep = normalizedName;
+          const existingState = stepStates.get(normalizedName);
+          if (existingState && existingState.status === StepStatus.RUNNING) {
+            // Update the existing running step
+            currentActiveStepIndex = stepOrder.indexOf(normalizedName);
+          }
         }
-
-        // Start update timer for real-time updates
-        startUpdateTimer();
-
-        // Render table header if first step
-        renderStepTable();
-
-        // Show the running step immediately (only if build not completed)
-        if (!buildCompleted) {
-          const paddedStepName = stepName.padEnd(45); // Reserve space for emoji + space (2 chars)
-          const stepDisplay = `🔄 ${paddedStepName}`;
-          const coloredStepDisplay = chalk.yellow(stepDisplay);
-          console.log(`${coloredStepDisplay} (0s)`);
-        }
-        currentActiveStepIndex = stepOrder.length - 1; // Track this line for updates
-
         return;
       }
 
       // Handle step end - workflowStatus: 2 = StepEnded
-      if (workflowStatus === 2 && stepName && stepStates.has(stepName)) {
-        updateStepStatus(stepName, StepStatus.COMPLETED, buildLogEvent);
+      if (workflowStatus === 2 && stepName) {
+        const normalizedName = normalizeStepName(stepName);
+        if (stepStates.has(normalizedName)) {
+          updateStepStatus(normalizedName, StepStatus.COMPLETED, buildLogEvent);
 
-        // Special case for "Completing workflow" - handle completion AFTER display
-        if (stepName === 'Completing workflow' && !buildCompleted) {
-          // Give a small delay to ensure step display happens before completion
-          setTimeout(() => {
-            buildCompleted = true;
-            if (sseConnection && sseConnection.close) {
-              sseConnection.close();
-            }
-            if (completionCallback && !completionCallbackCalled) {
-              completionCallbackCalled = true;
-              completionCallback();
-            }
-          }, 100); // 100ms delay
+          // Special case for "Completing workflow" - handle completion AFTER display
+          if (normalizedName === 'Completing workflow' && !buildCompleted) {
+            // Give a small delay to ensure step display happens before completion
+            setTimeout(() => {
+              buildCompleted = true;
+              if (sseConnection && sseConnection.close) {
+                sseConnection.close();
+              }
+              if (completionCallback && !completionCallbackCalled) {
+                completionCallbackCalled = true;
+                completionCallback();
+              }
+            }, 100); // 100ms delay
+          }
         }
         return;
       }
 
       // Handle step failed - workflowStatus: 3 = StepFailed
-      if (workflowStatus === 3 && stepName && stepStates.has(stepName)) {
-        // Mark step as having errors and complete it
-        const state = stepStates.get(stepName);
-        if (state) {
-          state.hasErrors = true;
+      if (workflowStatus === 3 && stepName) {
+        const normalizedName = normalizeStepName(stepName);
+        if (stepStates.has(normalizedName)) {
+          // Mark step as failed
+          updateStepStatus(normalizedName, StepStatus.FAILED, buildLogEvent);
         }
-        updateStepStatus(stepName, StepStatus.COMPLETED, buildLogEvent);
         return;
       }
 
       // Special handling for "Completing workflow" that might come without workflowStatus
-      if (stepName === 'Completing workflow' && !stepStates.has(stepName)) {
-        // This step might not have a start event, so create it as running first
-        stepStates.set(stepName, {
-          status: StepStatus.RUNNING,
-          startTime: Date.now(),
-          hasErrors: false
-        });
+      if (stepName === 'Completing workflow') {
+        const normalizedName = normalizeStepName(stepName);
+        if (!stepStates.has(normalizedName)) {
+          // This step might not have a start event, so create it as running first
+          stepStates.set(normalizedName, {
+            status: StepStatus.RUNNING,
+            startTime: Date.now(),
+            hasErrors: false
+          });
 
-        if (!stepOrder.includes(stepName)) {
-          stepOrder.push(stepName);
-        }
+          if (!stepOrder.includes(normalizedName)) {
+            stepOrder.push(normalizedName);
+          }
 
-        renderStepTable();
-        // Show the running step immediately (only if build not completed)
-        if (!buildCompleted) {
-          const paddedStepName = stepName.padEnd(45); // Reserve space for emoji + space (2 chars)
-          const stepDisplay = `🔄 ${paddedStepName}`;
-          const coloredStepDisplay = chalk.yellow(stepDisplay);
-          console.log(`${coloredStepDisplay} (0s)`);
-        }
-        currentActiveStep = stepName;
-        currentActiveStepIndex = stepOrder.length - 1;
+          renderStepTable();
+          // Show the running step immediately (only if build not completed)
+          if (!buildCompleted) {
+            const paddedStepName = normalizedName.padEnd(45); // Reserve space for emoji + space (2 chars)
+            const stepDisplay = `🔄 ${paddedStepName}`;
+            const coloredStepDisplay = chalk.yellow(stepDisplay);
+            console.log(`${coloredStepDisplay} (0s)`);
+          }
+          currentActiveStep = normalizedName;
+          currentActiveStepIndex = stepOrder.length - 1;
 
-        // Immediately complete it if it has completion data
-        if (workflowStatus === 2 || message.includes('completed')) {
-          updateStepStatus(stepName, StepStatus.COMPLETED, buildLogEvent);
-          setTimeout(() => {
-            buildCompleted = true;
-            if (sseConnection && sseConnection.close) {
-              sseConnection.close();
-            }
-            if (completionCallback && !completionCallbackCalled) {
-              completionCallbackCalled = true;
-              completionCallback();
-            }
-          }, 100);
+          // Immediately complete it if it has completion data
+          if (workflowStatus === 2 || message.includes('completed')) {
+            updateStepStatus(normalizedName, StepStatus.COMPLETED, buildLogEvent);
+            setTimeout(() => {
+              buildCompleted = true;
+              if (sseConnection && sseConnection.close) {
+                sseConnection.close();
+              }
+              if (completionCallback && !completionCallbackCalled) {
+                completionCallbackCalled = true;
+                completionCallback();
+              }
+            }, 100);
+          }
         }
         return;
       }
@@ -794,19 +873,35 @@ function createStepSummaryFormatter() {
       // Handle section:start - new step starting (fallback)
       if (message.includes('section:start')) {
         const stepName = message.replace('section:start', '').trim();
-        if (stepName && stepName !== currentActiveStep) {
-          currentActiveStep = stepName;
-          stepStates.set(stepName, {
-            status: StepStatus.RUNNING,
-            startTime: Date.now(),
-            hasErrors: false
-          });
+        const normalizedName = normalizeStepName(stepName);
+        if (normalizedName && normalizedName !== currentActiveStep) {
+          if (!stepStates.has(normalizedName)) {
+            currentActiveStep = normalizedName;
+            stepStates.set(normalizedName, {
+              status: StepStatus.RUNNING,
+              startTime: Date.now(),
+              hasErrors: false
+            });
 
-          // Start update timer for real-time updates
-          startUpdateTimer();
+            // Add to step order if not already present
+            if (!stepOrder.includes(normalizedName)) {
+              stepOrder.push(normalizedName);
+            }
 
-          // Re-render table
-          renderStepTable();
+            // Start update timer for real-time updates
+            startUpdateTimer();
+
+            // Re-render table
+            renderStepTable();
+          } else {
+            // Step already exists, just update currentActiveStep
+            currentActiveStep = normalizedName;
+            const existingState = stepStates.get(normalizedName);
+            if (existingState && existingState.status === StepStatus.RUNNING) {
+              // Update the existing running step
+              currentActiveStepIndex = stepOrder.indexOf(normalizedName);
+            }
+          }
         }
         return;
       }
@@ -814,11 +909,12 @@ function createStepSummaryFormatter() {
       // Handle section:end - step completing
       if (message.includes('section:end')) {
         const stepToComplete = message.replace('section:end', '').trim();
-        if (stepToComplete && stepStates.has(stepToComplete)) {
-          updateStepStatus(stepToComplete, StepStatus.COMPLETED, buildLogEvent);
+        const normalizedName = normalizeStepName(stepToComplete);
+        if (normalizedName && stepStates.has(normalizedName)) {
+          updateStepStatus(normalizedName, StepStatus.COMPLETED, buildLogEvent);
 
           // Special case for "Completing workflow"
-          if (stepToComplete === 'Completing workflow' && !buildCompleted) {
+          if (normalizedName === 'Completing workflow' && !buildCompleted) {
             setTimeout(() => {
               buildCompleted = true;
               if (sseConnection && sseConnection.close) {
@@ -837,19 +933,35 @@ function createStepSummaryFormatter() {
       // Handle step start patterns - look for common build step patterns
       if (message.includes('@@[section:start]') || message.includes('##[section]')) {
         const stepName = message.replace(/@@\[section:start\]|##\[section\]/g, '').trim();
-        if (stepName && stepName !== currentActiveStep) {
-          currentActiveStep = stepName;
-          stepStates.set(stepName, {
-            status: StepStatus.RUNNING,
-            startTime: Date.now(),
-            hasErrors: false
-          });
+        const normalizedName = normalizeStepName(stepName);
+        if (normalizedName && normalizedName !== currentActiveStep) {
+          if (!stepStates.has(normalizedName)) {
+            currentActiveStep = normalizedName;
+            stepStates.set(normalizedName, {
+              status: StepStatus.RUNNING,
+              startTime: Date.now(),
+              hasErrors: false
+            });
 
-          // Start update timer for real-time updates
-          startUpdateTimer();
+            // Add to step order if not already present
+            if (!stepOrder.includes(normalizedName)) {
+              stepOrder.push(normalizedName);
+            }
 
-          // Re-render table
-          renderStepTable();
+            // Start update timer for real-time updates
+            startUpdateTimer();
+
+            // Re-render table
+            renderStepTable();
+          } else {
+            // Step already exists, just update currentActiveStep
+            currentActiveStep = normalizedName;
+            const existingState = stepStates.get(normalizedName);
+            if (existingState && existingState.status === StepStatus.RUNNING) {
+              // Update the existing running step
+              currentActiveStepIndex = stepOrder.indexOf(normalizedName);
+            }
+          }
         }
         return;
       }
@@ -857,11 +969,12 @@ function createStepSummaryFormatter() {
       // Handle step end patterns
       if (message.includes('@@[section:end]') || message.includes('##[endgroup]')) {
         const stepToComplete = message.replace(/@@\[section:end\]|##\[endgroup\]/g, '').trim();
-        if (stepToComplete && stepStates.has(stepToComplete)) {
-          updateStepStatus(stepToComplete, StepStatus.COMPLETED, buildLogEvent);
+        const normalizedName = normalizeStepName(stepToComplete);
+        if (normalizedName && stepStates.has(normalizedName)) {
+          updateStepStatus(normalizedName, StepStatus.COMPLETED, buildLogEvent);
 
           // Special case for "Completing workflow"
-          if (stepToComplete === 'Completing workflow' && !buildCompleted) {
+          if (normalizedName === 'Completing workflow' && !buildCompleted) {
             setTimeout(() => {
               buildCompleted = true;
               if (sseConnection && sseConnection.close) {
@@ -881,26 +994,41 @@ function createStepSummaryFormatter() {
       if (stepName && currentActiveStep) {
         // Check if this might be a step start
         if (message.includes('Starting') || message.includes('Running') || message.includes('Executing')) {
-          if (!stepStates.has(stepName)) {
-            currentActiveStep = stepName;
-            stepStates.set(stepName, {
+          const normalizedName = normalizeStepName(stepName);
+          if (!stepStates.has(normalizedName)) {
+            currentActiveStep = normalizedName;
+            stepStates.set(normalizedName, {
               status: StepStatus.RUNNING,
               startTime: Date.now(),
               hasErrors: false
             });
+
+            // Add to step order if not already present
+            if (!stepOrder.includes(normalizedName)) {
+              stepOrder.push(normalizedName);
+            }
 
             // Start update timer for real-time updates
             startUpdateTimer();
 
             // Re-render table
             renderStepTable();
+          } else {
+            // Step already exists, just update currentActiveStep
+            currentActiveStep = normalizedName;
+            const existingState = stepStates.get(normalizedName);
+            if (existingState && existingState.status === StepStatus.RUNNING) {
+              // Update the existing running step
+              currentActiveStepIndex = stepOrder.indexOf(normalizedName);
+            }
           }
         }
       }
 
       // Handle errors (like Clean Terminal Formatter)
       if (message.includes('@@[error]') && currentActiveStep) {
-        const state = stepStates.get(currentActiveStep);
+        const normalizedName = normalizeStepName(currentActiveStep);
+        const state = stepStates.get(normalizedName);
         if (state) {
           state.hasErrors = true;
         }
@@ -915,7 +1043,8 @@ function createStepSummaryFormatter() {
                               buildLogEvent.warning === true;
 
       if (isWarningMessage && currentActiveStep) {
-        const state = stepStates.get(currentActiveStep);
+        const normalizedName = normalizeStepName(currentActiveStep);
+        const state = stepStates.get(normalizedName);
         if (state) {
           state.hasErrors = true;
         }
@@ -925,7 +1054,8 @@ function createStepSummaryFormatter() {
       const stepNameMatch = message.match(/Step\s+(.+?)\s+(failed|warning|error)/i);
       if (stepNameMatch) {
         const mentionedStep = stepNameMatch[1].trim();
-        const state = stepStates.get(mentionedStep);
+        const normalizedName = normalizeStepName(mentionedStep);
+        const state = stepStates.get(normalizedName);
         if (state) {
           state.hasErrors = true;
         }
@@ -933,7 +1063,8 @@ function createStepSummaryFormatter() {
 
       // Apply warning to current active step if warning message detected
       if (isWarningMessage && currentActiveStep) {
-        const state = stepStates.get(currentActiveStep);
+        const normalizedName = normalizeStepName(currentActiveStep);
+        const state = stepStates.get(normalizedName);
         if (state) {
           state.hasErrors = true;
         }
@@ -986,7 +1117,8 @@ function createStepSummaryFormatter() {
 
     // Method to mark a specific step as having warnings/errors
     markStepAsWarning(stepName: string): void {
-      const state = stepStates.get(stepName);
+      const normalizedName = normalizeStepName(stepName);
+      const state = stepStates.get(normalizedName);
       if (state) {
         state.hasErrors = true;
       }
