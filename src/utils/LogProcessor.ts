@@ -19,6 +19,16 @@ export class LogProcessor {
    * Process an incoming raw message from SSE
    */
   processMessage(rawMessage: ServerOutputData): void {
+    // Skip empty messages
+    if (!rawMessage.message || rawMessage.message.trim() === '') {
+      return;
+    }
+    
+    // Skip step echo messages
+    if (this.isStepEcho(rawMessage)) {
+      return;
+    }
+    
     // Check for duplicates
     if (this.deduplicator.isDuplicate(rawMessage)) {
       return;
@@ -91,8 +101,9 @@ export class LogProcessor {
       isStepEcho: this.isStepEcho(rawMessage)
     };
 
-    // Insert in correct order and emit when ready
-    this.insertInOrder(processed);
+    // For verbose mode, emit messages immediately without buffering
+    // since all messages have index 0, ordering is not reliable
+    this.onProcessedMessage(processed);
   }
 
   /**
@@ -121,9 +132,11 @@ export class LogProcessor {
     while (this.messageBuffer.length > 0) {
       const message = this.messageBuffer[0];
       
-      // Check if this message is the next expected one or if we should emit anyway
+      // For verbose mode, emit messages immediately without strict ordering
+      // since all messages seem to have index 0, we'll emit them as they come
       if (message.messageIndex === this.nextExpectedIndex || 
-          this.messageBuffer.length > 50) { // Don't buffer too many messages
+          message.messageIndex === 0 || // Accept messages with index 0
+          this.messageBuffer.length > 10) { // Reduced buffer size for faster emission
         
         this.messageBuffer.shift();
         this.nextExpectedIndex = Math.max(this.nextExpectedIndex, message.messageIndex + 1);
@@ -183,8 +196,20 @@ export class LogProcessor {
   forceStartLogs(): void {
     if (!this.logsStarted) {
       this.logsStarted = true;
-      console.log('🚀 Build logs force started');
       this.flushBuffer();
+    }
+  }
+
+  /**
+   * Flush all remaining buffered messages (useful when build completes)
+   */
+  flushAllMessages(): void {
+    // Emit all remaining messages in the buffer
+    while (this.messageBuffer.length > 0) {
+      const message = this.messageBuffer.shift();
+      if (message) {
+        this.onProcessedMessage(message);
+      }
     }
   }
 }

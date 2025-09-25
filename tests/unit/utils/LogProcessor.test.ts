@@ -630,7 +630,6 @@ describe('LogProcessor', () => {
       expect(stats.processed).toBe(true);
       expect(stats.buffered).toBe(0);
       expect(mockOnProcessedMessage).toHaveBeenCalledTimes(1);
-      expect(consoleSpy).toHaveBeenCalledWith('🚀 Build logs force started');
 
       consoleSpy.mockRestore();
     });

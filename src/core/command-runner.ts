@@ -4273,7 +4273,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           if (progressTracker) progressTracker.updateProgress(message);
           if (renderer) {
             const formattedMessage = renderer.renderMessage(message);
-            console.log(formattedMessage);
+            // Only log if there's actual content to display
+            if (formattedMessage && formattedMessage.trim()) {
+              console.log(formattedMessage);
+            }
           }
         });
         
@@ -4360,6 +4363,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
               ? createStepSummaryFormatter()
               : createCleanTerminalFormatter();
             let buildLogReceived = false;
+            let verboseLogsStarted = false;
             const buildStartTime = Date.now();
 
             // Give formatter access to SSE connection for immediate closure
@@ -4404,13 +4408,20 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                       buildLogReceived = true;
                     }
                     
-                    // Process message with clean formatter
-                    terminalFormatter.processMessage(buildLogEvent);
-                    
-                    // Process the build log event through our processors
-                    // Only if build is not completed and not in steps mode (to prevent logs after Build Summary)
-                    if (logProcessor && !terminalFormatter.isBuildCompleted() && monitorMode !== BuildMonitorMode.STEPS) {
-                      logProcessor.processMessage(buildLogEvent);
+                    // Process message with appropriate formatter based on monitor mode
+                    if (monitorMode === BuildMonitorMode.VERBOSE) {
+                      // In verbose mode, use log processor for detailed output
+                      if (logProcessor) {
+                        // Force start logs for verbose mode only once when first message arrives
+                        if (!verboseLogsStarted) {
+                          logProcessor.forceStartLogs();
+                          verboseLogsStarted = true;
+                        }
+                        logProcessor.processMessage(buildLogEvent);
+                      }
+                    } else if (monitorMode === BuildMonitorMode.STEPS) {
+                      // In steps mode, use terminal formatter for step summaries
+                      terminalFormatter.processMessage(buildLogEvent);
                     }
                   }
                 } catch (error: any) {
@@ -4425,6 +4436,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   const stats = progressTracker.getBuildStats();
                   if (renderer) renderer.renderSummary(stats);
                   progressTracker.stop();
+                }
+                // Flush any remaining buffered messages in verbose mode
+                if (monitorMode === BuildMonitorMode.VERBOSE && logProcessor) {
+                  logProcessor.flushAllMessages();
                 }
                 terminalFormatter.finish();
               });

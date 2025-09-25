@@ -28,7 +28,21 @@ export class MessageDeduplicator {
    * Generate a unique key for a message based on its identifying properties
    */
   private generateKey(message: ServerOutputData): string {
-    return `${message.taskId}:${message.stepName || 'all'}:${message.messageIndex || 0}:${message.message}`;
+    // Create a more robust key that handles the fact that all messages have index 0
+    // Use a combination of taskId, stepName, and message content hash
+    const messageHash = this.hashString(message.message);
+    return `${message.taskId}:${message.stepName || 'all'}:${messageHash}`;
+  }
+  
+  private hashString(str: string): string {
+    let hash = 0;
+    if (str.length === 0) return hash.toString();
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash.toString();
   }
 
   /**
