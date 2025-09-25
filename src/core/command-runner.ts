@@ -4263,7 +4263,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         const buildLogOptions = {
           timestamps: false,
           noColor: getConsoleOutputType() === 'json',
-          enableProgress: process.stdout.isTTY
+          enableProgress: process.stdout.isTTY,
+          verboseMode: monitorMode === BuildMonitorMode.VERBOSE
         };
         
         renderer = new TerminalRenderer(buildLogOptions);

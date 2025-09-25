@@ -49,13 +49,16 @@ export class TerminalRenderer {
       parts.push(chalk.gray(`[${timestamp}]`));
     }
 
-    // Add status icon
-    const icon = this.statusIcons[message.status] || chalk.gray('○');
-    parts.push(icon);
+    // Add status icon only if not in verbose mode
+    // In verbose mode, we show only the raw message without icons or step names
+    if (!this.options.verboseMode) {
+      const icon = this.statusIcons[message.status] || chalk.gray('○');
+      parts.push(icon);
 
-    // Add step name if not 'all'
-    if (message.stepName !== 'all') {
-      parts.push(chalk.cyan(`[${message.stepName}]`));
+      // Add step name if not 'all'
+      if (message.stepName !== 'all') {
+        parts.push(chalk.cyan(`[${message.stepName}]`));
+      }
     }
 
     // Format and add message

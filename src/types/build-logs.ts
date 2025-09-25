@@ -67,4 +67,5 @@ export interface BuildLogOptions {
   enableProgress?: boolean;
   saveToFile?: boolean;
   outputPath?: string;
+  verboseMode?: boolean;
 }
