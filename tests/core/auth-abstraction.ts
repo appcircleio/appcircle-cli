@@ -5,6 +5,7 @@
 
 export interface AuthCredentials {
   pat?: string;
+  personalAccessKey?: string;
   apiKey?: string;
   username?: string;
   organizationId?: string;
@@ -86,6 +87,7 @@ export class MockAuth implements AuthInterface {
 
   private validateCredentials(credentials: AuthCredentials): boolean {
     if (credentials.pat) return true;
+    if (credentials.personalAccessKey) return true;
     if (credentials.apiKey && credentials.username) return true;
     return false;
   }
@@ -147,6 +149,7 @@ export class MemoryAuth implements AuthInterface {
 
   private validateCredentials(credentials: AuthCredentials): boolean {
     if (credentials.pat) return true;
+    if (credentials.personalAccessKey) return true;
     if (credentials.apiKey && credentials.username) return true;
     return false;
   }

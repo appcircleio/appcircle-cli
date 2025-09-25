@@ -18,6 +18,15 @@ import {
   validateBuildStartParameters,
   determineBuildWaitBehavior,
   processBuildResponseForImmediateReturn,
+  selectBuildExecutionMode,
+  selectBuildMonitorMode,
+  BuildExecutionMode,
+  BuildMonitorMode,
+  BuildStatus,
+  isBuildFailed,
+  isBuildSuccessful,
+  isBuildStatusUnknown,
+  generateArtifactErrorMessage,
   checkIfUserAlreadyLoggedIn as utilCheckIfUserAlreadyLoggedIn,
   checkIfUserIsLoggedIn as utilCheckIfUserIsLoggedIn,
   validatePublishPlatform as utilValidatePublishPlatform,
@@ -145,7 +154,12 @@ import {
   downloadTaskLog,
   createSubOrganization,
   getLatestBuildByBranch,
-  getLatestBuildId
+  getLatestBuildId,
+  resolveIdentityFromToken,
+  getHookAccessToken,
+  openHookSSE,
+  triggerBuildLogsStreaming,
+  triggerStopBuildLogsStreaming
 } from '../services';
 import { appcircleApi, getHeaders, OptionsType } from '../services/api';
 import { commandWriter, configWriter } from './writer';
@@ -157,6 +171,981 @@ import chalk from 'chalk';
 import enquirer from 'enquirer';
 import { AppcircleExitError } from './AppcircleExitError';
 import { Commands, CommandType } from './commands';
+
+/**
+ * Step status enum for tracking step state
+ */
+enum StepStatus {
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed'
+}
+
+/**
+ * Create a clean terminal UX formatter that manages step state and ephemeral status
+ */
+function createCleanTerminalFormatter() {
+  const stepStates = new Map<string, {
+    status: StepStatus;
+    startTime: number;
+    hasErrors: boolean;
+  }>();
+  
+  let currentActiveStep = '';
+  let ephemeralStatusLine = '';
+  let buildCompleted = false;
+  let completionCallback: (() => void) | null = null;
+  let completionCallbackCalled = false;
+  let sseConnection: any = null;
+  
+  function clearEphemeralStatus() {
+    if (ephemeralStatusLine) {
+      // Clear the ephemeral line by writing to stderr
+      process.stderr.write('\r' + ' '.repeat(ephemeralStatusLine.length) + '\r');
+      ephemeralStatusLine = '';
+    }
+  }
+  
+  function writeEphemeralStatus(text: string) {
+    clearEphemeralStatus();
+    ephemeralStatusLine = text;
+    process.stderr.write(text);
+  }
+  
+  function writePersistentLog(text: string) {
+    clearEphemeralStatus();
+    console.log(text); // This goes to stdout
+    if (ephemeralStatusLine) {
+      process.stderr.write(ephemeralStatusLine); // Restore ephemeral status
+    }
+  }
+  
+  function updateStepStatus(stepName: string, status: StepStatus) {
+    const state = stepStates.get(stepName);
+    if (state) {
+      state.status = status;
+      
+      // Calculate duration
+      const elapsed = Math.round((Date.now() - state.startTime) / 1000);
+      const timeStr = elapsed === 0 ? '<1s' : elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+      
+      // Choose icon and color based on status
+      let icon = '';
+      let color = chalk.white;
+      
+      switch (status) {
+        case StepStatus.COMPLETED:
+          icon = state.hasErrors ? '✗' : '✓';
+          color = state.hasErrors ? chalk.red : chalk.green;
+          break;
+        case StepStatus.FAILED:
+          icon = '✗';
+          color = chalk.red;
+          state.hasErrors = true;
+          break;
+        case StepStatus.RUNNING:
+          icon = '●';
+          color = chalk.yellow;
+          break;
+      }
+      
+      clearEphemeralStatus();
+      writePersistentLog(color(`${icon} ${stepName} (${timeStr})`));
+      
+      if (status !== StepStatus.RUNNING) {
+        currentActiveStep = '';
+        
+        // Check if this is the final "Completing workflow" step
+        if (stepName === 'Completing workflow' && status === StepStatus.COMPLETED && !buildCompleted) {
+          // Build completion already handled in @@[section:end] processing
+          // Just trigger completion callback
+          if (completionCallback && !completionCallbackCalled) {
+            completionCallbackCalled = true;
+            try {
+              completionCallback();
+            } catch (error) {
+              console.error('Error in completion callback:', error);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  return {
+    processMessage(buildLogEvent: any): void {
+      // Skip all messages if build is already completed
+      if (buildCompleted) {
+        return;
+      }
+      
+      const rawMessage = buildLogEvent.message || '';
+      const stepName = buildLogEvent.stepName;
+      const uiOnly = buildLogEvent.uiOnly === true;
+      
+      // Clean message: remove \r\n and trim
+      const message = rawMessage.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      
+      // Skip uiOnly messages that are just step names (avoid duplication)
+      if (uiOnly && (message.trim() === stepName || message.trim() === currentActiveStep)) {
+        return;
+      }
+      
+      // Handle step changes - show step header only when step changes
+      if (stepName && stepName !== currentActiveStep) {
+        // Only show step header if we're starting a new step
+        if (!message.includes('@@[section:begin]')) {
+          currentActiveStep = stepName;
+          clearEphemeralStatus();
+          writePersistentLog(chalk.yellow(`● ${stepName}`));
+        }
+      }
+      
+      // Handle section begin
+      if (message.includes('@@[section:begin]')) {
+        // Handle both patterns: "@@[section:begin] ... Step started: StepName" and "@@[section:begin] ... Starting workflow"
+        const stepStartedMatch = message.match(/@@\[section:begin\]\s*(.+?)\s*Step started:\s*(.+)/);
+        if (stepStartedMatch) {
+          const step = stepStartedMatch[2];
+          
+          // Initialize step state
+          stepStates.set(step, {
+            status: StepStatus.RUNNING,
+            startTime: Date.now(),
+            hasErrors: false
+          });
+          
+          currentActiveStep = step;
+          
+          // Show step header and section begin message
+          clearEphemeralStatus();
+          writePersistentLog(chalk.yellow(`● ${step}`));
+          writePersistentLog(chalk.blue(message.trim()));
+        } else {
+          // Handle simple format: "@@[section:begin] ... Starting workflow"
+          const simpleMatch = message.match(/@@\[section:begin\]\s*(.+?)\s*(.+)/);
+          if (simpleMatch) {
+            const step = simpleMatch[2] || stepName;
+            
+            // Initialize step state
+            stepStates.set(step, {
+              status: StepStatus.RUNNING,
+              startTime: Date.now(),
+              hasErrors: false
+            });
+            
+            currentActiveStep = step;
+            
+            // Show step header and section begin message
+            clearEphemeralStatus();
+            writePersistentLog(chalk.yellow(`● ${step}`));
+            writePersistentLog(chalk.blue(message.trim()));
+          }
+        }
+        return;
+      }
+      
+      // Handle multi-line messages that contain @@[section:end] 
+      if (message.includes('@@[section:end]')) {
+        // Split message: everything before @@[section:end] is regular content, everything after is section end
+        const parts = message.split('@@[section:end]');
+        const contentPart = parts[0];
+        const sectionEndPart = '@@[section:end]' + (parts[1] || '');
+        
+        // First, process the content part if it has meaningful content
+        if (contentPart.trim() && currentActiveStep && !uiOnly) {
+          const lines = contentPart.split('\n').filter((line: string) => line.trim());
+          for (const line of lines) {
+            if (line.trim()) {
+              let formattedMessage = line.trim();
+              
+              // Color URLs
+              formattedMessage = formattedMessage.replace(
+                /(https?:\/\/[^\s]+)/g, 
+                chalk.blue('$1')
+              );
+              
+              writePersistentLog(formattedMessage);
+            }
+          }
+        }
+        
+        // Then handle the section end
+        let stepToComplete = currentActiveStep;
+        
+        const stepCompletedMatch = sectionEndPart.match(/@@\[section:end\]\s*(.+?)\s*Step completed:\s*(.+?),\s*Ver:\s*(.+)/);
+        if (stepCompletedMatch) {
+          stepToComplete = stepCompletedMatch[2];
+        } else {
+          // Simple format: "@@[section:end] Starting workflow"
+          const simpleMatch = sectionEndPart.match(/@@\[section:end\]\s*(.+)/);
+          if (simpleMatch) {
+            stepToComplete = simpleMatch[1].trim();
+          }
+        }
+        
+        // Show the section end message
+        if (sectionEndPart.trim() && !uiOnly) {
+          writePersistentLog(chalk.blue(sectionEndPart.trim()));
+        }
+        
+        if (stepToComplete) {
+          // SPECIAL CASE: If this is "Completing workflow" completion, delay build completion
+          if (stepToComplete === 'Completing workflow' && !buildCompleted) {
+            setTimeout(() => {
+              buildCompleted = true;
+
+              // Close SSE connection
+              if (sseConnection && sseConnection.close) {
+                sseConnection.close();
+              }
+            }, 100);
+          }
+          
+          updateStepStatus(stepToComplete, StepStatus.COMPLETED);
+          
+          // Check if build is completed after updating step status
+          if (buildCompleted) {
+            return;
+          }
+        }
+        return;
+      }
+      
+      // Handle errors
+      if (message.includes('@@[error]') && currentActiveStep) {
+        const state = stepStates.get(currentActiveStep);
+        if (state) {
+          state.hasErrors = true;
+          writePersistentLog(chalk.red(`${message.replace('@@[error]', '').trim()}`));
+        }
+        return;
+      }
+      
+      // Handle commands
+      if (message.includes('@@[command]') && currentActiveStep) {
+        writePersistentLog(chalk.cyan(`@@[command] ${message.replace('@@[command]', '').trim()}`));
+        return;
+      }
+      
+      // Handle regular messages for current step
+      if (message.trim() && currentActiveStep && !message.includes('@@[section')) {
+        // Skip uiOnly messages that are just duplicates
+        if (uiOnly) {
+          return;
+        }
+        
+        // Process multi-line messages (split by \n and show each line)
+        const lines = message.split('\n').filter((line: string) => line.trim());
+        for (const line of lines) {
+          if (line.trim()) {
+            let formattedMessage = line.trim();
+            
+            // Color URLs
+            formattedMessage = formattedMessage.replace(
+              /(https?:\/\/[^\s]+)/g, 
+              chalk.blue('$1')
+            );
+            
+            writePersistentLog(formattedMessage);
+          }
+        }
+      }
+    },
+    
+    setEphemeralStatus(status: string): void {
+      writeEphemeralStatus(chalk.gray(status));
+    },
+    
+    clearEphemeralStatus(): void {
+      clearEphemeralStatus();
+    },
+    
+    finish(): void {
+      clearEphemeralStatus();
+    },
+    
+    setCompletionCallback(callback: () => void): void {
+      completionCallback = callback;
+    },
+    
+    isBuildCompleted(): boolean {
+      return buildCompleted;
+    },
+    
+    setSSEConnection(connection: any): void {
+      sseConnection = connection;
+    }
+  };
+}
+
+/**
+ * Create a step summary formatter that shows only build steps and durations
+ */
+function createStepSummaryFormatter() {
+  const stepStates = new Map<string, {
+    status: StepStatus;
+    startTime: number;
+    endTime?: number;
+    hasErrors: boolean;
+    serverDuration?: number; // Duration from server logs
+  }>();
+
+  let currentActiveStep = '';
+  let buildCompleted = false;
+  let completionCallback: (() => void) | null = null;
+  let completionCallbackCalled = false;
+  let sseConnection: any = null;
+  let updateTimer: NodeJS.Timeout | null = null;
+  let hasRenderedTable = false;
+  let stepOrder: string[] = []; // Track the order of steps
+  let currentActiveStepIndex = -1; // Track which line to update
+  const displayedSteps = new Set<string>(); // Track which steps have been displayed to prevent duplicates
+
+  // Extract duration from build log event
+  function extractDurationFromEvent(buildLogEvent: any): number | null {
+    // Try direct properties first
+    if (buildLogEvent.duration && typeof buildLogEvent.duration === 'number') {
+      return buildLogEvent.duration;
+    }
+    if (buildLogEvent.stepDuration && typeof buildLogEvent.stepDuration === 'number') {
+      return buildLogEvent.stepDuration;
+    }
+
+    // Parse from message text
+    const message = buildLogEvent.message || '';
+    const patterns = [
+      /(\d+)s/,
+      /(\d+)\s*seconds?/,
+      /in\s*(\d+)s/,
+      /took\s*(\d+)s/,
+      /duration[:\s]*(\d+)s?/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = message.match(pattern);
+      if (match) {
+        const seconds = parseInt(match[1], 10);
+        if (!isNaN(seconds)) {
+          return seconds;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function formatDuration(stepName: string, startTime?: number, endTime?: number): string {
+    const state = stepStates.get(stepName);
+
+    // Helper function to format seconds into minutes and seconds
+    const formatSeconds = (totalSeconds: number): string => {
+      if (totalSeconds === 0) {
+        return '<1s';
+      }
+      if (totalSeconds < 60) {
+        return `${totalSeconds}s`;
+      }
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}m ${seconds}s`;
+    };
+
+    // Prefer server-provided duration if available
+    if (state?.serverDuration !== undefined) {
+      return formatSeconds(state.serverDuration);
+    }
+
+    // Fallback to client-side calculation
+    if (startTime && endTime) {
+      const duration = Math.round((endTime - startTime) / 1000);
+      return formatSeconds(duration);
+    } else if (startTime) {
+      const duration = Math.round((Date.now() - startTime) / 1000);
+      return formatSeconds(duration);
+    }
+
+    return '<1s';
+  }
+
+  // Helper function to normalize step names (trim whitespace, handle variations)
+  function normalizeStepName(stepName: string): string {
+    if (!stepName) return '';
+    return stepName.trim();
+  }
+
+  function getStepStatusColor(stepName: string): (text: string) => string {
+    const normalizedName = normalizeStepName(stepName);
+    const state = stepStates.get(normalizedName);
+    if (!state) return chalk.gray;
+
+    switch (state.status) {
+      case StepStatus.COMPLETED:
+        return state.hasErrors ? chalk.red : chalk.green;
+      case StepStatus.FAILED:
+        return chalk.red;
+      case StepStatus.RUNNING:
+        return chalk.yellow;
+      default:
+        return chalk.gray;
+    }
+  }
+
+  function renderStepTable() {
+    if (stepStates.size === 0) return;
+
+    // If this is the first render, print the header (only if build not completed)
+    if (!hasRenderedTable && !buildCompleted) {
+      hasRenderedTable = true;
+      console.log('🚀 Build Progress:');
+      console.log('─'.repeat(60)); // Separator line
+      console.log('');
+    }
+  }
+
+  function updateStepStatus(stepName: string, status: StepStatus, buildLogEvent?: any) {
+    const normalizedName = normalizeStepName(stepName);
+    const state = stepStates.get(normalizedName);
+    if (state) {
+      // Don't downgrade status: FAILED > COMPLETED > RUNNING
+      let statusChanged = false;
+      if (state.status === StepStatus.FAILED && status !== StepStatus.FAILED) {
+        // Keep FAILED status, don't downgrade to COMPLETED or RUNNING
+        // But still update display and other properties
+      } else if (state.status === StepStatus.COMPLETED && status === StepStatus.RUNNING) {
+        // Keep COMPLETED status, don't downgrade to RUNNING
+        // But still update display and other properties
+      } else {
+        state.status = status;
+        statusChanged = true;
+      }
+      // Always update endTime and other properties for COMPLETED or FAILED status
+      if (status === StepStatus.COMPLETED || status === StepStatus.FAILED) {
+        state.endTime = Date.now();
+
+        // Extract and store server-provided duration if available
+        if (buildLogEvent) {
+          const serverDuration = extractDurationFromEvent(buildLogEvent);
+          if (serverDuration !== null) {
+            state.serverDuration = serverDuration;
+          }
+
+          // Check for warnings in the build log event (simpler detection)
+          const message = buildLogEvent.message || '';
+          const hasWarning = buildLogEvent.hasWarning === true ||
+                           buildLogEvent.isWarning === true ||
+                           buildLogEvent.warning === true ||
+                           message.includes('@@[warning]') ||
+                           message.includes('@@[error]') ||
+                           message.includes('⚠️');
+
+          if (hasWarning) {
+            state.hasErrors = true;
+          }
+        }
+
+        // Stop timer if no more running steps
+        if (updateTimer) {
+          clearInterval(updateTimer);
+          updateTimer = null;
+        }
+      }
+
+      // Always update the step display if this is a completion event
+      if (status === StepStatus.COMPLETED || status === StepStatus.FAILED) {
+        // Check if we've already displayed this step
+        if (!displayedSteps.has(normalizedName)) {
+          // First time displaying this step
+          displayedSteps.add(normalizedName);
+          
+          // Update the step display
+          const duration = formatDuration(normalizedName, state.startTime, state.endTime);
+          const colorFn = getStepStatusColor(normalizedName);
+          const statusIcon = state.status === StepStatus.FAILED ? '❌ ' : (state.hasErrors ? '⚠️ ' : '✅');
+
+          // Format step display with consistent spacing for emoji alignment
+          const stepNamePart = `${normalizedName}`;
+          const paddedStepName = stepNamePart.padEnd(45); // Reserve space for emoji + space (2 chars)
+          const stepDisplay = `${statusIcon} ${paddedStepName}`;
+          const timeDisplay = `(${duration})`;
+
+          // Apply color to the step display
+          const coloredStepDisplay = colorFn(stepDisplay);
+
+          // If this is the current active step, update in-place
+          if (normalizedName === currentActiveStep && currentActiveStepIndex >= 0) {
+            // Move cursor up one line, clear it, and update
+            process.stdout.write('\x1b[1A'); // Move cursor up one line
+            process.stdout.write('\x1b[2K'); // Clear current line
+            process.stdout.write(`${coloredStepDisplay} ${timeDisplay}\n`);
+
+            // Reset active step since it's completed
+            currentActiveStep = '';
+            currentActiveStepIndex = -1;
+          } else {
+            // For non-active steps, just print the completed step
+            process.stdout.write(`${coloredStepDisplay} ${timeDisplay}\n`);
+          }
+        } else {
+          // Step already displayed, check if we need to update it with a worse status
+          const currentDisplayedState = stepStates.get(normalizedName);
+          if (currentDisplayedState) {
+            // Only update if the new status is worse (FAILED > hasErrors > SUCCESS)
+            const shouldUpdate = (
+              (state.status === StepStatus.FAILED && currentDisplayedState.status !== StepStatus.FAILED) ||
+              (state.hasErrors && !currentDisplayedState.hasErrors && state.status !== StepStatus.FAILED)
+            );
+            
+            if (shouldUpdate) {
+              // Update the displayed step with worse status
+              const duration = formatDuration(normalizedName, state.startTime, state.endTime);
+              const colorFn = getStepStatusColor(normalizedName);
+              const statusIcon = state.status === StepStatus.FAILED ? '❌ ' : (state.hasErrors ? '⚠️ ' : '✅');
+
+              // Format step display with consistent spacing for emoji alignment
+              const stepNamePart = `${normalizedName}`;
+              const paddedStepName = stepNamePart.padEnd(45); // Reserve space for emoji + space (2 chars)
+              const stepDisplay = `${statusIcon} ${paddedStepName}`;
+              const timeDisplay = `(${duration})`;
+
+              // Apply color to the step display
+              const coloredStepDisplay = colorFn(stepDisplay);
+
+              // Print the updated step (we can't update in-place as we don't know the line number)
+              process.stdout.write(`${coloredStepDisplay} ${timeDisplay}\n`);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function startUpdateTimer() {
+    if (updateTimer) {
+      clearInterval(updateTimer);
+    }
+
+    updateTimer = setInterval(() => {
+      // Only update if there are running steps
+      const hasRunningSteps = Array.from(stepStates.values()).some(state => state.status === StepStatus.RUNNING);
+      if (hasRunningSteps && !buildCompleted && currentActiveStep) {
+        // Update the current running step's time display
+        const state = stepStates.get(currentActiveStep);
+        if (state && state.status === StepStatus.RUNNING) {
+          const duration = formatDuration(currentActiveStep, state.startTime);
+          const paddedStepName = currentActiveStep.padEnd(45); // Reserve space for emoji + space (2 chars)
+          const stepDisplay = `🔄 ${paddedStepName}`;
+          const coloredStepDisplay = chalk.yellow(stepDisplay);
+          // Move cursor up one line, clear it, and update
+          process.stdout.write('\x1b[1A'); // Move cursor up one line
+          process.stdout.write('\x1b[2K'); // Clear current line
+          process.stdout.write(`${coloredStepDisplay} (${duration})\n`);
+        }
+      } else if (updateTimer) {
+        clearInterval(updateTimer);
+        updateTimer = null;
+      }
+    }, 1000); // Update every second
+  }
+
+  return {
+    processMessage(buildLogEvent: any): void {
+      if (buildCompleted) return;
+
+      const message = buildLogEvent.message || '';
+      const stepName = buildLogEvent.stepName;
+      const workflowStatus = buildLogEvent.workflowStatus;
+
+      // Handle step start - workflowStatus: 1 = StepStarted
+      if (workflowStatus === 1 && stepName && stepName !== currentActiveStep) {
+        const normalizedName = normalizeStepName(stepName);
+        // Only start step if it's not already in stepStates (prevent duplicates)
+        if (!stepStates.has(normalizedName)) {
+          currentActiveStep = normalizedName;
+          stepStates.set(normalizedName, {
+            status: StepStatus.RUNNING,
+            startTime: Date.now(),
+            hasErrors: false
+          });
+
+          // Add to step order if not already present
+          if (!stepOrder.includes(normalizedName)) {
+            stepOrder.push(normalizedName);
+          }
+
+          // Start update timer for real-time updates
+          startUpdateTimer();
+
+          // Render table header if first step
+          renderStepTable();
+
+          // Show the running step immediately (only if build not completed)
+          if (!buildCompleted) {
+            const paddedStepName = normalizedName.padEnd(45); // Reserve space for emoji + space (2 chars)
+            const stepDisplay = `🔄 ${paddedStepName}`;
+            const coloredStepDisplay = chalk.yellow(stepDisplay);
+            console.log(`${coloredStepDisplay} (0s)`);
+          }
+          currentActiveStepIndex = stepOrder.length - 1; // Track this line for updates
+        } else {
+          // Step already exists, just update currentActiveStep
+          currentActiveStep = normalizedName;
+          const existingState = stepStates.get(normalizedName);
+          if (existingState && existingState.status === StepStatus.RUNNING) {
+            // Update the existing running step
+            currentActiveStepIndex = stepOrder.indexOf(normalizedName);
+          }
+        }
+        return;
+      }
+
+      // Handle step end - workflowStatus: 2 = StepEnded
+      if (workflowStatus === 2 && stepName) {
+        const normalizedName = normalizeStepName(stepName);
+        if (stepStates.has(normalizedName)) {
+          updateStepStatus(normalizedName, StepStatus.COMPLETED, buildLogEvent);
+
+          // Special case for "Completing workflow" - handle completion AFTER display
+          if (normalizedName === 'Completing workflow' && !buildCompleted) {
+            // Give a small delay to ensure step display happens before completion
+            setTimeout(() => {
+              buildCompleted = true;
+              if (sseConnection && sseConnection.close) {
+                sseConnection.close();
+              }
+              if (completionCallback && !completionCallbackCalled) {
+                completionCallbackCalled = true;
+                completionCallback();
+              }
+            }, 100); // 100ms delay
+          }
+        }
+        return;
+      }
+
+      // Handle step failed - workflowStatus: 3 = StepFailed
+      if (workflowStatus === 3 && stepName) {
+        const normalizedName = normalizeStepName(stepName);
+        if (stepStates.has(normalizedName)) {
+          // Mark step as failed
+          updateStepStatus(normalizedName, StepStatus.FAILED, buildLogEvent);
+        }
+        return;
+      }
+
+      // Special handling for "Completing workflow" that might come without workflowStatus
+      if (stepName === 'Completing workflow') {
+        const normalizedName = normalizeStepName(stepName);
+        if (!stepStates.has(normalizedName)) {
+          // This step might not have a start event, so create it as running first
+          stepStates.set(normalizedName, {
+            status: StepStatus.RUNNING,
+            startTime: Date.now(),
+            hasErrors: false
+          });
+
+          if (!stepOrder.includes(normalizedName)) {
+            stepOrder.push(normalizedName);
+          }
+
+          renderStepTable();
+          // Show the running step immediately (only if build not completed)
+          if (!buildCompleted) {
+            const paddedStepName = normalizedName.padEnd(45); // Reserve space for emoji + space (2 chars)
+            const stepDisplay = `🔄 ${paddedStepName}`;
+            const coloredStepDisplay = chalk.yellow(stepDisplay);
+            console.log(`${coloredStepDisplay} (0s)`);
+          }
+          currentActiveStep = normalizedName;
+          currentActiveStepIndex = stepOrder.length - 1;
+
+          // Immediately complete it if it has completion data
+          if (workflowStatus === 2 || message.includes('completed')) {
+            updateStepStatus(normalizedName, StepStatus.COMPLETED, buildLogEvent);
+            setTimeout(() => {
+              buildCompleted = true;
+              if (sseConnection && sseConnection.close) {
+                sseConnection.close();
+              }
+              if (completionCallback && !completionCallbackCalled) {
+                completionCallbackCalled = true;
+                completionCallback();
+              }
+            }, 100);
+          }
+        }
+        return;
+      }
+
+      // Handle section:start - new step starting (fallback)
+      if (message.includes('section:start')) {
+        const stepName = message.replace('section:start', '').trim();
+        const normalizedName = normalizeStepName(stepName);
+        if (normalizedName && normalizedName !== currentActiveStep) {
+          if (!stepStates.has(normalizedName)) {
+            currentActiveStep = normalizedName;
+            stepStates.set(normalizedName, {
+              status: StepStatus.RUNNING,
+              startTime: Date.now(),
+              hasErrors: false
+            });
+
+            // Add to step order if not already present
+            if (!stepOrder.includes(normalizedName)) {
+              stepOrder.push(normalizedName);
+            }
+
+            // Start update timer for real-time updates
+            startUpdateTimer();
+
+            // Re-render table
+            renderStepTable();
+          } else {
+            // Step already exists, just update currentActiveStep
+            currentActiveStep = normalizedName;
+            const existingState = stepStates.get(normalizedName);
+            if (existingState && existingState.status === StepStatus.RUNNING) {
+              // Update the existing running step
+              currentActiveStepIndex = stepOrder.indexOf(normalizedName);
+            }
+          }
+        }
+        return;
+      }
+
+      // Handle section:end - step completing
+      if (message.includes('section:end')) {
+        const stepToComplete = message.replace('section:end', '').trim();
+        const normalizedName = normalizeStepName(stepToComplete);
+        if (normalizedName && stepStates.has(normalizedName)) {
+          updateStepStatus(normalizedName, StepStatus.COMPLETED, buildLogEvent);
+
+          // Special case for "Completing workflow"
+          if (normalizedName === 'Completing workflow' && !buildCompleted) {
+            setTimeout(() => {
+              buildCompleted = true;
+              if (sseConnection && sseConnection.close) {
+                sseConnection.close();
+              }
+              if (completionCallback && !completionCallbackCalled) {
+                completionCallbackCalled = true;
+                completionCallback();
+              }
+            }, 100);
+          }
+        }
+        return;
+      }
+
+      // Handle step start patterns - look for common build step patterns
+      if (message.includes('@@[section:start]') || message.includes('##[section]')) {
+        const stepName = message.replace(/@@\[section:start\]|##\[section\]/g, '').trim();
+        const normalizedName = normalizeStepName(stepName);
+        if (normalizedName && normalizedName !== currentActiveStep) {
+          if (!stepStates.has(normalizedName)) {
+            currentActiveStep = normalizedName;
+            stepStates.set(normalizedName, {
+              status: StepStatus.RUNNING,
+              startTime: Date.now(),
+              hasErrors: false
+            });
+
+            // Add to step order if not already present
+            if (!stepOrder.includes(normalizedName)) {
+              stepOrder.push(normalizedName);
+            }
+
+            // Start update timer for real-time updates
+            startUpdateTimer();
+
+            // Re-render table
+            renderStepTable();
+          } else {
+            // Step already exists, just update currentActiveStep
+            currentActiveStep = normalizedName;
+            const existingState = stepStates.get(normalizedName);
+            if (existingState && existingState.status === StepStatus.RUNNING) {
+              // Update the existing running step
+              currentActiveStepIndex = stepOrder.indexOf(normalizedName);
+            }
+          }
+        }
+        return;
+      }
+
+      // Handle step end patterns
+      if (message.includes('@@[section:end]') || message.includes('##[endgroup]')) {
+        const stepToComplete = message.replace(/@@\[section:end\]|##\[endgroup\]/g, '').trim();
+        const normalizedName = normalizeStepName(stepToComplete);
+        if (normalizedName && stepStates.has(normalizedName)) {
+          updateStepStatus(normalizedName, StepStatus.COMPLETED, buildLogEvent);
+
+          // Special case for "Completing workflow"
+          if (normalizedName === 'Completing workflow' && !buildCompleted) {
+            setTimeout(() => {
+              buildCompleted = true;
+              if (sseConnection && sseConnection.close) {
+                sseConnection.close();
+              }
+              if (completionCallback && !completionCallbackCalled) {
+                completionCallbackCalled = true;
+                completionCallback();
+              }
+            }, 100);
+          }
+        }
+        return;
+      }
+
+      // Handle step fallback patterns - try to extract step names from various formats
+      if (stepName && currentActiveStep) {
+        // Check if this might be a step start
+        if (message.includes('Starting') || message.includes('Running') || message.includes('Executing')) {
+          const normalizedName = normalizeStepName(stepName);
+          if (!stepStates.has(normalizedName)) {
+            currentActiveStep = normalizedName;
+            stepStates.set(normalizedName, {
+              status: StepStatus.RUNNING,
+              startTime: Date.now(),
+              hasErrors: false
+            });
+
+            // Add to step order if not already present
+            if (!stepOrder.includes(normalizedName)) {
+              stepOrder.push(normalizedName);
+            }
+
+            // Start update timer for real-time updates
+            startUpdateTimer();
+
+            // Re-render table
+            renderStepTable();
+          } else {
+            // Step already exists, just update currentActiveStep
+            currentActiveStep = normalizedName;
+            const existingState = stepStates.get(normalizedName);
+            if (existingState && existingState.status === StepStatus.RUNNING) {
+              // Update the existing running step
+              currentActiveStepIndex = stepOrder.indexOf(normalizedName);
+            }
+          }
+        }
+      }
+
+      // Handle errors (like Clean Terminal Formatter)
+      if (message.includes('@@[error]') && currentActiveStep) {
+        const normalizedName = normalizeStepName(currentActiveStep);
+        const state = stepStates.get(normalizedName);
+        if (state) {
+          state.hasErrors = true;
+        }
+        return;
+      }
+
+      // Handle warnings during steps
+      const isWarningMessage = message.includes('@@[warning]') ||
+                              message.includes('⚠️') ||
+                              buildLogEvent.hasWarning === true ||
+                              buildLogEvent.isWarning === true ||
+                              buildLogEvent.warning === true;
+
+      if (isWarningMessage && currentActiveStep) {
+        const normalizedName = normalizeStepName(currentActiveStep);
+        const state = stepStates.get(normalizedName);
+        if (state) {
+          state.hasErrors = true;
+        }
+      }
+
+      // Also check for warnings in any step mentioned in the message
+      const stepNameMatch = message.match(/Step\s+(.+?)\s+(failed|warning|error)/i);
+      if (stepNameMatch) {
+        const mentionedStep = stepNameMatch[1].trim();
+        const normalizedName = normalizeStepName(mentionedStep);
+        const state = stepStates.get(normalizedName);
+        if (state) {
+          state.hasErrors = true;
+        }
+      }
+
+      // Apply warning to current active step if warning message detected
+      if (isWarningMessage && currentActiveStep) {
+        const normalizedName = normalizeStepName(currentActiveStep);
+        const state = stepStates.get(normalizedName);
+        if (state) {
+          state.hasErrors = true;
+        }
+      }
+    },
+
+    getTotalStepsDuration(): number {
+      let total = 0;
+      for (const [stepName, state] of stepStates) {
+        if (state.status === StepStatus.COMPLETED && state.serverDuration !== undefined) {
+          total += state.serverDuration;
+        } else if (state.status === StepStatus.COMPLETED && state.startTime && state.endTime) {
+          total += Math.round((state.endTime - state.startTime) / 1000);
+        }
+      }
+      return total || 45; // Fallback if no steps tracked
+    },
+
+    // Final render
+    renderStepTable(): void {
+      renderStepTable();
+    },
+
+    setEphemeralStatus(status: string): void {
+      // Not used in step summary mode
+    },
+
+    clearEphemeralStatus(): void {
+      // Not used in step summary mode
+    },
+
+    finish(): void {
+      if (updateTimer) {
+        clearInterval(updateTimer);
+        updateTimer = null;
+      }
+    },
+
+    setCompletionCallback(callback: () => void): void {
+      completionCallback = callback;
+    },
+
+    isBuildCompleted(): boolean {
+      return buildCompleted;
+    },
+
+    setSSEConnection(connection: any): void {
+      sseConnection = connection;
+    },
+
+    // Method to mark a specific step as having warnings/errors
+    markStepAsWarning(stepName: string): void {
+      const normalizedName = normalizeStepName(stepName);
+      const state = stepStates.get(normalizedName);
+      if (state) {
+        state.hasErrors = true;
+      }
+    },
+
+    // Method to get the last completed step
+    getLastCompletedStep(): string | null {
+      let lastStep = null;
+      let latestTime = 0;
+      for (const [stepName, state] of stepStates) {
+        if (state.status === StepStatus.COMPLETED && state.endTime && state.endTime > latestTime) {
+          latestTime = state.endTime;
+          lastStep = stepName;
+        }
+      }
+      return lastStep;
+    },
+
+  };
+}
 
 /**
  * Prompts the user for a file path with a default value
@@ -214,9 +1203,14 @@ export const handleAlreadyLoggedIn = (): void => {
   console.error('You are already logged in. Use "logout" to logout first.');
 };
 
-// Helper function to handle PAT login
-export const handlePatLogin = async (params: any): Promise<void> => {
-  const responseData = await getToken({ pat: params.token });
+// Helper function to handle Personal Access Key login
+export const handlePersonalAccessKeyLogin = async (params: any): Promise<void> => {
+  // Validate secret parameter
+  if (!params.secret || params.secret.trim() === '') {
+    throw new ProgramError('Invalid Personal Access Key format provided');
+  }
+
+  const responseData = await getToken({ personalAccessKey: params.secret });
   writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
   commandWriter(CommandTypes.LOGIN, responseData);
 };
@@ -293,8 +1287,12 @@ const handleLoginCommand = async (command: ProgramCommand, params: any) => {
     }
   }
 
-  if (command.fullCommandName === `${PROGRAM_NAME}-login-pat`) {
-    await handlePatLogin(params);
+  if (command.fullCommandName === `${PROGRAM_NAME}-login-personal-access-key`) {
+    await handlePersonalAccessKeyLogin(params);
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-login-pat`) {
+    // Handle legacy pat command - convert token parameter to secret for backward compatibility
+    const patParams = { secret: params.token };
+    await handlePersonalAccessKeyLogin(patParams);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-login-api-key`) {
     await handleApiKeyLogin(params);
   } else {
@@ -325,12 +1323,14 @@ export const displayLogoutSuccessMessage = (): void => {
 };
 
 const handleLogoutCommand = async (command: ProgramCommand, params: any) => {
-  // Check if user is already logged in
-  validateUserIsLoggedIn();
-  
+  // Check if user is logged in first
+  if (!checkIfUserIsLoggedIn()) {
+    throw new ProgramError('You are not currently logged in');
+  }
+
   // Clear the stored token (no API call needed)
   clearStoredToken();
-  
+
   displayLogoutSuccessMessage();
 };
 
@@ -868,7 +1868,9 @@ export const handleBuildSuccessCompletion = async (finalStatusResponse: any, lat
     const buildId = latestBuildId || finalStatusResponse?.buildId;
     
     if (shouldDownloadArtifacts && commitId && buildId) {
-      await downloadBuildArtifactsWithSpinner(commitId, buildId, params, downloadPath, downloadArtifact);
+      const buildStatus = finalStatusResponse?.buildStatus;
+      const hasWarning = finalStatusResponse?.hasWarning;
+      await downloadBuildArtifactsWithSpinner(commitId, buildId, params, downloadPath, downloadArtifact, buildStatus, hasWarning);
     }
     
     if (shouldDownloadLogs) {
@@ -881,7 +1883,7 @@ export const handleBuildSuccessCompletion = async (finalStatusResponse: any, lat
   return await promptForDownloadActions(finalStatusResponse, latestBuildId, params, downloadPath, downloadArtifact, downloadBuildLogs, responseData);
 };
 
-export const downloadBuildArtifactsWithSpinner = async (commitId: string, buildId: string, params: any, downloadPath: string, downloadArtifact: Function) => {
+export const downloadBuildArtifactsWithSpinner = async (commitId: string, buildId: string, params: any, downloadPath: string, downloadArtifact: Function, buildStatus?: number | null, hasWarning?: boolean) => {
   const artifactSpinner = createOra('Waiting for artifacts to be ready...').start();
   await new Promise(resolve => setTimeout(resolve, 10000));
   artifactSpinner.text = 'Downloading artifacts...';
@@ -895,7 +1897,8 @@ export const downloadBuildArtifactsWithSpinner = async (commitId: string, buildI
     }, downloadPath, artifactFileName);
     artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(downloadPath, artifactFileName))}`);
   } catch (e: any) {
-    artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
+    const errorMessage = generateArtifactErrorMessage(buildStatus, e.message, buildId, hasWarning);
+    artifactSpinner.fail(errorMessage);
   }
 };
 
@@ -920,6 +1923,11 @@ export const downloadBuildLogsWithSpinner = async (commitId: string, buildId: st
 };
 
 export const promptForDownloadActions = async (finalStatusResponse: any, latestBuildId: string | null, params: any, defaultDownloadDir: string, downloadArtifact: Function, downloadBuildLogs: Function, responseData: any) => {
+  // Ensure SSE connection is closed before showing the prompt
+  if (params.sseConnection && params.sseConnection.close) {
+    params.sseConnection.close();
+  }
+  
   console.log(chalk.cyan('\nWhat would you like to do next?'));
   
   try {
@@ -940,7 +1948,9 @@ export const promptForDownloadActions = async (finalStatusResponse: any, latestB
       const buildIdForArtifact = latestBuildId || finalStatusResponse?.buildId;
 
       if (commitIdForArtifact && buildIdForArtifact) {
-        await downloadBuildArtifactsWithSpinner(commitIdForArtifact, buildIdForArtifact, params, artifactDownloadPath, downloadArtifact);
+        const buildStatus = finalStatusResponse?.buildStatus;
+        const hasWarning = finalStatusResponse?.hasWarning;
+        await downloadBuildArtifactsWithSpinner(commitIdForArtifact, buildIdForArtifact, params, artifactDownloadPath, downloadArtifact, buildStatus, hasWarning);
       } else {
         console.log(chalk.yellow('Build completed successfully but could not get artifact information.'));
       }
@@ -976,12 +1986,13 @@ export const downloadBuildLogsInteractive = async (finalStatusResponse: any, lat
         commitId, 
         buildId,
         branchId: params.branchId,
-        profileId: params.profileId
-      }, buildLogPath);
+        profileId: params.profileId,
+        path: buildLogPath
+      });
     } else {
-      await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+      await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
     }
-    console.log(chalk.green('Build completed successfully with logs downloaded.'));
+    console.log(chalk.green('Build log downloaded successfully.'));
     throw new AppcircleExitError('', 0);
   } catch (error: any) {
     if (error instanceof AppcircleExitError) {
@@ -989,7 +2000,7 @@ export const downloadBuildLogsInteractive = async (finalStatusResponse: any, lat
     }
     console.log(chalk.yellow(`Build failed and log download also failed: ${error.message}`));
     try {
-      await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+      await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
       console.log(chalk.yellow('Build failed but logs downloaded successfully.'));
       throw new AppcircleExitError('Build failed', 1);
     } catch (fallbackError: any) {
@@ -3132,6 +4143,13 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
   }
 
   if (command.fullCommandName === `${PROGRAM_NAME}-build-start`) {
+    // Declare monitoring variables at top scope for entire build command
+    let sseConnection: any = null;
+    let logProcessor: any = null;
+    let renderer: any = null;
+    let progressTracker: any = null;
+    let monitoringContext: any = null;
+    
     // Use extracted validation function
     const validation = validateBuildStartParameters(params, command.fullCommandName);
     if (!validation.isValid) {
@@ -3141,9 +4159,150 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       }
       throw new AppcircleExitError('', 1);
     }
+    
+    // Check if this is a non-interactive run (has --no-wait or JSON output)
+    const isNonInteractive = process.argv.includes('--no-wait') || getConsoleOutputType() === 'json';
+    
+    // Parse monitor mode from command line parameter or prompt user in interactive mode
+    let monitorMode = BuildMonitorMode.SUMMARY;
+    const monitorParam = command.opts()['monitor'];
+    const executionModeParam = command.opts()['executionMode']; // For backward compatibility
+    
+    // Check for new --monitor parameter first
+    if (monitorParam) {
+      // New monitor parameter provided - use it
+      switch (monitorParam.toLowerCase()) {
+        case 'none':
+          monitorMode = BuildMonitorMode.NONE;
+          break;
+        case 'summary':
+          monitorMode = BuildMonitorMode.SUMMARY;
+          break;
+        case 'steps':
+          monitorMode = BuildMonitorMode.STEPS;
+          break;
+        case 'verbose':
+          monitorMode = BuildMonitorMode.VERBOSE;
+          break;
+        default:
+          console.warn(`Warning: Unknown monitor mode '${monitorParam}'. Using 'summary' mode.`);
+          monitorMode = BuildMonitorMode.SUMMARY;
+      }
+    } else if (executionModeParam) {
+      // Legacy --execution-mode parameter provided - map to new monitor modes
+      switch (executionModeParam.toLowerCase()) {
+        case 'normal':
+          monitorMode = BuildMonitorMode.SUMMARY;
+          break;
+        case 'detailed':
+          monitorMode = BuildMonitorMode.VERBOSE;
+          break;
+        case 'step-summary':
+          monitorMode = BuildMonitorMode.STEPS;
+          break;
+        case 'skip':
+          monitorMode = BuildMonitorMode.NONE;
+          break;
+        default:
+          console.warn(`Warning: Unknown execution mode '${executionModeParam}'. Using 'summary' mode.`);
+          monitorMode = BuildMonitorMode.SUMMARY;
+      }
+    } else if (!isNonInteractive) {
+      // No command line parameter and interactive mode - prompt user
+      const modeSelection = await selectBuildMonitorMode();
+      
+      if (modeSelection.cancelled) {
+        console.log('\nBuild cancelled by user.');
+        throw new AppcircleExitError('Build cancelled', 0);
+      }
+      
+      monitorMode = modeSelection.mode;
+    }
+    // If non-interactive and no parameter provided, use default (SUMMARY)
+    
+    // Handle "None" monitor mode - just return Task/Build ID and exit
+    if (monitorMode === BuildMonitorMode.NONE) {
+      const spinner = createOra(`Generating Task ID...`).start();
+      try {
+        const responseData = await startBuild(params);
+        spinner.succeed(`Task ID generated successfully.\n\nTaskId: ${responseData.taskId}`);
+        
+        if (getConsoleOutputType() === 'json') {
+          console.log(JSON.stringify({
+            taskId: responseData.taskId,
+            queueItemId: responseData.queueItemId,
+            mode: 'none'
+          }));
+        }
+        
+        throw new AppcircleExitError('Task ID generated', 0);
+      } catch (error: any) {
+        throw error;
+      }
+    }
+    
+    // For Steps and Verbose monitor modes, setup SSE BEFORE starting build
+    if (monitorMode === BuildMonitorMode.STEPS || monitorMode === BuildMonitorMode.VERBOSE) {
+      try {
+        // Step 1: Setup SSE connection BEFORE build starts
+        const accessToken = readEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN);
+        const { sub: userId, currentOrganizationId: organizationId } = resolveIdentityFromToken(accessToken);
+        const hookToken = await getHookAccessToken(accessToken);
+        const hookHostname = readEnviromentConfigVariable(EnvironmentVariables.HOOK_HOSTNAME) || "https://hook.appcircle.io";
+        
+        sseConnection = await openHookSSE({
+          hookHostname,
+          userId,
+          organizationId,
+          token: hookToken
+        });
+        
+        console.log(chalk.green(`✓ SSE connection established with browserId: ${sseConnection.browserId}`));
+        
+        // Step 2: Initialize monitoring components
+        const { LogProcessor } = await import('../utils/LogProcessor');
+        const { TerminalRenderer } = await import('../utils/TerminalRenderer');
+        const { ProgressTracker } = await import('../utils/ProgressTracker');
+        
+        const buildLogOptions = {
+          timestamps: false,
+          noColor: getConsoleOutputType() === 'json',
+          enableProgress: process.stdout.isTTY,
+          verboseMode: monitorMode === BuildMonitorMode.VERBOSE
+        };
+        
+        renderer = new TerminalRenderer(buildLogOptions);
+        progressTracker = new ProgressTracker(buildLogOptions.enableProgress);
+        logProcessor = new LogProcessor((message) => {
+          if (progressTracker) progressTracker.updateProgress(message);
+          if (renderer) {
+            const formattedMessage = renderer.renderMessage(message);
+            // Only log if there's actual content to display
+            if (formattedMessage && formattedMessage.trim()) {
+              console.log(formattedMessage);
+            }
+          }
+        });
+        
+        // Store context for later trigger call
+        monitoringContext = {
+          accessToken,
+          userId,
+          organizationId,
+          hookHostname,
+          browserId: sseConnection.browserId
+        };
+      } catch (error: any) {
+        console.error(chalk.red(`❌ Failed to setup enhanced monitoring: ${error.message}`));
+        // Continue with normal build
+      }
+    }
+    
+    // Now start the build
     const spinner = createOra(`Starting Build...`).start();
+    let responseData: any;
     try {
-      const responseData = await startBuild(params);
+      responseData = await startBuild(params);
       
       // Use extracted wait behavior function
       const waitBehavior = determineBuildWaitBehavior(process.argv, getConsoleOutputType());
@@ -3169,30 +4328,156 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           throw new AppcircleExitError('Build queued successfully', 0);
         }
       }
-      
-      // Only continue with build monitoring if shouldWait is true
-      if (getConsoleOutputType() !== 'json') {
+    } catch (error: any) {
+      spinner.fail('Failed to start build');
+      throw error;
+    }
+
+    // Only continue with build monitoring if shouldWait is true
+    if (getConsoleOutputType() !== 'json') {
+      try {
         commandWriter(CommandTypes.BUILD, {
           fullCommandName: command.fullCommandName,
           data: responseData,
         });
-        spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
-      } else {
-        spinner.stop();
+        
+        // Show different messages based on monitor mode
+        if (monitorMode === BuildMonitorMode.VERBOSE) {
+          spinner.succeed(`Build successfully added to queue with verbose monitoring enabled.\n\nTaskId: ${responseData.taskId}`);
+        } else if (monitorMode === BuildMonitorMode.STEPS) {
+          spinner.succeed(`Build successfully added to queue with step monitoring enabled.\n\nTaskId: ${responseData.taskId}`);
+        }
+
+        // NOW trigger build logs streaming - SSE connection is already ready (for enhanced monitoring modes)
+        if ((monitorMode === BuildMonitorMode.VERBOSE || monitorMode === BuildMonitorMode.STEPS) && monitoringContext && sseConnection) {
+          const taskId = responseData.taskId || responseData.queueItemId;
+          try {
+            await triggerBuildLogsStreaming({
+              apiHostname: readEnviromentConfigVariable(EnvironmentVariables.API_HOSTNAME),
+              hookHostname: monitoringContext.hookHostname,
+              accessToken: monitoringContext.accessToken,
+              taskId,
+              browserId: monitoringContext.browserId,
+              userId: monitoringContext.userId,
+              organizationId: monitoringContext.organizationId
+            });
+
+            // Setup appropriate formatter based on monitor mode
+            const terminalFormatter = monitorMode === BuildMonitorMode.STEPS
+              ? createStepSummaryFormatter()
+              : createCleanTerminalFormatter();
+            let buildLogReceived = false;
+            let verboseLogsStarted = false;
+            const buildStartTime = Date.now();
+
+            // Give formatter access to SSE connection for immediate closure
+            terminalFormatter.setSSEConnection(sseConnection);
+
+            // Set completion callback to handle build completion
+            terminalFormatter.setCompletionCallback(async () => {
+                // Show build summary immediately (SSE already closed by formatter)
+                // const totalDuration = Math.round((Date.now() - buildStartTime) / 1000);
+                // console.log(chalk.cyan('\n📊 Build Summary:'));
+                // console.log(chalk.gray(`   Task ID: ${taskId}`));
+                // console.log(chalk.gray(`   Duration: ${totalDuration}s`));
+                // console.log(chalk.green('   Status: ✓ Completed Successfully'));
+                
+                // Call stop endpoint asynchronously (non-blocking)
+                triggerStopBuildLogsStreaming({
+                  hookHostname: monitoringContext.hookHostname,
+                  accessToken: monitoringContext.accessToken,
+                  taskId,
+                  browserId: monitoringContext.browserId,
+                  userId: monitoringContext.userId,
+                  organizationId: monitoringContext.organizationId
+                }).catch((error: any) => {
+                  console.error(chalk.yellow(`⚠️ Warning during cleanup: ${error.message}`));
+                });
+              });
+              
+              // Show initial ephemeral status
+              terminalFormatter.setEphemeralStatus('🔄 Connecting to build logs...');
+              
+              sseConnection.onMessage((data: string) => {
+                try {
+                  // Parse the build-log event data
+                  const parsed = JSON.parse(data);
+                  const buildLogEvents = Array.isArray(parsed) ? parsed : [parsed];
+                  
+                  for (const buildLogEvent of buildLogEvents) {
+                    if (!buildLogReceived) {
+                      terminalFormatter.clearEphemeralStatus();
+                      console.log(chalk.green('✓ Build logs started streaming!'));
+                      console.log(''); // Empty line for better separation
+                      buildLogReceived = true;
+                    }
+                    
+                    // Process message with appropriate formatter based on monitor mode
+                    if (monitorMode === BuildMonitorMode.VERBOSE) {
+                      // In verbose mode, use log processor for detailed output
+                      if (logProcessor) {
+                        // Force start logs for verbose mode only once when first message arrives
+                        if (!verboseLogsStarted) {
+                          logProcessor.forceStartLogs();
+                          verboseLogsStarted = true;
+                        }
+                        logProcessor.processMessage(buildLogEvent);
+                      }
+                    } else if (monitorMode === BuildMonitorMode.STEPS) {
+                      // In steps mode, use terminal formatter for step summaries
+                      terminalFormatter.processMessage(buildLogEvent);
+                    }
+                  }
+                } catch (error: any) {
+                  terminalFormatter.clearEphemeralStatus();
+                  console.error(chalk.red('Error parsing build log data:'), error.message);
+                }
+              });
+              
+              sseConnection.onClose(() => {
+                terminalFormatter.clearEphemeralStatus();
+                if (progressTracker) {
+                  const stats = progressTracker.getBuildStats();
+                  if (renderer) renderer.renderSummary(stats);
+                  progressTracker.stop();
+                }
+                // Flush any remaining buffered messages in verbose mode
+                if (monitorMode === BuildMonitorMode.VERBOSE && logProcessor) {
+                  logProcessor.flushAllMessages();
+                }
+                terminalFormatter.finish();
+              });
+              
+            } catch (triggerError: any) {
+              console.error(chalk.red(`❌ Failed to trigger build logs: ${triggerError.message}`));
+              console.log(chalk.yellow('Continuing with standard monitoring...'));
+            }
+        } else {
+          spinner.succeed(`Build successfully added to queue.\n\nTaskId: ${responseData.taskId}`);
+        }
+
+        if (getConsoleOutputType() === 'json') {
+          spinner.stop();
+        }
+      } catch (monitoringError: any) {
+        console.error('Monitoring setup failed:', monitoringError);
       }
-      
 
-      
-
-      const progressSpinner = createProgressSpinner(`Checking Build Status...`);
-      let dots = "";
+      // Only create progress spinner for non-enhanced monitoring modes
+      let progressSpinner: any = null;
+      let interval: NodeJS.Timeout | null = null;
       const startTime = Date.now();
-      
-      const interval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
-        dots = dots.length >= 3 ? "" : dots + ".";
-        const elapsedText = formatElapsedTime(startTime);
-        progressSpinner.text = chalk.yellow(`Build Running${dots} (${elapsedText})`);
-      }, 500);
+
+      if (monitorMode !== BuildMonitorMode.VERBOSE && monitorMode !== BuildMonitorMode.STEPS) {
+        progressSpinner = createProgressSpinner(`Checking Build Status...`);
+        let dots = "";
+        
+        interval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
+          dots = dots.length >= 3 ? "" : dots + ".";
+          const elapsedText = formatElapsedTime(startTime);
+          progressSpinner.text = chalk.yellow(`Build Running${dots} (${elapsedText})`);
+        }, 500);
+      }
       
       try {
         const taskId = responseData.queueItemId;
@@ -3201,20 +4486,27 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         const monitoringResult = await monitorBuildProgress(taskId, params, getBuildStatusFromQueue, getLatestBuildId);
         const { buildCompleted, buildSuccess, finalStatusResponse, latestBuildId, timedOut } = monitoringResult;
         
-        // Update spinner with status messages during monitoring
-        const monitoringInterval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
-          if (finalStatusResponse) {
-            const elapsedText = formatElapsedTime(startTime);
-            const hasWarning = finalStatusResponse.hasWarning === true;
-            updateBuildStatusMessage(finalStatusResponse.buildStatus, elapsedText, progressSpinner, hasWarning);
-          }
-        }, 500);
+        // Update spinner with status messages during monitoring (only for summary mode)
+        let monitoringInterval: NodeJS.Timeout | null = null;
+        if (monitorMode !== BuildMonitorMode.VERBOSE && monitorMode !== BuildMonitorMode.STEPS) {
+          monitoringInterval = getConsoleOutputType() === 'json' ? null : setInterval(() => {
+            if (finalStatusResponse) {
+              const elapsedText = formatElapsedTime(startTime);
+              const hasWarning = finalStatusResponse.hasWarning === true;
+              updateBuildStatusMessage(finalStatusResponse.buildStatus, elapsedText, progressSpinner, hasWarning);
+            }
+          }, 500);
+        }
         
         if (monitoringInterval) clearInterval(monitoringInterval);
         if (interval) clearInterval(interval);
         
         if (timedOut) {
-          progressSpinner.fail(chalk.red(`Build monitoring timed out after ${300 * 3} seconds.`));
+          if (progressSpinner) {
+            progressSpinner.fail(chalk.red(`Build monitoring timed out after ${300 * 3} seconds.`));
+          } else {
+            console.error(chalk.red(`Build monitoring timed out after ${300 * 3} seconds.`));
+          }
           throw new AppcircleExitError('Build monitoring timed out', 1);
         }
 
@@ -3222,15 +4514,31 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           if (buildSuccess) {
             try {
               const hasWarning = finalStatusResponse && finalStatusResponse.hasWarning === true;
+
+              // Warning handling is done during step processing
+
               const elapsedText = formatElapsedTime(startTime);
-              if (hasWarning) {
-                progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️ - Total time: ${elapsedText}`);
-                progressSpinner.succeed();
+              if (progressSpinner) {
+                if (hasWarning) {
+                  progressSpinner.text = chalk.hex('#FFA500')(`Build completed with warnings ⚠️ - Total time: ${elapsedText}`);
+                  progressSpinner.succeed();
+                } else {
+                  progressSpinner.succeed(`Build completed successfully ✅ - Total time: ${elapsedText}`);
+                }
               } else {
-                progressSpinner.succeed(`Build completed successfully ✅ - Total time: ${elapsedText}`);
+                // For detailed monitoring mode, show completion message directly
+                if (hasWarning) {
+                  console.log(chalk.hex('#FFA500')(`✔ Build completed with warnings ⚠️ - Total time: ${elapsedText}`));
+                } else {
+                  console.log(chalk.green(`✔ Build completed successfully ✅ - Total time: ${elapsedText}`));
+                }
               }
             } catch (e) {
-              progressSpinner.succeed(`Build completed successfully ✅`);
+              if (progressSpinner) {
+                progressSpinner.succeed(`Build completed successfully ✅`);
+              } else {
+                console.log(chalk.green(`✔ Build completed successfully ✅`));
+              }
             }
             
             const homeDir = os.homedir();
@@ -3277,7 +4585,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }, downloadPath, artifactFileName);
                   artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(downloadPath, artifactFileName))}`);
                 } catch (e: any) {
-                  artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
+                  const buildStatus = finalStatusResponse?.buildStatus;
+                  const hasWarning = finalStatusResponse?.hasWarning;
+                  const errorMessage = generateArtifactErrorMessage(buildStatus, e.message, buildId, hasWarning);
+                  artifactSpinner.fail(errorMessage);
                 }
               }
               
@@ -3300,6 +4611,12 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                 }
               }
               throw new AppcircleExitError('Build completed', 0);
+            }
+            
+            // For detailed monitoring mode, we still show the prompt but handle it differently
+            // Ensure SSE connection is closed before showing the prompt
+            if (sseConnection && sseConnection.close) {
+              sseConnection.close();
             }
                 
             console.log(chalk.cyan('\nWhat would you like to do next?'));
@@ -3335,7 +4652,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     }, artifactDownloadPath, artifactFileName);
                     artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(artifactDownloadPath, artifactFileName))}`);
                   } catch (e: any) {
-                    artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
+                    const buildStatus = finalStatusResponse?.buildStatus;
+                    const hasWarning = finalStatusResponse?.hasWarning;
+                    const errorMessage = generateArtifactErrorMessage(buildStatus, e.message, buildIdForArtifact, hasWarning);
+                    artifactSpinner.fail(errorMessage);
                   }
                 } else {
                   console.log(chalk.yellow('Build completed successfully but could not get artifact information.'));
@@ -3360,12 +4680,19 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                       commitId, 
                       buildId,
                       branchId: params.branchId,
-                      profileId: params.profileId
-                    }, buildLogPath);
+                      profileId: params.profileId,
+                      path: buildLogPath
+                    });
                   } else {
-                    await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+                    await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                   }
-                  console.log(chalk.green('Build completed successfully with logs downloaded.'));
+                  console.log(chalk.green('Build log downloaded successfully.'));
+                  
+                  // For verbose monitoring mode, exit immediately after log download
+                  if (monitorMode === BuildMonitorMode.VERBOSE) {
+                    throw new AppcircleExitError('', 0);
+                  }
+                  
                   throw new AppcircleExitError('', 0);
                 } catch (error: any) {
                   if (error instanceof AppcircleExitError) {
@@ -3373,7 +4700,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }
                   console.log(chalk.yellow(`Build failed and log download also failed: ${error.message}`));
                   try {
-                    await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+                    await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                     console.log(chalk.yellow('Build failed but logs downloaded successfully.'));
                     throw new AppcircleExitError('Build failed', 1);
                   } catch (fallbackError: any) {
@@ -3383,6 +4710,11 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                 }
               } else {
                 console.log(chalk.gray('Build completed successfully.'));
+                
+                // For verbose monitoring mode, exit immediately after continue
+                if (monitorMode === BuildMonitorMode.VERBOSE) {
+                  throw new AppcircleExitError('', 0);
+                }
               }
               throw new AppcircleExitError('Build completed', 0);
             } catch (err) {
@@ -3398,24 +4730,48 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                 finalStatusResponse.buildStatus : null;
               
               if (buildStatus === null || buildStatus === undefined) {
-                progressSpinner.fail(chalk.red(`Build completed but status information is unavailable.`));
+                if (progressSpinner) {
+                  progressSpinner.fail(chalk.red(`Build completed but status information is unavailable.`));
+                } else {
+                  console.log(chalk.red(`✗ Build completed but status information is unavailable.`));
+                }
               } else {
                 switch (buildStatus) {
                   case 1: // FAILED
-                    progressSpinner.fail(chalk.red(`Build completed, but failed.`));
+                    if (progressSpinner) {
+                      progressSpinner.fail(chalk.red(`Build completed, but failed.`));
+                    } else {
+                      console.log(chalk.red(`✗ Build completed, but failed.`));
+                    }
                     break;
                   case 2: // CANCELED
-                    progressSpinner.fail(chalk.hex('#FF8C32')(`Build was canceled.`));
+                    if (progressSpinner) {
+                      progressSpinner.fail(chalk.hex('#FF8C32')(`Build was canceled.`));
+                    } else {
+                      console.log(chalk.hex('#FF8C32')(`✗ Build was canceled.`));
+                    }
                     break;
                   case 3: // TIMEOUT
-                    progressSpinner.fail(chalk.red(`Build timed out.`));
+                    if (progressSpinner) {
+                      progressSpinner.fail(chalk.red(`Build timed out.`));
+                    } else {
+                      console.log(chalk.red(`✗ Build timed out.`));
+                    }
                     break;
                   default:
-                    progressSpinner.fail(chalk.red(`Build completed with status code: ${buildStatus}.`));
+                    if (progressSpinner) {
+                      progressSpinner.fail(chalk.red(`Build completed with status code: ${buildStatus}.`));
+                    } else {
+                      console.log(chalk.red(`✗ Build completed with status code: ${buildStatus}.`));
+                    }
                 }
               }
             } catch (e) {
-              progressSpinner.fail(chalk.red(`Build completed unsuccessfully.`));
+              if (progressSpinner) {
+                progressSpinner.fail(chalk.red(`Build completed unsuccessfully.`));
+              } else {
+                console.log(chalk.red(`✗ Build completed unsuccessfully.`));
+              }
             }
             
             // Skip interactive prompt for JSON output mode
@@ -3459,7 +4815,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }, downloadPath, artifactFileName);
                   artifactSpinner.succeed(`Artifacts downloaded successfully: file://${path.resolve(path.join(downloadPath, artifactFileName))}`);
                 } catch (e: any) {
-                  artifactSpinner.fail(`Cannot download artifact since the build failed: ${e.message}`);
+                  const buildStatus = finalStatusResponse?.buildStatus;
+                  const hasWarning = finalStatusResponse?.hasWarning;
+                  const errorMessage = generateArtifactErrorMessage(buildStatus, e.message, buildId, hasWarning);
+                  artifactSpinner.fail(errorMessage);
                 }
               }
               
@@ -3491,6 +4850,11 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             
             // Offer to download logs even on failure using enquirer
             console.log(chalk.cyan('\nBuild failed. Would you like to download the logs?'));
+            
+            // Ensure SSE connection is closed before showing the prompt
+            if (sseConnection && sseConnection.close) {
+              sseConnection.close();
+            }
             
             try {
               // @ts-ignore
@@ -3527,12 +4891,13 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                       commitId, 
                       buildId,
                       branchId: params.branchId,
-                      profileId: params.profileId
-                    }, buildLogPath);
+                      profileId: params.profileId,
+                      path: buildLogPath
+                    });
                   } else {
-                    await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+                    await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                   }
-                  console.log(chalk.green('Build completed successfully with logs downloaded.'));
+                  console.log(chalk.green('Build log downloaded successfully.'));
                   throw new AppcircleExitError('', 0);
                 } catch (error: any) {
                   if (error instanceof AppcircleExitError) {
@@ -3540,7 +4905,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   }
                   console.log(chalk.yellow(`Build failed and log download also failed: ${error.message}`));
                   try {
-                    await downloadBuildLogs(responseData.queueItemId, buildLogPath);
+                    await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                     console.log(chalk.yellow('Build failed but logs downloaded successfully.'));
                     throw new AppcircleExitError('Build failed', 1);
                   } catch (fallbackError: any) {
@@ -3566,16 +4931,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             throw e;
           }
         }
-        throw new AppcircleExitError('Build monitoring failed', 1);
       }
-    } catch (e) {
-      if (e instanceof AppcircleExitError) {
-        if (e.code === 0) {
-          throw e;
-        }
-      }
-      spinner.fail('Failed to start Build');
-      throw e;
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`) {
     const spinner = createOra('Listing...').start();
@@ -3809,7 +5165,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           const fullPath = path.join(downloadPath, artifactFileName);
           spinner.succeed(`The file ${artifactFileName} is downloaded successfully: file://${fullPath}`);
         } catch (e: any) {
-          spinner.fail(`Cannot download artifact since the build failed: ${e.message || 'Unknown error'}`);
+          const errorMessage = generateArtifactErrorMessage(null, e.message || 'Unknown error', params.buildId);
+          spinner.fail(errorMessage);
           
           try {
             const buildsResponse = await getBuildsOfCommit({ commitId: params.commitId });
@@ -3827,7 +5184,8 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         spinner.fail(chalk.red('CommitId or BuildId information not found.'));
       }
     } catch (e: any) {
-      spinner.fail(`Cannot download artifact since the build failed: ${e.message || 'Unknown error'}`);
+      const errorMessage = generateArtifactErrorMessage(null, e.message || 'Unknown error');
+      spinner.fail(errorMessage);
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-download-log`) {
     // Check if this is an interactive mode call
@@ -4302,7 +5660,7 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
   const progressSpinner = createOra('Preparing to download Build Logs...').start();
   
   let effectiveTaskId: string | null = null;
-  let providedPath = params?.path;
+  let providedPath = params?.path || (typeof taskIdOrParams === 'object' ? taskIdOrParams.path : undefined);
   let fileNameFromParams = params?.fileName;
   let commitId, buildId, branchId, profileId;
   let wasCanceled = params?.wasCanceled || false;

@@ -193,11 +193,22 @@ describe('commands.ts', () => {
       expect(loginCommand.subCommands!.length).toBeGreaterThan(0);
 
       const subCommandNames = loginCommand.subCommands!.map(sub => sub.command);
+      expect(subCommandNames).toContain('personal-access-key');
       expect(subCommandNames).toContain('pat');
       expect(subCommandNames).toContain('api-key');
     });
 
-    it('should have proper parameters for PAT login', () => {
+    it('should have proper parameters for Personal Access Key login', () => {
+      const personalAccessKeyCommand = loginCommand.subCommands!.find(sub => sub.command === 'personal-access-key')!;
+      expect(personalAccessKeyCommand.params).toBeDefined();
+      expect(personalAccessKeyCommand.params.length).toBe(1);
+      
+      const secretParam = personalAccessKeyCommand.params[0];
+      expect(secretParam.name).toBe('secret');
+      expect(secretParam.type).toBe(CommandParameterTypes.STRING);
+    });
+
+    it('should have proper parameters for PAT login (legacy)', () => {
       const patCommand = loginCommand.subCommands!.find(sub => sub.command === 'pat')!;
       expect(patCommand.params).toBeDefined();
       expect(patCommand.params.length).toBe(1);

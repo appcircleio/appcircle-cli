@@ -393,8 +393,8 @@ describe('Command Runner - Comprehensive Tests', () => {
       // Mock service to return success response
       vi.mocked(services.getToken).mockResolvedValue({ access_token: 'mock_token_success' });
 
-      const params = { token: 'valid_pat_token' };
-      const command = createMockCommand('appcircle-login-pat', params, CommandTypes.LOGIN);
+      const params = { secret: 'valid_personal_access_key' };
+      const command = createMockCommand('appcircle-login-personal-access-key', params, CommandTypes.LOGIN);
 
       // Should succeed without throwing
       await expect(runCommand(command)).resolves.not.toThrow();
@@ -408,6 +408,29 @@ describe('Command Runner - Comprehensive Tests', () => {
       consoleMock.restore();
     });
 
+    it('should handle successful PAT login (legacy)', async () => {
+      const config = await import('../../../src/config');
+      const services = await import('../../../src/services');
+      
+      // Mock config to show no existing token (not logged in)
+      vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
+      
+      // Mock service to return success response
+      vi.mocked(services.getToken).mockResolvedValue({ access_token: 'mock_token_success' });
+
+      const params = { token: 'valid_pat_token' };
+      const command = createMockCommand('appcircle-login-pat', params, CommandTypes.LOGIN);
+
+      // Should succeed without throwing
+      await expect(runCommand(command)).resolves.not.toThrow();
+      
+      // Should have called writeEnviromentConfigVariable to save token
+      expect(config.writeEnviromentConfigVariable).toHaveBeenCalledWith(
+        config.EnvironmentVariables.AC_ACCESS_TOKEN,
+        'mock_token_success'
+      );
+    });
+
     it('should handle failed PAT login', async () => {
       const consoleMock = mockConsole();
       const config = await import('../../../src/config');
@@ -419,8 +442,8 @@ describe('Command Runner - Comprehensive Tests', () => {
       // Mock config to show no existing token (not logged in)
       vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
 
-      const params = { token: 'invalid_pat_token' };
-      const command = createMockCommand('appcircle-login-pat', params, CommandTypes.LOGIN);
+      const params = { secret: 'invalid_personal_access_key' };
+      const command = createMockCommand('appcircle-login-personal-access-key', params, CommandTypes.LOGIN);
 
       // Should throw authentication error
       await expect(runCommand(command)).rejects.toThrow();
@@ -441,8 +464,8 @@ describe('Command Runner - Comprehensive Tests', () => {
       // Mock config to show existing token (already logged in)
       vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('existing_token');
 
-      const params = { token: 'another_pat_token' };
-      const command = createMockCommand('appcircle-login-pat', params, CommandTypes.LOGIN);
+      const params = { secret: 'another_personal_access_key' };
+      const command = createMockCommand('appcircle-login-personal-access-key', params, CommandTypes.LOGIN);
 
       // Should not throw but show already logged in message
       await expect(runCommand(command)).resolves.not.toThrow();
@@ -511,19 +534,10 @@ describe('Command Runner - Comprehensive Tests', () => {
       const config = await import('../../../src/config');
       vi.mocked(config.readEnviromentConfigVariable).mockReturnValue(''); // No token
 
-      const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
       const params = {};
       const command = createMockCommand('appcircle-logout', params, CommandTypes.LOGOUT);
 
-      await runCommand(command);
-
-      expect(consoleSpy).toHaveBeenCalledWith('You are not currently logged in.');
-      expect(mockProcessExit).toHaveBeenCalledWith(1);
-
-      mockProcessExit.mockRestore();
-      consoleSpy.mockRestore();
+      await expect(runCommand(command)).rejects.toThrow('You are not currently logged in');
     });
   });
 
@@ -1460,13 +1474,13 @@ describe('Command Runner - Comprehensive Tests', () => {
       });
     });
 
-    describe('handlePatLogin', () => {
-      it('should successfully handle PAT login and store token', async () => {
+    describe('handlePersonalAccessKeyLogin', () => {
+      it('should successfully handle Personal Access Key login and store token', async () => {
         const services = await import('../../../src/services');
         const config = await import('../../../src/config');
         const commandRunner = await import('../../../src/core/command-runner');
         
-        const mockResponse = { access_token: 'pat_token_success' };
+        const mockResponse = { access_token: 'personal_access_key_success' };
         vi.mocked(services.getToken).mockResolvedValueOnce(mockResponse);
         vi.mocked(config.writeEnviromentConfigVariable).mockImplementation(() => {});
         
@@ -1475,26 +1489,26 @@ describe('Command Runner - Comprehensive Tests', () => {
           commandWriter: vi.fn()
         }));
         
-        const params = { token: 'pat_token_123' };
+        const params = { secret: 'personal_access_key_123' };
         
-        await expect(commandRunner.handlePatLogin(params)).resolves.not.toThrow();
+        await expect(commandRunner.handlePersonalAccessKeyLogin(params)).resolves.not.toThrow();
         
-        expect(services.getToken).toHaveBeenCalledWith({ pat: 'pat_token_123' });
+        expect(services.getToken).toHaveBeenCalledWith({ personalAccessKey: 'personal_access_key_123' });
         expect(config.writeEnviromentConfigVariable).toHaveBeenCalledWith(
           config.EnvironmentVariables.AC_ACCESS_TOKEN, 
-          'pat_token_success'
+          'personal_access_key_success'
         );
       });
 
-      it('should handle PAT login failure', async () => {
+      it('should handle Personal Access Key login failure', async () => {
         const services = await import('../../../src/services');
-        vi.mocked(services.getToken).mockRejectedValueOnce(new Error('Invalid PAT token'));
+        vi.mocked(services.getToken).mockRejectedValueOnce(new Error('Invalid Personal Access Key'));
         
-        const { handlePatLogin } = await import('../../../src/core/command-runner');
+        const { handlePersonalAccessKeyLogin } = await import('../../../src/core/command-runner');
         
-        const params = { token: 'invalid_pat_token' };
+        const params = { secret: 'invalid_personal_access_key' };
         
-        await expect(handlePatLogin(params)).rejects.toThrow('Invalid PAT token');
+        await expect(handlePersonalAccessKeyLogin(params)).rejects.toThrow('Invalid Personal Access Key');
       });
     });
 

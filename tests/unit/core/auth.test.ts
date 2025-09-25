@@ -51,7 +51,7 @@ describe('Auth Abstraction', () => {
     it('should perform mock login', async () => {
       const auth = new MemoryAuth();
       
-      const response = await auth.login({ pat: 'test_pat' });
+      const response = await auth.login({ personalAccessKey: 'test_personal_access_key' });
       
       expect(response).toMatchObject({
         access_token: expect.stringContaining('mock_token_'),
@@ -64,9 +64,9 @@ describe('Auth Abstraction', () => {
     it('should prevent login when already authenticated', async () => {
       const auth = new MemoryAuth();
       
-      await auth.login({ pat: 'first_login' });
+      await auth.login({ personalAccessKey: 'first_login' });
       
-      await expect(auth.login({ pat: 'second_login' }))
+      await expect(auth.login({ personalAccessKey: 'second_login' }))
         .rejects.toThrow('Already authenticated. Use logout first.');
     });
   });
@@ -84,7 +84,7 @@ describe('Auth Abstraction', () => {
       
       expect(isAuthenticated()).toBe(false);
       
-      const response = await login({ pat: 'valid_pat' });
+      const response = await login({ personalAccessKey: 'valid_personal_access_key' });
       
       expect(response.access_token).toBe('mock_success_token');
       expect(isAuthenticated()).toBe(true);
@@ -94,7 +94,7 @@ describe('Auth Abstraction', () => {
     it('should handle failed authentication', async () => {
       setupAuthFailure();
       
-      await expect(login({ pat: 'invalid_pat' }))
+      await expect(login({ personalAccessKey: 'invalid_personal_access_key' }))
         .rejects.toThrow('Authentication failed');
       
       expect(isAuthenticated()).toBe(false);
@@ -115,7 +115,7 @@ describe('Auth Abstraction', () => {
     it('should handle PAT authentication', async () => {
       const mockAuth = setupAuthSuccess();
       
-      const response = await login({ pat: 'valid_pat_token' });
+      const response = await login({ personalAccessKey: 'valid_personal_access_key_token' });
       
       expect(response).toMatchObject({
         access_token: 'mock_success_token',

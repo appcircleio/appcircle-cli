@@ -112,7 +112,7 @@ describe('Services Index - Main Service Functions', () => {
 
   describe('Authentication Operations', () => {
     describe('getToken', () => {
-      it('should authenticate with personal access token', async () => {
+      it('should authenticate with personal access key', async () => {
         const mockTokenResponse = {
           access_token: 'abc123token',
           expires_in: 3600,
@@ -120,11 +120,11 @@ describe('Services Index - Main Service Functions', () => {
         }
         vi.mocked(axios.post).mockResolvedValue({ data: mockTokenResponse })
 
-        const result = await getToken({ pat: 'pat_12345' })
+        const result = await getToken({ personalAccessKey: 'personal_access_key_12345' })
 
         expect(axios.post).toHaveBeenCalledWith(
-          `${AUTH_HOSTNAME}/auth/v1/token`,
-          'pat=pat_12345',
+          `${AUTH_HOSTNAME}/auth/v3/token`,
+          'personalAccessKey=personal_access_key_12345',
           {
             headers: {
               accept: 'application/json',
@@ -139,7 +139,7 @@ describe('Services Index - Main Service Functions', () => {
         const authError = new Error('Invalid personal access token')
         vi.mocked(axios.post).mockRejectedValue(authError)
 
-        await expect(getToken({ pat: 'invalid_pat' }))
+        await expect(getToken({ personalAccessKey: 'invalid_personal_access_key' }))
           .rejects.toThrow('Invalid personal access token')
       })
 
@@ -148,7 +148,7 @@ describe('Services Index - Main Service Functions', () => {
         ;(timeoutError as any).code = 'ETIMEDOUT'
         vi.mocked(axios.post).mockRejectedValue(timeoutError)
 
-        await expect(getToken({ pat: 'pat_12345' }))
+        await expect(getToken({ personalAccessKey: 'personal_access_key_12345' }))
           .rejects.toThrow('timeout')
       })
 
@@ -157,7 +157,7 @@ describe('Services Index - Main Service Functions', () => {
         ;(formatError as any).response = { status: 400, data: { error: 'Invalid token format' } }
         vi.mocked(axios.post).mockRejectedValue(formatError)
 
-        await expect(getToken({ pat: 'malformed-pat' }))
+        await expect(getToken({ personalAccessKey: 'malformed-personal-access-key' }))
           .rejects.toThrow('Malformed token')
       })
     })

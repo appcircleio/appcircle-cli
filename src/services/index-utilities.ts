@@ -37,6 +37,18 @@ export const createPATAuthData = (pat: string): string => {
 };
 
 /**
+ * Creates Personal Access Key authentication request data for v3 API
+ * @param personalAccessKey Personal Access Key
+ * @returns URL-encoded string for Personal Access Key authentication
+ */
+export const createPersonalAccessKeyAuthData = (personalAccessKey: string): string => {
+  if (!validatePATFormat(personalAccessKey)) {
+    throw new ProgramError('Invalid Personal Access Key format provided');
+  }
+  return qs.stringify({ personalAccessKey });
+};
+
+/**
  * Creates API key authentication request data
  * @param name API key name
  * @param secret API key secret

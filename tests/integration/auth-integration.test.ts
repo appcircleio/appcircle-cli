@@ -18,7 +18,7 @@ describe('Authentication Integration Tests', () => {
     it('should successfully authenticate with valid PAT', async () => {
       // MSW will handle this automatically with our handlers
       
-      const response = await getToken({ pat: 'valid_pat_token' });
+      const response = await getToken({ personalAccessKey: 'valid_pat_token' });
       
       expect(response).toMatchObject({
         access_token: expect.stringContaining('mock_access_token'),
@@ -29,12 +29,12 @@ describe('Authentication Integration Tests', () => {
     });
 
     it('should reject invalid PAT tokens', async () => {
-      await expect(getToken({ pat: 'invalid_pat_token' }))
+      await expect(getToken({ personalAccessKey: 'invalid_pat_token' }))
         .rejects.toThrow();
     });
 
     it('should handle expired PAT tokens', async () => {
-      await expect(getToken({ pat: 'expired_pat_token' }))
+      await expect(getToken({ personalAccessKey: 'expired_pat_token' }))
         .rejects.toThrow();
     });
   });
@@ -84,7 +84,7 @@ describe('Authentication Integration Tests', () => {
         })
       );
 
-      await expect(getToken({ pat: 'any_token' }))
+      await expect(getToken({ personalAccessKey: 'any_token' }))
         .rejects.toThrow();
     });
 
@@ -97,7 +97,7 @@ describe('Authentication Integration Tests', () => {
         })
       );
 
-      await expect(getToken({ pat: 'timeout_token' }))
+      await expect(getToken({ personalAccessKey: 'timeout_token' }))
         .rejects.toThrow();
     });
 
@@ -112,14 +112,14 @@ describe('Authentication Integration Tests', () => {
         })
       );
 
-      await expect(getToken({ pat: 'rate_limited_token' }))
+      await expect(getToken({ personalAccessKey: 'rate_limited_token' }))
         .rejects.toThrow();
     });
   });
 
   describe('Token Management', () => {
     it('should properly store and retrieve tokens', async () => {
-      const response = await getToken({ pat: 'valid_pat_token' });
+      const response = await getToken({ personalAccessKey: 'valid_pat_token' });
       
       // Store token in environment (simulating what the CLI does)
       process.env.AC_ACCESS_TOKEN = response.access_token;
@@ -139,8 +139,8 @@ describe('Authentication Integration Tests', () => {
 
     it('should prevent multiple simultaneous logins', async () => {
       // This test verifies that the auth system handles concurrent requests properly
-      const loginPromise1 = getToken({ pat: 'valid_pat_token' });
-      const loginPromise2 = getToken({ pat: 'valid_pat_token' });
+      const loginPromise1 = getToken({ personalAccessKey: 'valid_pat_token' });
+      const loginPromise2 = getToken({ personalAccessKey: 'valid_pat_token' });
       
       const results = await Promise.all([loginPromise1, loginPromise2]);
       
@@ -165,7 +165,7 @@ describe('Authentication Integration Tests', () => {
         })
       );
 
-      await expect(getToken({ pat: 'invalid_token' }))
+      await expect(getToken({ personalAccessKey: 'invalid_token' }))
         .rejects.toThrow();
     });
 
@@ -181,7 +181,7 @@ describe('Authentication Integration Tests', () => {
         })
       );
 
-      const result = await getToken({ pat: 'malformed_response' });
+      const result = await getToken({ personalAccessKey: 'malformed_response' });
       
       // The response should be malformed (not a proper token object)
       expect(result).not.toHaveProperty('access_token');

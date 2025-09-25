@@ -9,7 +9,11 @@ import {
   decodeJwtToken,
   validateOrganizationId,
   checkIfUserAlreadyLoggedIn,
-  checkIfUserIsLoggedIn
+  checkIfUserIsLoggedIn,
+  selectBuildExecutionMode,
+  selectBuildMonitorMode,
+  BuildExecutionMode,
+  BuildMonitorMode
 } from '../../../src/core/command-runner-utilities';
 
 describe('Command Runner Build Utilities', () => {
@@ -584,6 +588,180 @@ describe('Command Runner Build Utilities', () => {
       const result = checkIfUserIsLoggedIn(mockConfigService);
       
       expect(result).toBe(false);
+    });
+  });
+
+  describe('selectBuildExecutionMode', () => {
+    let mockPrompt: any;
+
+    beforeEach(() => {
+      mockPrompt = {
+        run: vi.fn()
+      };
+    });
+
+    it('should return NORMAL mode when user selects Summary only', async () => {
+      mockPrompt.run.mockResolvedValue('Summary only - Real-time build status and duration');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.NORMAL);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return STEP_SUMMARY mode when user selects Step-by-step', async () => {
+      mockPrompt.run.mockResolvedValue('Step-by-step - Real-time progress for each build step');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.STEP_SUMMARY);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return DETAILED_MONITORING mode when user selects Full logs', async () => {
+      mockPrompt.run.mockResolvedValue('Full logs - Real-time verbose build output streaming');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.DETAILED_MONITORING);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return SKIP_SHOW_TASK_ID mode when user selects Task ID only', async () => {
+      mockPrompt.run.mockResolvedValue('Task ID only - No monitoring, returns task ID for async tracking');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.SKIP_SHOW_TASK_ID);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return NORMAL mode as default when parsing fails', async () => {
+      mockPrompt.run.mockResolvedValue('Invalid selection');
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.NORMAL);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return cancelled=true when prompt throws error', async () => {
+      mockPrompt.run.mockRejectedValue(new Error('User cancelled'));
+      
+      const result = await selectBuildExecutionMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildExecutionMode.NORMAL);
+      expect(result.cancelled).toBe(true);
+    });
+
+    it('should create prompt with correct parameters', async () => {
+      let capturedPrompt: any;
+      const createPrompt = vi.fn().mockImplementation((name, message, choices) => {
+        capturedPrompt = { name, message, choices };
+        return mockPrompt;
+      });
+      
+      mockPrompt.run.mockResolvedValue('Summary only - Real-time build status and duration');
+      
+      await selectBuildExecutionMode(createPrompt);
+      
+      expect(createPrompt).toHaveBeenCalledWith(
+        'executionMode',
+        'Select build monitoring preference:',
+        [
+          'Summary only - Real-time build status and duration',
+          'Step-by-step - Real-time progress for each build step',
+          'Full logs - Real-time verbose build output streaming',
+          'Task ID only - No monitoring, returns task ID for async tracking'
+        ]
+      );
+    });
+  });
+
+  describe('selectBuildMonitorMode', () => {
+    let mockPrompt: any;
+
+    beforeEach(() => {
+      mockPrompt = {
+        run: vi.fn()
+      };
+    });
+
+    it('should return NONE mode when user selects None', async () => {
+      mockPrompt.run.mockResolvedValue('None - No monitoring, just return Task/Build ID and exit');
+      
+      const result = await selectBuildMonitorMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildMonitorMode.NONE);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return SUMMARY mode when user selects Summary', async () => {
+      mockPrompt.run.mockResolvedValue('Summary - Wait until completion, show final status + total duration in one line');
+      
+      const result = await selectBuildMonitorMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildMonitorMode.SUMMARY);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return STEPS mode when user selects Steps', async () => {
+      mockPrompt.run.mockResolvedValue('Steps - Wait until completion, show step-by-step progress (started/finished) minimally');
+      
+      const result = await selectBuildMonitorMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildMonitorMode.STEPS);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return VERBOSE mode when user selects Verbose', async () => {
+      mockPrompt.run.mockResolvedValue('Verbose - Wait until completion, stream detailed logs line by line in real-time');
+      
+      const result = await selectBuildMonitorMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildMonitorMode.VERBOSE);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return SUMMARY mode as default when parsing fails', async () => {
+      mockPrompt.run.mockResolvedValue('Invalid selection');
+      
+      const result = await selectBuildMonitorMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildMonitorMode.SUMMARY);
+      expect(result.cancelled).toBe(false);
+    });
+
+    it('should return cancelled=true when prompt throws error', async () => {
+      mockPrompt.run.mockRejectedValue(new Error('User cancelled'));
+      
+      const result = await selectBuildMonitorMode(() => mockPrompt);
+      
+      expect(result.mode).toBe(BuildMonitorMode.SUMMARY);
+      expect(result.cancelled).toBe(true);
+    });
+
+    it('should create prompt with correct parameters', async () => {
+      let capturedPrompt: any;
+      const createPrompt = vi.fn().mockImplementation((name, message, choices) => {
+        capturedPrompt = { name, message, choices };
+        return mockPrompt;
+      });
+      
+      mockPrompt.run.mockResolvedValue('Summary - Wait until completion, show final status + total duration in one line');
+      
+      await selectBuildMonitorMode(createPrompt);
+      
+      expect(createPrompt).toHaveBeenCalledWith(
+        'monitorMode',
+        'Select build monitoring preference:',
+        [
+          'None - No monitoring, just return Task/Build ID and exit',
+          'Summary - Wait until completion, show final status + total duration in one line',
+          'Steps - Wait until completion, show step-by-step progress (started/finished) minimally',
+          'Verbose - Wait until completion, stream detailed logs line by line in real-time'
+        ]
+      );
     });
   });
 });
