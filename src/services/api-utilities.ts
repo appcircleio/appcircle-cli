@@ -117,7 +117,7 @@ export const validateEnvironmentVariable = (envVar: EnvironmentVariables): {
   }
   
   // Additional validation for hostnames
-  if (envVar === EnvironmentVariables.API_HOSTNAME || envVar === EnvironmentVariables.AUTH_HOSTNAME) {
+  if (envVar === EnvironmentVariables.API_HOSTNAME || envVar === EnvironmentVariables.AUTH_HOSTNAME || envVar === EnvironmentVariables.HOOK_HOSTNAME) {
     try {
       new URL(value);
       return { isValid: true, value };

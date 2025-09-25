@@ -607,6 +607,39 @@ export interface BuildResponseProcessingResult {
 }
 
 /**
+ * Monitor modes for build start
+ */
+export enum BuildMonitorMode {
+  NONE = 'none',
+  SUMMARY = 'summary',
+  STEPS = 'steps',
+  VERBOSE = 'verbose'
+}
+
+/**
+ * @deprecated Use BuildMonitorMode instead
+ */
+export enum BuildExecutionMode {
+  NORMAL = 'normal',
+  DETAILED_MONITORING = 'detailed',
+  STEP_SUMMARY = 'step-summary',
+  SKIP_SHOW_TASK_ID = 'skip'
+}
+
+export interface BuildMonitorModeResult {
+  mode: BuildMonitorMode;
+  cancelled: boolean;
+}
+
+/**
+ * @deprecated Use BuildMonitorModeResult instead
+ */
+export interface BuildExecutionModeResult {
+  mode: BuildExecutionMode;
+  cancelled: boolean;
+}
+
+/**
  * Validates build start command parameters
  * Pure function - easily testable
  */
@@ -831,4 +864,181 @@ export const checkIfUserIsLoggedIn = (
   }
 ): boolean => {
   return configService.has('AC_ACCESS_TOKEN') && !!configService.get('AC_ACCESS_TOKEN');
+};
+
+/**
+ * Prompts user to select monitor mode for build start
+ * Supports dependency injection for testing
+ */
+export const selectBuildMonitorMode = async (
+  createPrompt = (name: string, message: string, choices: string[]) => {
+    const { AutoComplete } = require('enquirer');
+    return new AutoComplete({
+      name,
+      message,
+      choices,
+      limit: 10
+    });
+  }
+): Promise<BuildMonitorModeResult> => {
+  const choices = [
+    '1. None - No monitoring, just return Task/Build ID and exit',
+    '2. Summary - Wait until completion, show final status + total duration in one line',
+    '3. Steps - Wait until completion, show step-by-step progress (started/finished) minimally',
+    '4. Verbose - Wait until completion, stream detailed logs line by line in real-time'
+  ];
+
+  try {
+    const selectPrompt = createPrompt(
+      'monitorMode',
+      'Select build monitoring preference:',
+      choices
+    );
+    
+    const selected = await selectPrompt.run();
+    
+    // Parse the selection
+    if (selected.includes('None')) {
+      return { mode: BuildMonitorMode.NONE, cancelled: false };
+    } else if (selected.includes('Summary')) {
+      return { mode: BuildMonitorMode.SUMMARY, cancelled: false };
+    } else if (selected.includes('Steps')) {
+      return { mode: BuildMonitorMode.STEPS, cancelled: false };
+    } else if (selected.includes('Verbose')) {
+      return { mode: BuildMonitorMode.VERBOSE, cancelled: false };
+    } else {
+      // Default to summary if parsing fails
+      return { mode: BuildMonitorMode.SUMMARY, cancelled: false };
+    }
+  } catch (error) {
+    // User cancelled or error occurred
+    return { mode: BuildMonitorMode.SUMMARY, cancelled: true };
+  }
+};
+
+/**
+ * @deprecated Use selectBuildMonitorMode instead
+ */
+export const selectBuildExecutionMode = async (
+  createPrompt = (name: string, message: string, choices: string[]) => {
+    const { AutoComplete } = require('enquirer');
+    return new AutoComplete({
+      name,
+      message,
+      choices,
+      limit: 10
+    });
+  }
+): Promise<BuildExecutionModeResult> => {
+  const choices = [
+    '1. Summary only - Real-time build status and duration',
+    '2. Step-by-step - Real-time progress for each build step',
+    '3. Full logs - Real-time verbose build output streaming',
+    '4. Task ID only - No monitoring, returns task ID for async tracking'
+  ];
+
+  try {
+    const selectPrompt = createPrompt(
+      'executionMode',
+      'Select build monitoring preference:',
+      choices
+    );
+    
+    const selected = await selectPrompt.run();
+    
+    // Parse the selection
+    if (selected.includes('Summary only')) {
+      return { mode: BuildExecutionMode.NORMAL, cancelled: false };
+    } else if (selected.includes('Step-by-step')) {
+      return { mode: BuildExecutionMode.STEP_SUMMARY, cancelled: false };
+    } else if (selected.includes('Full logs')) {
+      return { mode: BuildExecutionMode.DETAILED_MONITORING, cancelled: false };
+    } else if (selected.includes('Task ID only')) {
+      return { mode: BuildExecutionMode.SKIP_SHOW_TASK_ID, cancelled: false };
+    } else {
+      // Default to normal if parsing fails
+      return { mode: BuildExecutionMode.NORMAL, cancelled: false };
+    }
+  } catch (error) {
+    // User cancelled or error occurred
+    return { mode: BuildExecutionMode.NORMAL, cancelled: true };
+  }
+};
+
+/**
+ * Build status constants for better readability
+ */
+export const BuildStatus = {
+  SUCCESS: 0,
+  FAILED: 1,
+  CANCELED: 2,
+  TIMEOUT: 3,
+  WAITING: 90,
+  RUNNING: 91,
+  COMPLETING: 92
+} as const;
+
+/**
+ * Determines if a build status indicates failure
+ * @param buildStatus The build status code
+ * @returns True if the build failed, canceled, or timed out
+ */
+export const isBuildFailed = (buildStatus: number | null | undefined): boolean => {
+  return buildStatus === BuildStatus.FAILED || 
+         buildStatus === BuildStatus.CANCELED || 
+         buildStatus === BuildStatus.TIMEOUT;
+};
+
+/**
+ * Determines if a build status indicates success
+ * @param buildStatus The build status code
+ * @returns True if the build succeeded
+ */
+export const isBuildSuccessful = (buildStatus: number | null | undefined): boolean => {
+  return buildStatus === BuildStatus.SUCCESS;
+};
+
+/**
+ * Determines if build status is unknown or unavailable
+ * @param buildStatus The build status code
+ * @returns True if build status is null, undefined, or unknown
+ */
+export const isBuildStatusUnknown = (buildStatus: number | null | undefined): boolean => {
+  return buildStatus === null || buildStatus === undefined;
+};
+
+/**
+ * Generates appropriate artifact download error message based on build status
+ * @param buildStatus The build status code
+ * @param originalError The original error message
+ * @param buildId Optional build ID for context
+ * @param hasWarning Optional warning flag to provide more context
+ * @returns User-friendly error message
+ */
+export const generateArtifactErrorMessage = (
+  buildStatus: number | null | undefined,
+  originalError: string,
+  buildId?: string,
+  hasWarning?: boolean
+): string => {
+  // If build actually failed, keep the original message
+  if (isBuildFailed(buildStatus)) {
+    return `Cannot download artifact since the build failed: ${originalError}`;
+  }
+  
+  // If build succeeded but no artifacts found
+  if (isBuildSuccessful(buildStatus)) {
+    if (hasWarning) {
+      return 'Build completed with warnings, but no artifacts were found.';
+    }
+    return 'Build succeeded, but no artifacts were found.';
+  }
+  
+  // If build status is unknown and no artifacts found
+  if (isBuildStatusUnknown(buildStatus)) {
+    return 'No artifacts were found for this build.';
+  }
+  
+  // Fallback to original message for any other status
+  return `Cannot download artifact since the build failed: ${originalError}`;
 };

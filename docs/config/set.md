@@ -9,13 +9,14 @@ appcircle config set <key> <value>
 
 ```plaintext
 $ appcircle config set AUTH_HOSTNAME https://auth.example.com
+$ appcircle config set HOOK_HOSTNAME https://hook.example.com
 ```
 
 ## Arguments
 
 | Argument                                                                                                                                 | Description                                             |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `key`                                                                                                        | Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN] |
+| `key`                                                                                                        | Config key [API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, AC_ACCESS_TOKEN] |
 `value` |     Config value                                   
 
 ## Options inherited from parent commands

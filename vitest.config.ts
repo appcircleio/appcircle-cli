@@ -21,7 +21,8 @@ export default defineConfig({
         'src/**/*.test.ts',
         'src/**/*.spec.ts',
         'src/utils/orahelper.ts',
-        'src/types/file-upload.ts'
+        'src/types/file-upload.ts',
+        'src/types/build-logs.ts'
       ],
       // Separate thresholds for different test types
       thresholds: {
