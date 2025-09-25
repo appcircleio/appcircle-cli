@@ -20,7 +20,7 @@ export const shouldFallbackToInteractive = (
   const knownTopLevelCommands = commands.map(cmd => cmd.command);
   
   if (argv._.length === 1 && knownTopLevelCommands.includes(argv._[0])) {
-    if (argv._[0] === 'login' && argv.pat) {
+    if (argv._[0] === 'login' && argv.secret) {
       return false;
     } else {
       return true;

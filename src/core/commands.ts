@@ -278,19 +278,19 @@ LEARN MORE
   {
     command: CommandTypes.LOGIN,
     description: 'Login',
-    longDescription: `Authenticate with Appcircle using Personal Access Token or API Key
+    longDescription: `Authenticate with Appcircle using Personal Access Key or API Key
 
 USAGE
-  appcircle login pat --token <token>
+  appcircle login personal-access-key --secret <secret>
   appcircle login api-key [--name <name> --secret <secret> [--organization-id <id>]]
 
 DESCRIPTION
   Authenticate with Appcircle to access your organization's resources and perform CLI operations.
-  You can choose between Personal Access Token or API Key authentication methods.
+  You can choose between Personal Access Key or API Key authentication methods.
   API Key method supports an optional organization ID parameter for multi-organization accounts.
 
 EXAMPLES
-  appcircle login pat --token "your-personal-access-token-here"
+  appcircle login personal-access-key --secret "my-secret"
   appcircle login api-key
   appcircle login api-key --name "my-api-key" --secret "my-secret"
   appcircle login api-key --name "my-api-key" --secret "my-secret" --organization-id "org-123"
@@ -302,35 +302,35 @@ LEARN MORE
     params: [],
     subCommands: [
       {
-        command: 'pat',
-        description: 'Login with Personal Access Token',
-        longDescription: `Authenticate with Appcircle using your Personal Access Token
+        command: 'personal-access-key',
+        description: 'Login with Personal Access Key',
+        longDescription: `Authenticate with Appcircle using your Personal Access Key
 
 USAGE
-  appcircle login pat --token <token>
+  appcircle login personal-access-key --secret <secret>
 
 REQUIRED OPTIONS
-  --token <token>  Your Personal Access Token from Appcircle dashboard
+  --secret <secret>  Your Personal Access Key from Appcircle dashboard
 
 DESCRIPTION
-  Authenticate with Appcircle using your Personal Access Token. You can provide your token 
-  directly via the --token option, or the command will prompt you to enter it interactively 
+  Authenticate with Appcircle using your Personal Access Key. You can provide your key 
+  directly via the --secret option, or the command will prompt you to enter it interactively 
   for security. Once authenticated, your token will be stored securely for future CLI operations.
 
 EXAMPLES
-  appcircle login pat --token "your-personal-access-token-here"
+  appcircle login personal-access-key --secret "my-secret"
 
 LEARN MORE
-  To get your Personal Access Token:
+  To get your Personal Access Key:
   1. Go to Appcircle Dashboard (https://my.appcircle.io)
   2. Navigate to 'My Organization' → 'Integrations' → 'Personal API Tokens'
-  3. Click 'Generate Token' and copy the generated token
-  4. Use the token with this login command`,
+  3. Click 'Generate Token' and copy the generated key
+  4. Use the key with this login command`,
         params: [
           {
-            name: 'token',
-            description: 'Personal Access Token',
-            longDescription: 'Your Personal Access Token from Appcircle dashboard',
+            name: 'secret',
+            description: 'Personal Access Key',
+            longDescription: 'Your Personal Access Key from Appcircle dashboard',
             type: CommandParameterTypes.STRING,
             valueType: 'string',
             requriedForInteractiveMode: false,

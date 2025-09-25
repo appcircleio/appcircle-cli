@@ -155,9 +155,9 @@ CURL_LOGGING= appcircle
 
 You can authenticate with Appcircle using either Personal Access Token or API Key:
 
-#### Using Personal Access Token
-- [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#generatingmanaging-the-personal-api-tokens)
-- Using the Appcircle CLI, create a full access API token using the following command: `appcircle login pat --token="YOUR PERSONAL ACCESS TOKEN"`.
+#### Using Personal Access Key
+- [Generate a personal access key from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#generatingmanaging-the-personal-api-tokens)
+- Using the Appcircle CLI, create a full access API token using the following command: `appcircle login personal-access-key --secret="YOUR PERSONAL ACCESS KEY"`.
 
 #### Using API Key
 - [Create an API Key from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#api-keys)

@@ -1203,14 +1203,14 @@ export const handleAlreadyLoggedIn = (): void => {
   console.error('You are already logged in. Use "logout" to logout first.');
 };
 
-// Helper function to handle PAT login
-export const handlePatLogin = async (params: any): Promise<void> => {
-  // Validate token parameter
-  if (!params.token || params.token.trim() === '') {
-    throw new ProgramError('Invalid PAT format provided');
+// Helper function to handle Personal Access Key login
+export const handlePersonalAccessKeyLogin = async (params: any): Promise<void> => {
+  // Validate secret parameter
+  if (!params.secret || params.secret.trim() === '') {
+    throw new ProgramError('Invalid Personal Access Key format provided');
   }
 
-  const responseData = await getToken({ pat: params.token });
+  const responseData = await getToken({ personalAccessKey: params.secret });
   writeEnviromentConfigVariable(EnvironmentVariables.AC_ACCESS_TOKEN, responseData.access_token);
   commandWriter(CommandTypes.LOGIN, responseData);
 };
@@ -1287,8 +1287,8 @@ const handleLoginCommand = async (command: ProgramCommand, params: any) => {
     }
   }
 
-  if (command.fullCommandName === `${PROGRAM_NAME}-login-pat`) {
-    await handlePatLogin(params);
+  if (command.fullCommandName === `${PROGRAM_NAME}-login-personal-access-key`) {
+    await handlePersonalAccessKeyLogin(params);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-login-api-key`) {
     await handleApiKeyLogin(params);
   } else {

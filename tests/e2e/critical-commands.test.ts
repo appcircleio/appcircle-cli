@@ -69,11 +69,11 @@ describe('Critical Command E2E Tests', () => {
   });
   describe('🔐 Authentication Commands', () => {
     it('should handle login command without credentials', async () => {
-      const result = await runCommand(['login', 'pat']);
+      const result = await runCommand(['login', 'personal-access-key']);
       
       // Should prompt for missing credentials or show error
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain('token');
+      expect(result.stderr).toContain('secret');
     });
     it.skip('should handle logout command when not authenticated', async () => {
       // Ensure we're testing with a clean config file by deleting it if it exists
@@ -100,27 +100,27 @@ describe('Critical Command E2E Tests', () => {
       expect(result.stderr).toContain('command');
     });
 
-    it.skip('should handle invalid PAT token gracefully', async () => {
-      const result = await runCommand(['login', 'pat', '--token', 'invalid-token-123']);
+    it.skip('should handle invalid Personal Access Key gracefully', async () => {
+      const result = await runCommand(['login', 'personal-access-key', '--secret', 'invalid-key-123']);
 
       // Should fail with authentication error
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr.length).toBeGreaterThan(0);
     });
 
-    it('should validate login command with missing token parameter', async () => {
-      const result = await runCommand(['login', 'pat', '--token']);
+    it('should validate login command with missing secret parameter', async () => {
+      const result = await runCommand(['login', 'personal-access-key', '--secret']);
 
-      // Should fail when token parameter is provided but empty
+      // Should fail when secret parameter is provided but empty
       expect(result.exitCode).not.toBe(0);
     });
 
-    it.skip('should handle login with empty token string', async () => {
-      const result = await runCommand(['login', 'pat', '--token', '']);
+    it.skip('should handle login with empty secret string', async () => {
+      const result = await runCommand(['login', 'personal-access-key', '--secret', '']);
 
-      // Should fail with empty token
+      // Should fail with empty secret
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain('Invalid PAT format provided');
+      expect(result.stderr).toContain('Invalid Personal Access Key format provided');
     });
 
     it.skip('should handle logout when already logged out multiple times', async () => {

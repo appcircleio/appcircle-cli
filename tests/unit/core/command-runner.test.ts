@@ -393,8 +393,8 @@ describe('Command Runner - Comprehensive Tests', () => {
       // Mock service to return success response
       vi.mocked(services.getToken).mockResolvedValue({ access_token: 'mock_token_success' });
 
-      const params = { token: 'valid_pat_token' };
-      const command = createMockCommand('appcircle-login-pat', params, CommandTypes.LOGIN);
+      const params = { secret: 'valid_personal_access_key' };
+      const command = createMockCommand('appcircle-login-personal-access-key', params, CommandTypes.LOGIN);
 
       // Should succeed without throwing
       await expect(runCommand(command)).resolves.not.toThrow();
@@ -419,8 +419,8 @@ describe('Command Runner - Comprehensive Tests', () => {
       // Mock config to show no existing token (not logged in)
       vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
 
-      const params = { token: 'invalid_pat_token' };
-      const command = createMockCommand('appcircle-login-pat', params, CommandTypes.LOGIN);
+      const params = { secret: 'invalid_personal_access_key' };
+      const command = createMockCommand('appcircle-login-personal-access-key', params, CommandTypes.LOGIN);
 
       // Should throw authentication error
       await expect(runCommand(command)).rejects.toThrow();
@@ -441,8 +441,8 @@ describe('Command Runner - Comprehensive Tests', () => {
       // Mock config to show existing token (already logged in)
       vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('existing_token');
 
-      const params = { token: 'another_pat_token' };
-      const command = createMockCommand('appcircle-login-pat', params, CommandTypes.LOGIN);
+      const params = { secret: 'another_personal_access_key' };
+      const command = createMockCommand('appcircle-login-personal-access-key', params, CommandTypes.LOGIN);
 
       // Should not throw but show already logged in message
       await expect(runCommand(command)).resolves.not.toThrow();

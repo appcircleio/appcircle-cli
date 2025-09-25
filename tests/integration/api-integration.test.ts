@@ -19,7 +19,7 @@ describe('API Integration Tests', () => {
   describe('Authenticated API Requests', () => {
     beforeEach(async () => {
       // Authenticate for API tests
-      await auth.login({ pat: 'valid_token' });
+      await auth.login({ personalAccessKey: 'valid_token' });
     });
 
     it('should successfully fetch build profiles', async () => {
@@ -127,7 +127,7 @@ describe('API Integration Tests', () => {
 
   describe('API Error Scenarios', () => {
     beforeEach(async () => {
-      await auth.login({ pat: 'valid_token' });
+      await auth.login({ personalAccessKey: 'valid_token' });
     });
 
     it('should handle rate limiting errors', async () => {
@@ -198,7 +198,7 @@ describe('API Integration Tests', () => {
 
   describe('Cross-platform Compatibility', () => {
     beforeEach(async () => {
-      await auth.login({ pat: 'valid_token' });
+      await auth.login({ personalAccessKey: 'valid_token' });
     });
 
     it('should handle different HTTP status codes correctly', async () => {

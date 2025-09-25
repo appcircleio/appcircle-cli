@@ -90,8 +90,8 @@ describe('Main Utilities', () => {
   });
 
   describe('shouldFallbackToInteractive', () => {
-    it('should return false for login with PAT token', () => {
-      const argv = { _: ['login'], pat: 'token123' };
+    it('should return false for login with Personal Access Key', () => {
+      const argv = { _: ['login'], secret: 'key123' };
       
       const result = shouldFallbackToInteractive(argv, mockCommands);
       
@@ -476,11 +476,11 @@ describe('Main Utilities', () => {
       expect(result.shouldRunInteractive).toBe(true);
     });
 
-    it('should return context with no fallback for login with PAT', () => {
+    it('should return context with no fallback for login with Personal Access Key', () => {
       const originalArgv = [...process.argv];
-      process.argv = ['node', 'appcircle', 'login', '--pat', 'token123'];
+      process.argv = ['node', 'appcircle', 'login', '--secret', 'key123'];
       
-      const argv = { _: ['login'], pat: 'token123' };
+      const argv = { _: ['login'], secret: 'key123' };
       
       const result = processCommandLineArguments(argv, mockCommands);
       

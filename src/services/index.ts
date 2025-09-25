@@ -11,6 +11,7 @@ import { FileUploadInformation } from '../types/file-upload';
 import { getMaxUploadBytes } from '../utils/size-limit';
 import {
   createPATAuthData,
+  createPersonalAccessKeyAuthData,
   createAPIKeyAuthData,
   validateAPIKeyParams,
   createAuthHeaders,
@@ -169,14 +170,27 @@ export function resolveIdentityFromToken(accessToken: string): { sub: string; cu
   }
 }
 
-export async function getToken(options: OptionsType<{ pat: string }>) {
-  const authData = createPATAuthData(options.pat);
+export async function getToken(options: OptionsType<{ personalAccessKey: string }>) {
+  const authData = createPersonalAccessKeyAuthData(options.personalAccessKey);
   const headers = createAuthHeaders();
   
-  const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, authData, {
-    headers,
-  });
-  return response.data;
+  try {
+    // Try v3 API first
+    const response = await axios.post(`${AUTH_HOSTNAME}/auth/v3/token`, authData, {
+      headers,
+    });
+    return response.data;
+  } catch (error: any) {
+    // If v3 fails, fallback to v1 API with pat parameter
+    if (error.response?.status >= 400) {
+      const fallbackAuthData = createPATAuthData(options.personalAccessKey);
+      const fallbackResponse = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, fallbackAuthData, {
+        headers,
+      });
+      return fallbackResponse.data;
+    }
+    throw error;
+  }
 }
 
 export async function getTokenFromApiKey(options: OptionsType<{ name: string; secret: string; organizationId?: string }>) {
