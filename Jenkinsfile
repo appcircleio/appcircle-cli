@@ -14,8 +14,6 @@ pipeline {
                 set -x
                 set -euo pipefail
                 
-                node --version
-                
                 echo "🔨 Starting PR Validation Pipeline 🔨"
                 echo "=================================="
                 
@@ -51,6 +49,8 @@ pipeline {
                 # shellcheck shell=bash
                 set -x
                 set -euo pipefail
+
+                node --version
                 
                 git fetch --tags --force
                 tag=$(git describe --tags --abbrev=0)
