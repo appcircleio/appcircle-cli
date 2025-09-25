@@ -8,16 +8,16 @@ appcircle login [options]
 
 ## Subcommands
 
-### `pat` - Login with Personal Access Token
+### `personal-access-key` - Login with Personal Access Key
 
 ```plaintext
-appcircle login pat --token <token>
+appcircle login personal-access-key --secret <secret>
 ```
 
 #### Options
 
 ```plaintext
-      --token <token>   Personal Access Token
+      --secret <secret>   Personal Access Key
 ```
 
 ### `api-key` - Login with API Key
@@ -37,8 +37,8 @@ appcircle login api-key --name <name> --secret <secret> [--organization-id <id>]
 ## Examples
 
 ```bash
-# Login with Personal Access Token
-appcircle login pat --token "your-personal-access-token-here"
+# Login with Personal Access Key
+appcircle login personal-access-key --secret "my-secret"
 
 # Login with API Key
 appcircle login api-key --name "my-api-key" --secret "my-secret"
@@ -60,7 +60,7 @@ In interactive mode (`appcircle -i`), authentication options are grouped under "
 - Choose "Login" or "Logout" from the submenu
     - When choosing **Login**, you can authenticate using:
         - **API Key**
-        - **Personal Access Token (PAT)**
+        - **Personal Access Key**
 - Use "⬅ Back" to navigate between menus
 
 ## Options inherited from parent commands

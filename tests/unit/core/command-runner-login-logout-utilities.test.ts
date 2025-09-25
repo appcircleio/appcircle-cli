@@ -39,7 +39,7 @@ vi.mock('../../../src/core/commands', () => ({
 
 // Import functions to test
 import {
-  handlePatLogin,
+  handlePersonalAccessKeyLogin,
   handleApiKeyLogin,
   handleUnknownLoginCommand,
   checkIfUserAlreadyLoggedIn,
@@ -67,15 +67,15 @@ describe('Command Runner Login/Logout Utilities', () => {
     });
   });
 
-  describe('handlePatLogin', () => {
-    it('should handle successful PAT login', async () => {
-      const mockParams = { token: 'test-pat-token' };
+  describe('handlePersonalAccessKeyLogin', () => {
+    it('should handle successful Personal Access Key login', async () => {
+      const mockParams = { secret: 'test-personal-access-key' };
       const mockResponse = { access_token: 'jwt-access-token' };
       (getToken as any).mockResolvedValue(mockResponse);
 
-      await handlePatLogin(mockParams);
+      await handlePersonalAccessKeyLogin(mockParams);
 
-      expect(getToken).toHaveBeenCalledWith({ pat: 'test-pat-token' });
+      expect(getToken).toHaveBeenCalledWith({ personalAccessKey: 'test-personal-access-key' });
       expect(writeEnviromentConfigVariable).toHaveBeenCalledWith(
         EnvironmentVariables.AC_ACCESS_TOKEN,
         'jwt-access-token'
@@ -83,39 +83,34 @@ describe('Command Runner Login/Logout Utilities', () => {
       expect(commandWriter).toHaveBeenCalledWith(CommandTypes.LOGIN, mockResponse);
     });
 
-    it('should handle PAT login with empty token', async () => {
-      const mockParams = { token: '' };
-      const mockResponse = { access_token: 'jwt-access-token' };
-      (getToken as any).mockResolvedValue(mockResponse);
+    it('should handle Personal Access Key login with empty secret', async () => {
+      const mockParams = { secret: '' };
 
-      await handlePatLogin(mockParams);
+      await expect(handlePersonalAccessKeyLogin(mockParams)).rejects.toThrow('Invalid Personal Access Key format provided');
 
-      expect(getToken).toHaveBeenCalledWith({ pat: '' });
-      expect(writeEnviromentConfigVariable).toHaveBeenCalledWith(
-        EnvironmentVariables.AC_ACCESS_TOKEN,
-        'jwt-access-token'
-      );
+      expect(getToken).not.toHaveBeenCalled();
+      expect(writeEnviromentConfigVariable).not.toHaveBeenCalled();
     });
 
-    it('should handle PAT login API error', async () => {
-      const mockParams = { token: 'invalid-token' };
-      (getToken as any).mockRejectedValue(new Error('Invalid PAT'));
+    it('should handle Personal Access Key login API error', async () => {
+      const mockParams = { secret: 'invalid-key' };
+      (getToken as any).mockRejectedValue(new Error('Invalid Personal Access Key'));
 
-      await expect(handlePatLogin(mockParams)).rejects.toThrow('Invalid PAT');
+      await expect(handlePersonalAccessKeyLogin(mockParams)).rejects.toThrow('Invalid Personal Access Key');
 
-      expect(getToken).toHaveBeenCalledWith({ pat: 'invalid-token' });
+      expect(getToken).toHaveBeenCalledWith({ personalAccessKey: 'invalid-key' });
       expect(writeEnviromentConfigVariable).not.toHaveBeenCalled();
       expect(commandWriter).not.toHaveBeenCalled();
     });
 
-    it('should handle PAT login with special characters', async () => {
-      const mockParams = { token: 'test-token@#$%^&*()' };
+    it('should handle Personal Access Key login with special characters', async () => {
+      const mockParams = { secret: 'test-key@#$%^&*()' };
       const mockResponse = { access_token: 'jwt-token' };
       (getToken as any).mockResolvedValue(mockResponse);
 
-      await handlePatLogin(mockParams);
+      await handlePersonalAccessKeyLogin(mockParams);
 
-      expect(getToken).toHaveBeenCalledWith({ pat: 'test-token@#$%^&*()' });
+      expect(getToken).toHaveBeenCalledWith({ personalAccessKey: 'test-key@#$%^&*()' });
     });
   });
 

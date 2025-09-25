@@ -27,6 +27,9 @@ export const API_HOSTNAME = readEnviromentConfigVariable(
 export const AUTH_HOSTNAME = readEnviromentConfigVariable(
   EnvironmentVariables.AUTH_HOSTNAME
 );
+export const HOOK_HOSTNAME = readEnviromentConfigVariable(
+  EnvironmentVariables.HOOK_HOSTNAME
+) || "https://hook.appcircle.io";
 
 export const appcircleApi = axios.create(
   createAxiosConfig(API_HOSTNAME)

@@ -174,13 +174,13 @@ describe('Main.ts - Comprehensive Tests', () => {
         expect(slicedArgs).toEqual(['config', 'list', '--output', 'json']);
       });
 
-      it('should handle login PAT argument detection logic', () => {
-        // Simulate minimist parsing result for login with PAT
-        const mockArgv = { _: ['login'], pat: 'token123' };
+      it('should handle login Personal Access Key argument detection logic', () => {
+        // Simulate minimist parsing result for login with Personal Access Key
+        const mockArgv = { _: ['login'], secret: 'key123' };
         
         // Test the fallback logic from main.ts
         let isFallbackToInteractive = false;
-        if (mockArgv._[0] === 'login' && mockArgv.pat) {
+        if (mockArgv._[0] === 'login' && mockArgv.secret) {
           isFallbackToInteractive = false;
         } else {
           isFallbackToInteractive = true;
@@ -433,11 +433,11 @@ describe('Main.ts - Comprehensive Tests', () => {
       }).not.toThrow();
     });
 
-    it('should handle login command with PAT', async () => {
-      process.argv = ['node', 'appcircle', 'login', '--pat', 'token123'];
+    it('should handle login command with Personal Access Key', async () => {
+      process.argv = ['node', 'appcircle', 'login', '--secret', 'key123'];
       
       const minimist = await import('minimist');
-      (minimist.default as any).mockReturnValue({ _: ['login'], pat: 'token123', output: 'plain' });
+      (minimist.default as any).mockReturnValue({ _: ['login'], secret: 'key123', output: 'plain' });
       
       const { main } = await import('../../src/main.js');
       
