@@ -4847,6 +4847,11 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             // Offer to download logs even on failure using enquirer
             console.log(chalk.cyan('\nBuild failed. Would you like to download the logs?'));
             
+            // Ensure SSE connection is closed before showing the prompt
+            if (sseConnection && sseConnection.close) {
+              sseConnection.close();
+            }
+            
             try {
               // @ts-ignore
               const response: any = await enquirer.prompt({
