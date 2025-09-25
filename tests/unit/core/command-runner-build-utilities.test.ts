@@ -669,10 +669,10 @@ describe('Command Runner Build Utilities', () => {
         'executionMode',
         'Select build monitoring preference:',
         [
-          'Summary only - Real-time build status and duration',
-          'Step-by-step - Real-time progress for each build step',
-          'Full logs - Real-time verbose build output streaming',
-          'Task ID only - No monitoring, returns task ID for async tracking'
+          '1. Summary only - Real-time build status and duration',
+          '2. Step-by-step - Real-time progress for each build step',
+          '3. Full logs - Real-time verbose build output streaming',
+          '4. Task ID only - No monitoring, returns task ID for async tracking'
         ]
       );
     });
@@ -756,10 +756,10 @@ describe('Command Runner Build Utilities', () => {
         'monitorMode',
         'Select build monitoring preference:',
         [
-          'None - No monitoring, just return Task/Build ID and exit',
-          'Summary - Wait until completion, show final status + total duration in one line',
-          'Steps - Wait until completion, show step-by-step progress (started/finished) minimally',
-          'Verbose - Wait until completion, stream detailed logs line by line in real-time'
+          '1. None - No monitoring, just return Task/Build ID and exit',
+          '2. Summary - Wait until completion, show final status + total duration in one line',
+          '3. Steps - Wait until completion, show step-by-step progress (started/finished) minimally',
+          '4. Verbose - Wait until completion, stream detailed logs line by line in real-time'
         ]
       );
     });
