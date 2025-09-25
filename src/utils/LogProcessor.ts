@@ -24,10 +24,8 @@ export class LogProcessor {
       return;
     }
     
-    // Skip step echo messages
-    if (this.isStepEcho(rawMessage)) {
-      return;
-    }
+    // Process step echo messages but mark them appropriately
+    // (Don't skip them - they should be processed with isStepEcho: true)
     
     // Check for duplicates
     if (this.deduplicator.isDuplicate(rawMessage)) {
@@ -43,7 +41,20 @@ export class LogProcessor {
     }
 
     if (this.logsStarted) {
-      this.processAndEmit(rawMessage);
+      // Use ordered processing for messages with proper indices
+      const processed: ProcessedLogMessage = {
+        id: rawMessage.id,
+        taskId: rawMessage.taskId,
+        message: rawMessage.message,
+        messageIndex: rawMessage.messageIndex || 0,
+        stepName: rawMessage.stepName || 'all',
+        status: rawMessage.workflowStatus,
+        timestamp: rawMessage.progressTime,
+        isStepEcho: this.isStepEcho(rawMessage)
+      };
+      
+      // Use ordered insertion for proper message sequencing
+      this.insertInOrder(processed);
     } else {
       // Buffer the message until logs start
       this.buffer.push(rawMessage);
@@ -78,11 +89,21 @@ export class LogProcessor {
    * Flush all buffered messages when logs start
    */
   private flushBuffer(): void {
-    // Sort buffer by messageIndex to ensure correct order
-    this.buffer.sort((a, b) => (a.messageIndex || 0) - (b.messageIndex || 0));
-    
-    // Process all buffered messages
-    this.buffer.forEach(message => this.processAndEmit(message));
+    // Process all buffered messages using ordered insertion
+    this.buffer.forEach(rawMessage => {
+      const processed: ProcessedLogMessage = {
+        id: rawMessage.id,
+        taskId: rawMessage.taskId,
+        message: rawMessage.message,
+        messageIndex: rawMessage.messageIndex || 0,
+        stepName: rawMessage.stepName || 'all',
+        status: rawMessage.workflowStatus,
+        timestamp: rawMessage.progressTime,
+        isStepEcho: this.isStepEcho(rawMessage)
+      };
+      
+      this.insertInOrder(processed);
+    });
     this.buffer = [];
   }
 
@@ -100,6 +121,9 @@ export class LogProcessor {
       timestamp: rawMessage.progressTime,
       isStepEcho: this.isStepEcho(rawMessage)
     };
+
+    // Update nextExpectedIndex based on the message index
+    this.nextExpectedIndex = Math.max(this.nextExpectedIndex, processed.messageIndex + 1);
 
     // For verbose mode, emit messages immediately without buffering
     // since all messages have index 0, ordering is not reliable
@@ -132,11 +156,10 @@ export class LogProcessor {
     while (this.messageBuffer.length > 0) {
       const message = this.messageBuffer[0];
       
-      // For verbose mode, emit messages immediately without strict ordering
-      // since all messages seem to have index 0, we'll emit them as they come
+      // Emit messages in order based on messageIndex
       if (message.messageIndex === this.nextExpectedIndex || 
           message.messageIndex === 0 || // Accept messages with index 0
-          this.messageBuffer.length > 10) { // Reduced buffer size for faster emission
+          this.messageBuffer.length > 10) { // Force emit if buffer too large
         
         this.messageBuffer.shift();
         this.nextExpectedIndex = Math.max(this.nextExpectedIndex, message.messageIndex + 1);

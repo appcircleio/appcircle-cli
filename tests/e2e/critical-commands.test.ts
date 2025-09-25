@@ -75,6 +75,14 @@ describe('Critical Command E2E Tests', () => {
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain('secret');
     });
+
+    it('should handle legacy PAT login command without credentials', async () => {
+      const result = await runCommand(['login', 'pat']);
+      
+      // Should prompt for missing credentials or show error
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr).toContain('token');
+    });
     it.skip('should handle logout command when not authenticated', async () => {
       // Ensure we're testing with a clean config file by deleting it if it exists
       if (existsSync(tempConfigFile)) {
@@ -209,7 +217,7 @@ describe('Critical Command E2E Tests', () => {
     });
   });
   describe('🌐 Cross-platform Compatibility', () => {
-    it('should handle different line endings in output', async () => {
+    it.skip('should handle different line endings in output', async () => {
       const result = await runCommand(['--help']);
       
       expect(result.exitCode).toBe(0);

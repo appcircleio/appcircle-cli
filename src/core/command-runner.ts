@@ -1289,6 +1289,10 @@ const handleLoginCommand = async (command: ProgramCommand, params: any) => {
 
   if (command.fullCommandName === `${PROGRAM_NAME}-login-personal-access-key`) {
     await handlePersonalAccessKeyLogin(params);
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-login-pat`) {
+    // Handle legacy pat command - convert token parameter to secret for backward compatibility
+    const patParams = { secret: params.token };
+    await handlePersonalAccessKeyLogin(patParams);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-login-api-key`) {
     await handleApiKeyLogin(params);
   } else {

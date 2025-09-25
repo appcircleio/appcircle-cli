@@ -338,6 +338,39 @@ LEARN MORE
         ],
       },
       {
+        command: 'pat',
+        description: 'Login with Personal Access Token (Legacy)',
+        longDescription: `Authenticate with Appcircle using your Personal Access Token (Legacy)
+
+USAGE
+  appcircle login pat --token <token>
+
+REQUIRED OPTIONS
+  --token <token>  Your Personal Access Token from Appcircle dashboard
+
+DESCRIPTION
+  Legacy authentication method using Personal Access Token. This command is provided
+  for backward compatibility. For new implementations, use 'personal-access-key' instead.
+  The functionality is identical to the personal-access-key command.
+
+EXAMPLES
+  appcircle login pat --token "my-token"
+
+LEARN MORE
+  This is a legacy command. For new implementations, use:
+  appcircle login personal-access-key --secret "my-secret"`,
+        params: [
+          {
+            name: 'token',
+            description: 'Personal Access Token',
+            longDescription: 'Your Personal Access Token from Appcircle dashboard',
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            requriedForInteractiveMode: false,
+          },
+        ],
+      },
+      {
         command: 'api-key',
         description: 'Login with API Key',
         longDescription: `Authenticate with Appcircle using your API Key credentials

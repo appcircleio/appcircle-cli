@@ -98,6 +98,14 @@ describe('Main Utilities', () => {
       expect(result).toBe(false);
     });
 
+    it('should return false for login with PAT token (legacy)', () => {
+      const argv = { _: ['login'], token: 'pat123' };
+      
+      const result = shouldFallbackToInteractive(argv, mockCommands);
+      
+      expect(result).toBe(false);
+    });
+
     it('should return true for login without PAT token', () => {
       const argv = { _: ['login'] };
       

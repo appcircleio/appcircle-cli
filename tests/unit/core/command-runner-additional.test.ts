@@ -103,8 +103,8 @@ describe('Command Runner - Additional Functions', () => {
     });
   });
 
-  describe('handlePatLogin', () => {
-    it('should handle valid PAT login', async () => {
+  describe('handlePersonalAccessKeyLogin', () => {
+    it('should handle valid Personal Access Key login', async () => {
       const mockGetToken = vi.fn().mockResolvedValue({ access_token: 'token' });
 
       // Create a spy on the actual import
@@ -121,9 +121,9 @@ describe('Command Runner - Additional Functions', () => {
         };
       });
 
-      const params = { token: 'valid-pat-token' };
+      const params = { secret: 'valid-personal-access-key' };
       try {
-        await commandRunner.handlePatLogin(params);
+        await commandRunner.handlePersonalAccessKeyLogin(params);
         expect(true).toBe(true); // If no error is thrown, test passes
       } catch (error) {
         // Expected to fail due to mocking limitations
@@ -131,14 +131,14 @@ describe('Command Runner - Additional Functions', () => {
       }
     });
 
-    it('should throw error for empty token', async () => {
-      const params = { token: '' };
-      await expect(commandRunner.handlePatLogin(params)).rejects.toThrow();
+    it('should throw error for empty secret', async () => {
+      const params = { secret: '' };
+      await expect(commandRunner.handlePersonalAccessKeyLogin(params)).rejects.toThrow();
     });
 
-    it('should throw error for missing token', async () => {
+    it('should throw error for missing secret', async () => {
       const params = {};
-      await expect(commandRunner.handlePatLogin(params)).rejects.toThrow();
+      await expect(commandRunner.handlePersonalAccessKeyLogin(params)).rejects.toThrow();
     });
   });
 
