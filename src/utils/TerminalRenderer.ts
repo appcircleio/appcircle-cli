@@ -154,7 +154,7 @@ export class TerminalRenderer {
     // @@[command] -> Cyan  
     formatted = formatted.replace(/@@\[command\]/g, chalk.cyan('@@[command]'));
     
-    // @@[error] -> Red
+    // @@[error] -> Red (only exact match)
     formatted = formatted.replace(/@@\[error\]/g, chalk.red('@@[error]'));
     
     // URLs -> Blue (simple regex for http/https URLs)
@@ -169,8 +169,8 @@ export class TerminalRenderer {
         formatted = chalk.green(formatted);
       }
     }
-    // Error patterns  
-    else if (/❌|✗|error|failed|exception/i.test(formatted)) {
+    // Error patterns - only for specific error markers, not general "error" text
+    else if (/❌|✗|@@error:/i.test(formatted)) {
       if (!formatted.includes('\u001b[')) {
         formatted = chalk.red(formatted);
       }

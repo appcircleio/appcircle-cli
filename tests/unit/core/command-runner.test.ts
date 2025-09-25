@@ -409,6 +409,9 @@ describe('Command Runner - Comprehensive Tests', () => {
     });
 
     it('should handle successful PAT login (legacy)', async () => {
+      const config = await import('../../../src/config');
+      const services = await import('../../../src/services');
+      
       // Mock config to show no existing token (not logged in)
       vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('');
       

@@ -700,7 +700,7 @@ const handleCommandParamsAndArguments = async (selectedCommand: CommandType, par
 
 // Step 1: Pure function to filter available commands
 export const getAvailableChoices = (command: CommandType): CommandType[] => {
-  return command.subCommands?.filter((cmd) => !cmd.ignore) || [];
+  return command.subCommands?.filter((cmd) => !cmd.ignore && !cmd.hidden) || [];
 };
 
 // Step 2: Pure function to check if should execute single command directly

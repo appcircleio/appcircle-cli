@@ -42,6 +42,7 @@ export type CommandType = {
   description: string;
   longDescription?: string;
   ignore?: boolean;
+  hidden?: boolean; // Hide from interactive mode menu
   subCommands?: CommandType[];
   arguments?: ParamType[];
   params: ParamType[];
@@ -340,6 +341,7 @@ LEARN MORE
       {
         command: 'pat',
         description: 'Login with Personal Access Token (Legacy)',
+        hidden: true, // Hide from interactive mode menu
         longDescription: `Authenticate with Appcircle using your Personal Access Token (Legacy)
 
 USAGE

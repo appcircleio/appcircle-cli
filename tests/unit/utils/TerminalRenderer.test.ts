@@ -230,15 +230,27 @@ describe('TerminalRenderer', () => {
         const errorMessages = [
           'Build ❌ failed',
           'Tests ✗ failed',
-          'error: something went wrong',
-          'Task failed completely',
-          'Unexpected exception occurred'
+          '@@error: something went wrong'
         ];
 
         errorMessages.forEach(messageText => {
           const message = createMockProcessedMessage({ message: messageText });
           const result = renderer.renderMessage(message);
           expect(result).toContain('[red]');
+        });
+      });
+
+      it('should NOT format general error text as red', () => {
+        const nonErrorMessages = [
+          'something went wrong', // This should NOT be red anymore
+          'Error handling in code',
+          'message without error prefix'
+        ];
+
+        nonErrorMessages.forEach(messageText => {
+          const message = createMockProcessedMessage({ message: messageText });
+          const result = renderer.renderMessage(message);
+          expect(result).not.toContain('[red]');
         });
       });
 
