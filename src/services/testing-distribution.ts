@@ -26,9 +26,48 @@ export async function getDistributionProfileById(options: OptionsType<{ distProf
 export async function getLatestAppVersionId(options: OptionsType<{ distProfileId: string }>) {
     const profile = await getDistributionProfileById(options);
     if (profile && profile.appVersions && profile.appVersions.length > 0) {
-        const sortedVersions = [...profile.appVersions].sort((a, b) => 
+        const sortedVersions = [...profile.appVersions].sort((a: any, b: any) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
+        return sortedVersions[0].id;
+    }
+    return null;
+}
+
+// New function to get the latest app version ID with a minimum wait for new uploads
+export async function getLatestAppVersionIdAfterUpload(options: OptionsType<{ distProfileId: string; expectedFileSize?: number; fileName?: string }>) {
+    // Give some time for the new version to appear in the API
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const profile = await getDistributionProfileById(options);
+    if (profile && profile.appVersions && profile.appVersions.length > 0) {
+        // Sort by creation time, newest first
+        const sortedVersions = [...profile.appVersions].sort((a: any, b: any) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        // If we have expected file size or name, try to match the most recent version
+        if (options.expectedFileSize || options.fileName) {
+            for (const version of sortedVersions) {
+                const isRecentlyCreated = new Date().getTime() - new Date(version.createdAt).getTime() < 30000; // Within 30 seconds
+
+                if (isRecentlyCreated) {
+                    // Additional checks can be added here if needed
+                    if (options.expectedFileSize && version.size && Math.abs(version.size - options.expectedFileSize) < 1000) {
+                        return version.id;
+                    }
+                    if (options.fileName && version.fileName && version.fileName.includes(options.fileName)) {
+                        return version.id;
+                    }
+                    // If no specific matching criteria, return the most recent one
+                    if (!options.expectedFileSize && !options.fileName) {
+                        return version.id;
+                    }
+                }
+            }
+        }
+
+        // Fallback to most recent version
         return sortedVersions[0].id;
     }
     return null;

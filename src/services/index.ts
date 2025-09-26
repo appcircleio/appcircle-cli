@@ -3,92 +3,216 @@ import fs from 'fs';
 import path from 'path';
 import FormData from 'form-data';
 import axios from 'axios';
+import chalk from 'chalk';
 import { CountriesList, EnvironmentVariableTypes } from '../constant';
-import { AUTH_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
+import { AUTH_HOSTNAME, HOOK_HOSTNAME, OptionsType, appcircleApi, getHeaders } from './api';
 import { ProgramError } from '../core/ProgramError';
-import os from 'os';
 import { FileUploadInformation } from '../types/file-upload';
-import { getMaxUploadBytes, GB } from '../utils/size-limit';
+import { getMaxUploadBytes } from '../utils/size-limit';
+import {
+  createPATAuthData,
+  createPersonalAccessKeyAuthData,
+  createAPIKeyAuthData,
+  validateAPIKeyParams,
+  createAuthHeaders,
+  handleAPIKeyAuthError,
+  validateBuildStartParams,
+  resolveCommitId,
+  resolveConfigurationId,
+  createBuildRequestUrl,
+  createBuildRequestHeaders,
+  determineBuildIdForDownload,
+  generateArtifactFilename,
+  validateAndCreateDownloadPath,
+  validateDownloadResponse,
+  processDownloadError,
+  validateLogContent,
+  isTextBasedContent,
+  processLogDownloadError,
+  sortBuildsByDate,
+  getLatestBuildIdFromSorted,
+  validateUploadFile,
+  createUploadFormData,
+  createUploadRequestConfig,
+  validateEnvironmentVariableParams,
+  validateSignedUrlUploadInfo,
+  determineUploadMethod,
+  validateFileSize
+} from './index-utilities';
 
-export async function getToken(options: OptionsType<{ pat: string }>) {
-  const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, qs.stringify({ pat: options.pat }), {
-    headers: {
-      accept: 'application/json',
-      'content-type': 'application/x-www-form-urlencoded',
-    },
-  });
-  return response.data;
+export class DetailedMonitoringError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public originalError?: Error
+  ) {
+    super(message);
+    this.name = 'DetailedMonitoringError';
+  }
 }
 
-export async function getTokenFromApiKey(options: OptionsType<{ name: string; secret: string; organizationId?: string }>) {
-  const requestData = {
-    name: options.name,
-    secret: options.secret,
-  };
+export const ErrorCodes = {
+  E_HOOK_AUTH_FAILED: 'E_HOOK_AUTH_FAILED',
+  E_SSE_CONNECT_FAILED: 'E_SSE_CONNECT_FAILED',
+  E_TOKEN_MALFORMED: 'E_TOKEN_MALFORMED',
+  E_TOKEN_DECODE_FAILED: 'E_TOKEN_DECODE_FAILED',
+  E_CLAIM_MISSING_SUB: 'E_CLAIM_MISSING_SUB',
+  E_CLAIM_MISSING_ORG: 'E_CLAIM_MISSING_ORG',
+  E_IDENTITY_RESOLVE_FAILED: 'E_IDENTITY_RESOLVE_FAILED',
+} as const;
 
-  if (options.organizationId !== undefined) {
-    (requestData as any).organizationId = options.organizationId;
-  }
-
-  try {
-    const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/api-key/token`, qs.stringify(requestData), {
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/x-www-form-urlencoded',
-      },
-    });
-    return response.data;
-  } catch (error: any) {
-    if (error.response) {
-      const { status, data } = error.response;
+// Retry utility for API calls
+async function retryApiCall<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 2,
+  timeoutMs: number = 15000
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
+      });
       
-      // 403 - Authorization failed (organization access)
-      if (status === 403) {
-        const orgId = options.organizationId || 'the specified organization';
-        throw new ProgramError(
-          `Login failed: Your API Key does not have access to organization "${orgId}".`
-        );
+      return await Promise.race([operation(), timeoutPromise]);
+    } catch (error: any) {
+      lastError = error;
+      
+      // Don't retry on 4xx errors (client errors)
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        throw error;
       }
       
-      // 400 - Bad Request (invalid format, etc.)
-      if (status === 400) {
-        if (data?.error && data.error.includes('organizationId must be a valid GUID')) {
-          throw new ProgramError(
-            `Invalid organization ID format: "${options.organizationId}"`
-          );
-        }
-        throw new ProgramError(
-          `Invalid request: ${data?.error || 'Bad request format'}`
-        );
+      // Don't retry on the last attempt
+      if (attempt === maxRetries) {
+        break;
       }
       
-      // 401 - Authentication failed
-      if (status === 401) {
-        throw new ProgramError(
-          `Authentication failed: Invalid API Key credentials`
-        );
-      }
-      
-      // 500+ - Server errors
-      if (status >= 500) {
-        throw new ProgramError(
-          `Server error occurred while processing your request (Status: ${status})`
-        );
-      }
+      // Wait before retry (exponential backoff)
+      const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
+  }
+  
+  throw lastError || new Error('Max retries exceeded');
+}
+
+// JWT Decoding utilities
+function base64UrlDecode(input: string): string {
+  input = input.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = input.length % 4 ? 4 - (input.length % 4) : 0;
+  const padded = input + '='.repeat(pad);
+  return Buffer.from(padded, 'base64').toString('utf8');
+}
+
+/**
+ * Decodes JWT payload without signature verification
+ * @param token JWT token string
+ * @returns Decoded payload as object
+ */
+export function decodeJwtPayload(token: string): Record<string, any> {
+  const parts = token.split('.');
+  if (parts.length < 2) {
+    throw new Error('E_TOKEN_MALFORMED');
+  }
+  
+  try {
+    const payloadJson = base64UrlDecode(parts[1]);
+    const payload = JSON.parse(payloadJson);    
+    return payload;
+  } catch (error) {
+    throw new Error('E_TOKEN_DECODE_FAILED');
+  }
+}
+
+/**
+ * Extracts identity claims from JWT access token
+ * @param accessToken JWT access token
+ * @returns Object with sub and currentOrganizationId
+ */
+export function resolveIdentityFromToken(accessToken: string): { sub: string; currentOrganizationId: string } {  
+  try {
+    const payload = decodeJwtPayload(accessToken);
     
-    // Network or other errors
-    if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND') {
-      throw new ProgramError(
-        `Connection error: Unable to connect to Appcircle servers`
+    // Extract sub claim
+    const sub = payload.sub;
+    if (!sub || typeof sub !== 'string' || sub.trim() === '') {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_CLAIM_MISSING_SUB,
+        'Missing or invalid "sub" claim in access token. Please re-authenticate.'
       );
     }
     
+    // Extract organization claim (with configurable key)
+    const orgClaimKey = process.env.CLAIM_ORG_KEY || 'currentOrganizationId';
+    const currentOrganizationId = payload[orgClaimKey];
+    
+    if (!currentOrganizationId || typeof currentOrganizationId !== 'string' || currentOrganizationId.trim() === '') {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_CLAIM_MISSING_ORG,
+        `Missing or invalid "${orgClaimKey}" claim in access token. Please ensure you have access to an organization.`
+      );
+    }
+     
+    return { sub, currentOrganizationId };
+    
+  } catch (error: any) {
+    if (error instanceof DetailedMonitoringError) {
+      throw error;
+    }
+    
+    throw new DetailedMonitoringError(
+      ErrorCodes.E_IDENTITY_RESOLVE_FAILED,
+      'Unable to extract identity from access token. Consider re-authenticating.',
+      error
+    );
+  }
+}
+
+export async function getToken(options: OptionsType<{ personalAccessKey: string }>) {
+  const authData = createPersonalAccessKeyAuthData(options.personalAccessKey);
+  const headers = createAuthHeaders();
+  
+  try {
+    // Try v3 API first
+    const response = await axios.post(`${AUTH_HOSTNAME}/auth/v3/token`, authData, {
+      headers,
+    });
+    return response.data;
+  } catch (error: any) {
+    // If v3 fails, fallback to v1 API with pat parameter
+    if (error.response?.status >= 400) {
+      const fallbackAuthData = createPATAuthData(options.personalAccessKey);
+      const fallbackResponse = await axios.post(`${AUTH_HOSTNAME}/auth/v1/token`, fallbackAuthData, {
+        headers,
+      });
+      return fallbackResponse.data;
+    }
     throw error;
   }
 }
 
-export async function getBuildProfiles(options: OptionsType = {}) {
+export async function getTokenFromApiKey(options: OptionsType<{ name: string; secret: string; organizationId?: string }>) {
+  const validation = validateAPIKeyParams(options.name, options.secret);
+  if (!validation.isValid) {
+    throw new ProgramError(validation.error!);
+  }
+
+  const requestData = createAPIKeyAuthData(options.name, options.secret, options.organizationId);
+  const headers = createAuthHeaders();
+
+  try {
+    const response = await axios.post(`${AUTH_HOSTNAME}/auth/v1/api-key/token`, requestData, {
+      headers,
+    });
+    return response.data;
+  } catch (error: any) {
+    handleAPIKeyAuthError(error, options.organizationId);
+  }
+}
+
+export async function getBuildProfiles(_options: OptionsType = {}) {
   const buildProfiles = await appcircleApi.get(`build/v2/profiles`, {
     headers: getHeaders(),
   });
@@ -119,53 +243,39 @@ export async function getActiveBuilds() {
 export async function startBuild(
   options: OptionsType<{ profileId: string; branchId?: string; workflowId?: string; commitId?: string, commitHash?: string, configurationId?: string }>
 ) {
+  const validation = validateBuildStartParams(options);
+  if (!validation.isValid) {
+    throw new ProgramError(validation.error!);
+  }
+
   let workflowId = options.workflowId || '';
   let commitId = options.commitId || '';
   let configurationId = options.configurationId || '';
-  let branchId = options.branchId;
+  const branchId = options.branchId;
 
-  // branchId is only required if commitId is not provided
-  if (!commitId && !options.commitHash) {
-    if (!branchId) {
-      throw new ProgramError(`Branch ID is required when commit ID is not provided. Please provide --branchId or --branch parameter.`);
-    }
+  // Resolve commit ID if not provided
+  if (!commitId) {
     const allCommitsByBranchId = await getCommits({ branchId: branchId! });
-    if (allCommitsByBranchId && allCommitsByBranchId.length > 0) {
-      commitId = allCommitsByBranchId[0].id;
-    } else {
-      throw new ProgramError(`No commits found for branch ID "${branchId}".`);
+    const result = resolveCommitId(allCommitsByBranchId, options.commitHash);
+    if (result.error) {
+      throw new ProgramError(`${result.error} for branch ID "${branchId}".`);
     }
-  } else if (!commitId && options.commitHash) {
-    if (!branchId) {
-      throw new ProgramError(`Branch ID is required when commit hash is provided. Please provide --branchId or --branch parameter.`);
-    }
-    const allCommitsByBranchId = await getCommits({ branchId: branchId! });
-    const foundCommit = allCommitsByBranchId?.find((c:any) => c.hash == options.commitHash);
-    if (foundCommit) {
-      commitId = foundCommit.id;
-    } else {
-      throw new ProgramError(`Commit with hash "${options.commitHash}" not found for branch ID "${branchId}".`);
-    }
+    commitId = result.commitId;
   }
 
+  // Resolve configuration ID if not provided
   if (!configurationId) {
     const allConfigurations = await getConfigurations({ profileId: options.profileId });
-    if (allConfigurations && allConfigurations.length > 0 && allConfigurations[0].item1 && allConfigurations[0].item1.id) {
-      configurationId = allConfigurations[0].item1.id;
-    } else {
-      throw new ProgramError(`No configurations found for profile ID "${options.profileId}".`);
+    const result = resolveConfigurationId(allConfigurations);
+    if (result.error) {
+      throw new ProgramError(`${result.error} for profile ID "${options.profileId}".`);
     }
+    configurationId = result.configurationId;
   }
   
-  const postUrl = `build/v2/commits/${commitId}?${qs.stringify({ action: 'build', workflowId, configurationId })}`;
+  const postUrl = createBuildRequestUrl(commitId, workflowId, configurationId);
   const postBody = '{}';
-  const postHeaders = {
-    headers: {
-      ...getHeaders(),
-      accept: '*/*',
-      'content-type': 'application/x-www-form-urlencoded',
-    },
-  };
+  const postHeaders = createBuildRequestHeaders(getHeaders());
 
   const buildResponse = await appcircleApi.post(
     postUrl,
@@ -177,25 +287,17 @@ export async function startBuild(
 
 export async function downloadArtifact(options: OptionsType<{ buildId?: string; commitId: string; branchId?: string; profileId?: string }>, downloadPath: string, artifactFileName?: string) {
   try {
-    let buildId = options.buildId;
-    if (options.branchId && options.profileId) {
-      const latestBuildId = await getLatestBuildId({ 
-        branchId: options.branchId, 
-        profileId: options.profileId 
-      });
-      if (latestBuildId) {
-        buildId = latestBuildId;
-      }
+    const buildResult = await determineBuildIdForDownload(options, getLatestBuildId, getBuildsOfCommit);
+    if (buildResult.error) {
+      throw new ProgramError(buildResult.error);
     }
-    else if (!buildId || buildId === '00000000-0000-0000-0000-000000000000') {
-      const buildsResponse = await getBuildsOfCommit({ commitId: options.commitId });
-      if (buildsResponse && buildsResponse.builds && buildsResponse.builds.length > 0) {
-        buildId = buildsResponse.builds[0].id;
-      } else {
-        throw new Error(`No builds found for commit ID: ${options.commitId}`);
-      }
+
+    const pathValidation = validateAndCreateDownloadPath(downloadPath, fs);
+    if (!pathValidation.isValid) {
+      throw new ProgramError(pathValidation.error!);
     }
-    const endpoint = `build/v1/commits/${options.commitId}/builds/${buildId}`;
+
+    const endpoint = `build/v1/commits/${options.commitId}/builds/${buildResult.buildId}`;
     const response = await appcircleApi.get(
       endpoint,
       {
@@ -203,20 +305,18 @@ export async function downloadArtifact(options: OptionsType<{ buildId?: string; 
         responseType: 'arraybuffer',
       }
     );
-    if (response.status === 200) {
-      const fileName = artifactFileName || `artifacts-${Date.now()}.zip`;
-      const artifactPath = path.join(downloadPath, fileName);
-      // Ensure directory exists before writing file
-      fs.mkdirSync(downloadPath, { recursive: true });
-      fs.writeFileSync(artifactPath, response.data);
-    } else {
-      throw new Error('Build artifact not found');
+    
+    const responseValidation = validateDownloadResponse(response, buildResult.buildId);
+    if (!responseValidation.isValid) {
+      throw new Error(responseValidation.error);
     }
+
+    const fileName = generateArtifactFilename(artifactFileName);
+    const artifactPath = path.join(downloadPath, fileName);
+    fs.writeFileSync(artifactPath, response.data);
   } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw new Error(`Build artifact not found. No artifact available for latest build ID (${options.buildId}).`);
-    }
-    throw error;
+    const errorMessage = processDownloadError(error, options.buildId);
+    throw new Error(errorMessage);
   }
 }
 
@@ -246,12 +346,12 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
         buildId = buildsResponse.builds[0].id;
         console.log(`Found latest build ID from commit: ${buildId}`);
       } else {
-        throw new Error(`No builds found for commit ID: ${options.commitId}`);
+        throw new ProgramError(`No builds found for commit ID: ${options.commitId}`);
       }
     }
   } catch (apiError: any) {
     if (!buildId) {
-      throw new Error(`Could not get build ID: ${apiError.message}`);
+      throw new ProgramError(`Could not get build ID: ${apiError.message}`);
     }
     console.log(`API error: ${apiError.message}. Continuing with existing build ID: ${buildId}`);
   }
@@ -272,10 +372,9 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
       },
     });
 
-    if (downloadResponse.data && 
-        (downloadResponse.data.includes('No Logs Available') || 
-         downloadResponse.data.trim() === '')) {
-      throw new Error('No Logs Available');
+    const logValidation = validateLogContent(downloadResponse.data);
+    if (!logValidation.isValid) {
+      throw new ProgramError(logValidation.error!);
     }
     
     const writer = fs.createWriteStream(`${downloadPath}/${fileName || `${buildId}-log.txt`}`);
@@ -291,29 +390,26 @@ export async function downloadBuildLog(options: OptionsType<{ buildId?: string; 
       });
     });
   } catch (error: any) {
-    if (error.response && error.response.status === 404) {
-      throw new Error('No Logs Available (404)');
-    } else if (error.response && error.response.status) {
-      throw new Error(`HTTP error: ${error.response.status}`);
-    }
-    throw error;
+    const errorMessage = processLogDownloadError(error);
+    throw new ProgramError(errorMessage);
   }
 }
 
 export async function uploadArtifact(options: OptionsType<{ message: string; app: string; distProfileId: string }>) {
-  const data = new FormData();
-  data.append('Message', options.message);
-  data.append('File', fs.createReadStream(options.app));
+  const fileValidation = validateUploadFile(options.app, fs);
+  if (!fileValidation.isValid) {
+    throw new ProgramError(fileValidation.error!);
+  }
 
-  const uploadResponse = await appcircleApi.post(`distribution/v2/profiles/${options.distProfileId}/app-versions`, data, {
-    maxContentLength: Infinity,
-    maxBodyLength: Infinity,
-    headers: {
-      ...getHeaders(),
-      ...data.getHeaders(),
-      'Content-Type': 'multipart/form-data;boundary=' + data.getBoundary(),
-    },
-  });
+  const fileStream = fs.createReadStream(options.app);
+  const data = createUploadFormData(options.message, fileStream, FormData);
+  const config = createUploadRequestConfig(data, getHeaders(), getMaxUploadBytes());
+
+  const uploadResponse = await appcircleApi.post(
+    `distribution/v2/profiles/${options.distProfileId}/app-versions`, 
+    data, 
+    config
+  );
   return uploadResponse.data;
 }
 
@@ -356,21 +452,22 @@ export async function uploadArtifactWithSignedUrl(
 ) {
   const { app, uploadInfo } = options;
   
-  if (!uploadInfo || !uploadInfo.uploadUrl) {
-    throw new ProgramError('Invalid upload information received from server');
+  const uploadInfoValidation = validateSignedUrlUploadInfo(uploadInfo);
+  if (!uploadInfoValidation.isValid) {
+    throw new ProgramError(uploadInfoValidation.error!);
   }
   
   const stats = fs.statSync(app);
   const maxBytes = getMaxUploadBytes();
-  if (maxBytes !== null && stats.size > maxBytes) {
-    throw new ProgramError(
-      `File size ${(stats.size / GB).toFixed(2)} GB exceeds the allowed limit of ${(maxBytes / GB).toFixed(2)} GB.`
-    );
+  const fileSizeValidation = validateFileSize(stats.size, maxBytes);
+  if (!fileSizeValidation.isValid) {
+    throw new ProgramError(fileSizeValidation.error!);
   }
 
   const { uploadUrl, configuration } = uploadInfo;
+  const uploadMethod = determineUploadMethod(configuration);
   
-  if (!configuration || !configuration.httpMethod || configuration.httpMethod === 'PUT') {
+  if (uploadMethod === 'PUT') {
     const file = fs.createReadStream(app);
     return putUploadWithRetry(uploadUrl,file, {
         'Content-Length': stats.size,
@@ -393,7 +490,7 @@ export async function uploadArtifactWithSignedUrl(
   });
 }
 
-export async function getEnvironmentVariableGroups(options: OptionsType = {}) {
+export async function getEnvironmentVariableGroups(_options: OptionsType = {}) {
   const environmentVariableGroups = await appcircleApi.get(`build/v1/variable-groups`, {
     headers: getHeaders(),
   });
@@ -452,7 +549,6 @@ async function createTextEnvironmentVariable(options: OptionsType<{ variableGrou
 async function createFileEnvironmentVariable(options: OptionsType<{ key: string; isSecret: boolean; filePath: string; variableGroupId: string }>) {
   const form = new FormData();
   const file = fs.createReadStream(options.filePath);
-  console.log('options.filePath): ', options.filePath);
   form.append('Key', options.key);
   form.append('Value', path.basename(options.filePath));
   form.append('IsSecret', 'false');
@@ -480,6 +576,17 @@ export async function createEnvironmentVariable(
     isSecret: boolean;
   }>
 ) {
+  const validation = validateEnvironmentVariableParams(
+    options.type,
+    options.key,
+    options.value,
+    options.filePath
+  );
+  
+  if (!validation.isValid) {
+    throw new ProgramError(validation.error!);
+  }
+
   if (options.type === EnvironmentVariableTypes.FILE) {
     return createFileEnvironmentVariable(options);
   } else if (!options.type || options.type === EnvironmentVariableTypes.TEXT) {
@@ -489,7 +596,7 @@ export async function createEnvironmentVariable(
   }
 }
 
-export async function getBranches(options: OptionsType<{ profileId: string }>, showConsole: boolean = true) {
+export async function getBranches(options: OptionsType<{ profileId: string }>, _showConsole: boolean = true) {
   const branchResponse = await appcircleApi.get(`build/v1/profiles/${options.profileId}`, {
     headers: getHeaders(),
   });
@@ -522,6 +629,335 @@ export const getUserInfo = async () => {
     headers: getHeaders(),
   });
   return userInfo.data;
+};
+
+
+/**
+ * Trigger build logs streaming
+ */
+export const triggerBuildLogsStreaming = async (params: {
+  apiHostname: string;
+  hookHostname?: string;
+  accessToken: string;
+  taskId: string;
+  browserId: string;
+  userId: string;
+  organizationId: string;
+}): Promise<void> => {
+  const { apiHostname, accessToken, taskId, browserId } = params;
+  
+  // Use hook hostname with query parameters (as shown in the curl example)
+  const triggerUrl = `${params.hookHostname || apiHostname}/build/log/trigger-events-receiving`;
+  
+  try {
+    const url = new URL(triggerUrl);
+    url.searchParams.set('taskId', taskId);
+    url.searchParams.set('browserId', browserId);
+    url.searchParams.set('userId', params.userId);
+    url.searchParams.set('organizationId', params.organizationId);
+    
+    const response = await axios.post(url.toString(), null, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      },
+      timeout: 15000
+    });
+  } catch (error: any) {
+    console.error(chalk.red(`❌ Trigger API Failed: ${error.message}`));
+    if (error.response) {
+      console.error(chalk.red(`   Status: ${error.response.status} ${error.response.statusText}`));
+      console.error(chalk.red(`   Response: ${JSON.stringify(error.response.data)}`));
+    }
+  }
+};
+
+/**
+ * Stops build logs streaming by calling the stop endpoint
+ */
+export const triggerStopBuildLogsStreaming = async (params: {
+  hookHostname: string;
+  accessToken: string;
+  taskId: string;
+  browserId: string;
+  userId: string;
+  organizationId: string;
+}): Promise<void> => {
+  const { hookHostname, accessToken, taskId, browserId } = params;
+  
+  const stopUrl = `${hookHostname}/build/log/trigger-stop-events-receiving`;
+  
+  try {
+    const url = new URL(stopUrl);
+    url.searchParams.set('taskId', taskId);
+    url.searchParams.set('browserId', browserId);
+    url.searchParams.set('userId', params.userId);
+    url.searchParams.set('organizationId', params.organizationId);
+    
+    const response = await axios.post(url.toString(), null, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': '*/*'
+      },
+      timeout: 10000
+    });
+    
+  } catch (error: any) {
+    console.error(chalk.yellow(`⚠️ Stop API Warning: ${error.message}`));
+    if (error.response) {
+      console.error(chalk.yellow(`   Status: ${error.response.status} ${error.response.statusText}`));
+    }
+    // Don't throw - this is cleanup, not critical
+  }
+};
+
+/**
+ * Obtains a short-lived hook token from the hook service
+ */
+export const getHookAccessToken = async (accessToken: string): Promise<string> => {
+  try {
+    const response = await retryApiCall(async () => {
+      return await axios.post(`${HOOK_HOSTNAME}/auth/token`, {}, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    }, 2, 15000);
+    
+    const { access_token: hookToken, expires_in } = response.data;
+    
+    if (!hookToken || typeof hookToken !== 'string' || hookToken.trim() === '') {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_HOOK_AUTH_FAILED,
+        'Invalid or empty access token received from hook service. Please re-login and try again.'
+      );
+    }
+    
+    return hookToken;
+  } catch (error: any) {
+    if (error instanceof DetailedMonitoringError) {
+      throw error;
+    }
+    
+    if (error.response) {
+      const status = error.response.status;
+      if (status === 401) {
+        throw new DetailedMonitoringError(
+          ErrorCodes.E_HOOK_AUTH_FAILED,
+          'Authentication failed with hook service. Please re-login to refresh your credentials.',
+          error
+        );
+      } else if (status === 403) {
+        throw new DetailedMonitoringError(
+          ErrorCodes.E_HOOK_AUTH_FAILED,
+          'Access denied to hook service. Please ensure you have the required permissions.',
+          error
+        );
+      } else {
+        throw new DetailedMonitoringError(
+          ErrorCodes.E_HOOK_AUTH_FAILED,
+          `Hook authentication failed: ${status} - ${error.response.statusText}. Please check your network connection.`,
+          error
+        );
+      }
+    } else if (error.request || error.message.includes('timeout')) {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_HOOK_AUTH_FAILED,
+        'Hook authentication failed: Network error or timeout. Please check your network connection or proxy settings.',
+        error
+      );
+    } else {
+      throw new DetailedMonitoringError(
+        ErrorCodes.E_HOOK_AUTH_FAILED,
+        `Hook authentication failed: ${error.message}`,
+        error
+      );
+    }
+  }
+};
+
+// SSE connection interface for type safety
+export interface SSEConnection {
+  stream: NodeJS.ReadableStream;
+  browserId: string;
+  close: () => void;
+  onMessage: (callback: (data: string) => void) => void;
+  onError: (callback: (error: Error) => void) => void;
+  onClose: (callback: () => void) => void;
+}
+
+/**
+ * Opens a Server-Sent Events connection to the hook service
+ */
+export const openHookSSE = async (params: {
+  hookHostname: string;
+  userId: string;
+  organizationId: string;
+  token: string;
+}): Promise<SSEConnection> => {
+  const { hookHostname, userId, organizationId, token } = params;
+  
+  // Construct the URL with query parameters
+  // Try multiple possible endpoints for build logs
+  const url = `${hookHostname}/v2/hooks`;
+  
+  // Use a consistent browser ID for CLI (as shown in curl example)
+  const browserId = 'cli-' + Math.random().toString(36).substring(2, 15);
+  
+  const queryParams = new URLSearchParams({
+    userId,
+    organizationId,
+    token,
+    browserId // Add browser ID to track this specific connection
+  });
+  const fullUrl = `${url}?${queryParams}`;
+  
+  // SSE connection setup
+  
+  let lastError: Error | null = null;
+  const maxRetries = 3;
+  const retryDelays = [1000, 2000, 5000]; // 1s, 2s, 5s
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await axios({
+        method: 'get',
+        url: fullUrl,
+        headers: {
+          'accept': 'text/event-stream',
+          'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+          'cache-control': 'no-cache',
+        },
+        responseType: 'stream',
+        timeout: 15000,
+      });
+      
+      if (response.status !== 200) {
+        throw new Error(`SSE connection failed with status: ${response.status}`);
+      }
+      
+      const stream = response.data;
+      let isClosed = false;
+      const messageCallbacks: ((data: string) => void)[] = [];
+      const errorCallbacks: ((error: Error) => void)[] = [];
+      const closeCallbacks: (() => void)[] = [];
+      
+      // Handle stream data and parse SSE format
+      let buffer = '';
+      let currentEvent: string | null = null;
+      let currentData: string[] = [];
+      
+      stream.on('data', (chunk: Buffer) => {
+        const chunkStr = chunk.toString();
+        buffer += chunkStr;
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        
+        // Process each line and handle SSE format properly
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            currentEvent = line.substring(6).trim();
+            currentData = [];
+          } else if (line.startsWith('data:')) {
+            const data = line.substring(5);
+            currentData.push(data);
+          } else if (line.trim() === '') {
+            // Empty line indicates end of SSE event
+            if (currentEvent && currentData.length > 0) {
+              const eventData = currentData.join('\n');
+              
+              // Only process build-log events
+              if (currentEvent === 'build-log') {
+                messageCallbacks.forEach(callback => {
+                  try {
+                    callback(eventData);
+                  } catch (error) {
+                    console.error('Error in SSE message callback:', error);
+                  }
+                });
+              }
+              // Reset for next event
+              currentEvent = null;
+              currentData = [];
+            }
+          }
+          // Ignore other line types (id:, retry:, etc.)
+        }
+      });
+      
+      stream.on('error', (error: Error) => {
+        if (!isClosed) {
+          errorCallbacks.forEach(callback => {
+            try {
+              callback(error);
+            } catch (err) {
+              console.error('Error in SSE error callback:', err);
+            }
+          });
+        }
+      });
+      
+      stream.on('end', () => {
+        if (!isClosed) {
+          isClosed = true;
+          closeCallbacks.forEach(callback => {
+            try {
+              callback();
+            } catch (error) { }
+          });
+        }
+      });
+      
+      stream.on('close', () => {
+        // Stream closed - no logging needed
+      });
+      
+      // Return SSE connection interface
+      return {
+        stream,
+        browserId, // Return the browser ID for triggering logs
+        close: () => {
+          if (!isClosed) {
+            isClosed = true;
+            stream.destroy();
+            closeCallbacks.forEach(callback => {
+              try {
+                callback();
+              } catch (error) { }
+            });
+          }
+        },
+        onMessage: (callback: (data: string) => void) => {
+          messageCallbacks.push(callback);
+        },
+        onError: (callback: (error: Error) => void) => {
+          errorCallbacks.push(callback);
+        },
+        onClose: (callback: () => void) => {
+          closeCallbacks.push(callback);
+        }
+      };
+      
+    } catch (error: any) {
+      lastError = error;
+      
+      // Don't retry on the last attempt
+      if (attempt === maxRetries) {
+        break;
+      }
+      
+      // Wait before retry
+      const delay = retryDelays[attempt] || 5000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  // All retries failed
+  throw new DetailedMonitoringError(
+    ErrorCodes.E_SSE_CONNECT_FAILED,
+    `Failed to establish SSE connection after ${maxRetries + 1} attempts. Please check your network connection and hook service availability.`,
+    lastError || undefined
+  );
 };
 
 
@@ -566,17 +1002,16 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
     }
     
     return new Promise((resolve, reject) => {
-      if (downloadResponse.headers['content-type'] && downloadResponse.headers['content-type'].includes('text/plain')) {
+      if (isTextBasedContent(downloadResponse.headers['content-type'])) {
         let responseText = '';
         downloadResponse.data.on('data', (chunk: Buffer) => {
           responseText += chunk.toString('utf8');
         });
         
         downloadResponse.data.on('end', () => {
-          if (responseText.includes('No Logs Available')) {
-            reject(new Error('No Logs Available'));
-          } else if (responseText.trim() === '') {
-            reject(new Error('Empty response'));
+          const logValidation = validateLogContent(responseText);
+          if (!logValidation.isValid) {
+            reject(new ProgramError(logValidation.error!));
           } else {
             const targetFile = `${downloadPath}/${fileName || `build-task-${options.taskId}-log.txt`}`;
             const writer = fs.createWriteStream(targetFile);
@@ -614,10 +1049,8 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
       }
     });
   } catch (error: any) {
-    if (error.response && error.response.status === 404) {
-      throw new Error('HTTP error: 404');
-    }
-    throw error;
+    const errorMessage = processLogDownloadError(error);
+    throw new ProgramError(errorMessage);
   }
 }
 
@@ -647,11 +1080,7 @@ export async function getLatestBuildId(options: OptionsType<{ branchId: string; 
     );
 
     if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-      const sortedBuilds = response.data.sort((a: any, b: any) => {
-        return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
-      });
-      
-      return sortedBuilds[0].id;
+      return getLatestBuildIdFromSorted(response.data);
     }
     return null;
   } catch (error) {

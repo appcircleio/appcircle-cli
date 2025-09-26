@@ -42,6 +42,7 @@ export type CommandType = {
   description: string;
   longDescription?: string;
   ignore?: boolean;
+  hidden?: boolean; // Hide from interactive mode menu
   subCommands?: CommandType[];
   arguments?: ParamType[];
   params: ParamType[];
@@ -113,7 +114,7 @@ LEARN MORE
         arguments: [
           {
             name: 'key',
-            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN]',
+            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, AC_ACCESS_TOKEN]',
             type: CommandParameterTypes.SELECT,
             params: Object.keys(DefaultEnvironmentVariables),
           },
@@ -128,7 +129,7 @@ USAGE
   appcircle config set <key> <value>
 
 REQUIRED ARGUMENTS
-  <key>    Configuration key (API_HOSTNAME, AUTH_HOSTNAME, or AC_ACCESS_TOKEN)
+  <key>    Configuration key (API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, or AC_ACCESS_TOKEN)
   <value>  New value for the configuration property
 
 DESCRIPTION
@@ -137,7 +138,8 @@ DESCRIPTION
 
 EXAMPLES
   appcircle config set API_HOSTNAME "https://api.appcircle.io"
-  appcircle config set AUTH_HOSTNAME "https://auth.appcircle.io" 
+  appcircle config set AUTH_HOSTNAME "https://auth.appcircle.io"
+  appcircle config set HOOK_HOSTNAME "https://hook.appcircle.io"
   appcircle config set AC_ACCESS_TOKEN "your-access-token-here"
 
 LEARN MORE
@@ -148,7 +150,7 @@ LEARN MORE
         arguments: [
           {
             name: 'key',
-            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN]',
+            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, AC_ACCESS_TOKEN]',
             type: CommandParameterTypes.SELECT,
             params: Object.keys(DefaultEnvironmentVariables),
           },
@@ -277,19 +279,19 @@ LEARN MORE
   {
     command: CommandTypes.LOGIN,
     description: 'Login',
-    longDescription: `Authenticate with Appcircle using Personal Access Token or API Key
+    longDescription: `Authenticate with Appcircle using Personal Access Key or API Key
 
 USAGE
-  appcircle login pat --token <token>
+  appcircle login personal-access-key --secret <secret>
   appcircle login api-key [--name <name> --secret <secret> [--organization-id <id>]]
 
 DESCRIPTION
   Authenticate with Appcircle to access your organization's resources and perform CLI operations.
-  You can choose between Personal Access Token or API Key authentication methods.
+  You can choose between Personal Access Key or API Key authentication methods.
   API Key method supports an optional organization ID parameter for multi-organization accounts.
 
 EXAMPLES
-  appcircle login pat --token "your-personal-access-token-here"
+  appcircle login personal-access-key --secret "my-secret"
   appcircle login api-key
   appcircle login api-key --name "my-api-key" --secret "my-secret"
   appcircle login api-key --name "my-api-key" --secret "my-secret" --organization-id "org-123"
@@ -301,9 +303,46 @@ LEARN MORE
     params: [],
     subCommands: [
       {
+        command: 'personal-access-key',
+        description: 'Login with Personal Access Key',
+        longDescription: `Authenticate with Appcircle using your Personal Access Key
+
+USAGE
+  appcircle login personal-access-key --secret <secret>
+
+REQUIRED OPTIONS
+  --secret <secret>  Your Personal Access Key from Appcircle dashboard
+
+DESCRIPTION
+  Authenticate with Appcircle using your Personal Access Key. You can provide your key 
+  directly via the --secret option, or the command will prompt you to enter it interactively 
+  for security. Once authenticated, your token will be stored securely for future CLI operations.
+
+EXAMPLES
+  appcircle login personal-access-key --secret "my-secret"
+
+LEARN MORE
+  To get your Personal Access Key:
+  1. Go to Appcircle Dashboard (https://my.appcircle.io)
+  2. Navigate to 'My Organization' → 'Integrations' → 'Personal API Tokens'
+  3. Click 'Generate Token' and copy the generated key
+  4. Use the key with this login command`,
+        params: [
+          {
+            name: 'secret',
+            description: 'Personal Access Key',
+            longDescription: 'Your Personal Access Key from Appcircle dashboard',
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            requriedForInteractiveMode: false,
+          },
+        ],
+      },
+      {
         command: 'pat',
-        description: 'Login with Personal Access Token',
-        longDescription: `Authenticate with Appcircle using your Personal Access Token
+        description: 'Login with Personal Access Token (Legacy)',
+        hidden: true, // Hide from interactive mode menu
+        longDescription: `Authenticate with Appcircle using your Personal Access Token (Legacy)
 
 USAGE
   appcircle login pat --token <token>
@@ -312,19 +351,16 @@ REQUIRED OPTIONS
   --token <token>  Your Personal Access Token from Appcircle dashboard
 
 DESCRIPTION
-  Authenticate with Appcircle using your Personal Access Token. You can provide your token 
-  directly via the --token option, or the command will prompt you to enter it interactively 
-  for security. Once authenticated, your token will be stored securely for future CLI operations.
+  Legacy authentication method using Personal Access Token. This command is provided
+  for backward compatibility. For new implementations, use 'personal-access-key' instead.
+  The functionality is identical to the personal-access-key command.
 
 EXAMPLES
-  appcircle login pat --token "your-personal-access-token-here"
+  appcircle login pat --token "my-token"
 
 LEARN MORE
-  To get your Personal Access Token:
-  1. Go to Appcircle Dashboard (https://my.appcircle.io)
-  2. Navigate to 'My Organization' → 'Integrations' → 'Personal API Tokens'
-  3. Click 'Generate Token' and copy the generated token
-  4. Use the token with this login command`,
+  This is a legacy command. For new implementations, use:
+  appcircle login personal-access-key --secret "my-secret"`,
         params: [
           {
             name: 'token',
@@ -448,6 +484,7 @@ OPTIONAL OPTIONS
   --download-logs           Automatically download build logs after completion
   --download-artifacts      Automatically download build artifacts after completion
   --path <string>           Download path for logs and artifacts (default: ~/Downloads)
+  --monitor <mode>          Build monitoring preference: none, summary (default), steps, or verbose
 
 EXAMPLES
   appcircle build start --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --workflowId 6ba7b811-9dad-11d1-80b4-00c04fd430c8
@@ -589,6 +626,17 @@ LEARN MORE
             required: false,
             requriedForInteractiveMode: false,
             skipForInteractiveMode: true,
+            params: [],
+          },
+          {
+            name: 'monitor',
+            description: "Build monitoring preference: none, summary (default), steps, or verbose",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            defaultValue: 'summary',
             params: [],
           },
         ],
@@ -4183,22 +4231,22 @@ EXAMPLES
             longDescription: `Publish an enterprise app version
 
 USAGE
-  appcircle enterprise-app-store version publish --entProfileId <uuid> --entVersionId <uuid> [--summary <text>] [--releaseNotes <text>] [--publishType <type>]
+  appcircle enterprise-app-store version publish --entProfileId <uuid> --entVersionId <uuid> --summary <text> --releaseNotes <text> --publishType <type>
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
   --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --entVersionId <uuid>   App Version ID (UUID format)
   --entVersion <string>   App version name (alternative to --entVersionId)
-  --summary <text>        (Optional) Summary text
-  --releaseNotes <text>   (Optional) Release notes
-  --publishType <type>    (Optional) 0=None, 1=Beta, 2=Live
+  --summary <text>        Summary text
+  --releaseNotes <text>   Release notes
+  --publishType <type>    Publish type: 0=None, 1=Beta, 2=Live
 
 DESCRIPTION
   Publish a specific app version to the enterprise app store profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version publish --entProfile "Internal Apps" --entVersion "v1.2.3" --publishType 2`,
+  appcircle enterprise-app-store version publish --entProfile "Internal Apps" --entVersion "v1.2.3" --summary "New release" --releaseNotes "Bug fixes and improvements" --publishType 2`,
             params: [
               {
                 name: 'entProfileId',
@@ -4239,12 +4287,14 @@ EXAMPLES
                 description: 'Summary',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
+                required: true,
               },
               {
                 name: 'releaseNotes',
                 description: 'Release Notes',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
+                required: true,
               },
               {
                 name: 'publishType',
@@ -4266,6 +4316,7 @@ EXAMPLES
                   },
                 ],
                 valueType: 'number',
+                required: true,
               },
             ],
           },
