@@ -112,13 +112,30 @@ pipeline {
                 echo "$BADGES"
 
                 # Update README.md with new badges
-                if grep -q "!\[Coverage\]" README.md; then
+                if grep -q "^!\\[Coverage\\]" README.md; then
                     # Backup README
                     cp README.md README.md.bak
 
-                    # Replace coverage badge line
-                    sed -i.tmp "/^!\[Coverage\]/c\\
-$BADGES" README.md
+                    # Replace coverage badge line using a temp file
+                    grep -v "^!\\[Coverage\\]\\|^!\\[Branches\\]\\|^!\\[Functions\\]" README.md > README.md.tmp || true
+
+                    # Find the line number of NPM Version badge
+                    LINE_NUM=$(grep -n "^!\\[NPM Version\\]" README.md.tmp | cut -d: -f1)
+
+                    if [ -n "$LINE_NUM" ]; then
+                        # Insert new badges after NPM Version badge
+                        head -n "$LINE_NUM" README.md.tmp > README.md.new
+                        echo "$BADGES" >> README.md.new
+                        tail -n +$((LINE_NUM + 1)) README.md.tmp >> README.md.new
+                        mv README.md.new README.md
+                    else
+                        # If NPM Version badge not found, just prepend to file
+                        echo "$BADGES" > README.md.new
+                        echo "" >> README.md.new
+                        cat README.md.tmp >> README.md.new
+                        mv README.md.new README.md
+                    fi
+
                     rm -f README.md.tmp
 
                     # Configure git
