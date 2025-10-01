@@ -27,15 +27,129 @@ pipeline {
                 fi
                 echo "✅ TypeScript compilation successful! 🎉"
                 
-                echo "🧪 Running unit tests..."
+                echo "🧪 Running unit tests with coverage..."
                 if ! npm test; then
                     echo "❌ Unit tests failed! 💔"
                     exit 1
                 fi
                 echo "✅ Unit tests passed! 🌟"
-                
+
+                echo "📊 Posting coverage report to PR..."
+                # This section is optional and won't fail the build
+                set +e  # Don't exit on error for coverage posting
+                if [ -n "${GITHUB_TOKEN:-}" ]; then
+                    # Generate PR comment
+                    COVERAGE_COMMENT=$(node scripts/parse-coverage.js pr-comment 2>/dev/null)
+
+                    if [ $? -eq 0 ] && [ -n "$COVERAGE_COMMENT" ]; then
+                        # Escape comment for JSON
+                        ESCAPED_COMMENT=$(echo "$COVERAGE_COMMENT" | jq -Rs . 2>/dev/null)
+
+                        if [ $? -eq 0 ]; then
+                            # Post comment to PR
+                            HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/gh_response.json -X POST \
+                              -H "Authorization: token ${GITHUB_TOKEN}" \
+                              -H "Accept: application/vnd.github.v3+json" \
+                              "https://api.github.com/repos/appcircleio/appcircle-cli/issues/${CHANGE_ID}/comments" \
+                              -d "{\"body\": $ESCAPED_COMMENT}" 2>/dev/null)
+
+                            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+                                echo "✅ Coverage comment posted to PR #${CHANGE_ID}"
+                            else
+                                echo "⚠️  Failed to post coverage comment (HTTP ${HTTP_CODE:-unknown}), continuing..."
+                            fi
+                        else
+                            echo "⚠️  Failed to format coverage comment, continuing..."
+                        fi
+                    else
+                        echo "⚠️  Failed to generate coverage comment, continuing..."
+                    fi
+                else
+                    echo "⚠️  GITHUB_TOKEN not available, skipping coverage comment"
+                fi
+                set -e  # Re-enable exit on error
+
                 echo "=================================="
                 echo "🎯 PR validation complete - All checks passed! 🚀"
+                '''
+            }
+        }
+
+        stage('Update Coverage Badges') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                sh '''#!/bin/bash
+                # shellcheck shell=bash
+                set -x
+                set +e  # Don't fail the build if badge update fails
+
+                echo "📊 Updating coverage badges in README..."
+
+                # Install dependencies if not already installed
+                if [ ! -d "node_modules" ]; then
+                    echo "📦 Installing dependencies..."
+                    yarn install
+                fi
+
+                # Run tests to generate coverage
+                echo "🧪 Running tests to generate coverage..."
+                if ! npm test; then
+                    echo "⚠️  Tests failed, skipping badge update"
+                    exit 0
+                fi
+
+                # Generate new badges
+                BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null)
+
+                if [ $? -ne 0 ] || [ -z "$BADGES" ]; then
+                    echo "⚠️  Failed to generate badges, skipping update"
+                    exit 0
+                fi
+
+                echo "Generated badges:"
+                echo "$BADGES"
+
+                # Update README.md with new badges
+                if grep -q "!\[Coverage\]" README.md; then
+                    # Backup README
+                    cp README.md README.md.bak
+
+                    # Replace coverage badge line
+                    sed -i.tmp "/^!\[Coverage\]/c\\
+$BADGES" README.md
+                    rm -f README.md.tmp
+
+                    # Configure git
+                    git config user.email "jenkins@appcircle.io"
+                    git config user.name "Appcircle Jenkins"
+
+                    # Check if there are changes
+                    if git diff --quiet README.md; then
+                        echo "ℹ️  No changes to coverage badges"
+                        rm -f README.md.bak
+                    else
+                        # Commit and push with [skip ci] to avoid triggering another build
+                        git add README.md
+                        if git commit -m "docs: update coverage badges [skip ci]"; then
+                            if git push origin develop; then
+                                echo "✅ Coverage badges updated in README.md"
+                                rm -f README.md.bak
+                            else
+                                echo "⚠️  Failed to push changes, restoring backup"
+                                mv README.md.bak README.md
+                            fi
+                        else
+                            echo "⚠️  Failed to commit changes, restoring backup"
+                            mv README.md.bak README.md
+                        fi
+                    fi
+                else
+                    echo "⚠️  Coverage badge not found in README.md, skipping update"
+                fi
+
+                exit 0  # Always exit successfully
                 '''
             }
         }
