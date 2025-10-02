@@ -9,7 +9,7 @@ pipeline {
                 changeRequest()
             }
             steps {
-                withCredentials([string(credentialsId: 'GithubUserNamePersonalToken', variable: 'GITHUB_TOKEN')]) {
+                withCredentials([string(credentialsId: 'GithubPersonalToken', variable: 'GITHUB_TOKEN')]) {
                     sh '''#!/bin/bash
                 # shellcheck shell=bash
                 set -x
