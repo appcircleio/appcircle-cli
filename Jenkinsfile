@@ -158,7 +158,7 @@ pipeline {
                         # Commit and push with [skip ci] to avoid triggering another build
                         git add README.md
                         if git commit -m "docs: update coverage badges [skip ci]"; then
-                            if git push https://${OZER_GITHUB_PAT}@github.com/appcircleio/appcircle-cli.git develop; then
+                            if git push https://${OZER_GITHUB_PAT}@github.com/appcircleio/appcircle-cli.git HEAD:develop; then
                                 echo "✅ Coverage badges updated in README.md"
                                 rm -f README.md.bak
                             else
@@ -181,10 +181,7 @@ pipeline {
 
         stage('Publish') {
             when {
-                allOf {
-                    not { changeRequest() }
-                    not { changelog '.*\\[skip ci\\].*' }
-                }
+                expression { false }
             }
             steps {
                 sh '''#!/bin/bash
