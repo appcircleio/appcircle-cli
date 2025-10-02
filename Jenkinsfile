@@ -2,6 +2,7 @@ pipeline {
     agent { label 'agent'}
     environment {
         NPM_AUTH_TOKEN = credentials('Appcircle-CLI-NPM-Cred')
+        OZER_GITHUB_PAT = credentials('ozer-github-pat')
     }
     stages {
         stage('PR Validation') {
@@ -43,24 +44,26 @@ pipeline {
                     COVERAGE_COMMENT=$(node scripts/parse-coverage.js pr-comment 2>/dev/null)
 
                     if [ $? -eq 0 ] && [ -n "$COVERAGE_COMMENT" ]; then
-                        # Escape comment for JSON
-                        ESCAPED_COMMENT=$(echo "$COVERAGE_COMMENT" | jq -Rs . 2>/dev/null)
+                        # Create JSON payload
+                        JSON_PAYLOAD=$(jq -n --arg body "$COVERAGE_COMMENT" '{body: $body}' 2>/dev/null)
 
-                        if [ $? -eq 0 ]; then
+                        if [ $? -eq 0 ] && [ -n "$JSON_PAYLOAD" ]; then
                             # Post comment to PR
                             HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/gh_response.json -X POST \
                               -H "Authorization: token ${GITHUB_TOKEN}" \
                               -H "Accept: application/vnd.github.v3+json" \
+                              -H "Content-Type: application/json" \
                               "https://api.github.com/repos/appcircleio/appcircle-cli/issues/${CHANGE_ID}/comments" \
-                              -d "{\"body\": $ESCAPED_COMMENT}" 2>/dev/null)
+                              -d "$JSON_PAYLOAD" 2>/dev/null)
 
                             if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
                                 echo "✅ Coverage comment posted to PR #${CHANGE_ID}"
                             else
                                 echo "⚠️  Failed to post coverage comment (HTTP ${HTTP_CODE:-unknown}), continuing..."
+                                cat /tmp/gh_response.json 2>/dev/null || true
                             fi
                         else
-                            echo "⚠️  Failed to format coverage comment, continuing..."
+                            echo "⚠️  Failed to create JSON payload, continuing..."
                         fi
                     else
                         echo "⚠️  Failed to generate coverage comment, continuing..."
@@ -141,8 +144,8 @@ pipeline {
                     rm -f README.md.tmp
 
                     # Configure git
-                    git config user.email "jenkins@appcircle.io"
-                    git config user.name "Appcircle Jenkins"
+                    git config user.email "ozer@appcircle.io"
+                    git config user.name "Özer from Jenkins"
 
                     # Check if there are changes
                     if git diff --quiet README.md; then
@@ -152,7 +155,7 @@ pipeline {
                         # Commit and push with [skip ci] to avoid triggering another build
                         git add README.md
                         if git commit -m "docs: update coverage badges [skip ci]"; then
-                            if git push origin develop; then
+                            if git push https://${OZER_GITHUB_PAT}@github.com/appcircleio/appcircle-cli.git develop; then
                                 echo "✅ Coverage badges updated in README.md"
                                 rm -f README.md.bak
                             else
