@@ -9,7 +9,8 @@ pipeline {
                 changeRequest()
             }
             steps {
-                sh '''#!/bin/bash
+                withCredentials([string(credentialsId: 'GithubUserNamePersonalToken', variable: 'GITHUB_TOKEN')]) {
+                    sh '''#!/bin/bash
                 # shellcheck shell=bash
                 set -x
                 set -euo pipefail
@@ -37,7 +38,7 @@ pipeline {
                 echo "📊 Posting coverage report to PR..."
                 # This section is optional and won't fail the build
                 set +e  # Don't exit on error for coverage posting
-                if [ -n "${GithubUserNamePersonalToken:-}" ]; then
+                if [ -n "${GITHUB_TOKEN:-}" ]; then
                     # Generate PR comment
                     COVERAGE_COMMENT=$(node scripts/parse-coverage.js pr-comment 2>/dev/null)
 
@@ -48,7 +49,7 @@ pipeline {
                         if [ $? -eq 0 ]; then
                             # Post comment to PR
                             HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/gh_response.json -X POST \
-                              -H "Authorization: token ${GithubUserNamePersonalToken}" \
+                              -H "Authorization: token ${GITHUB_TOKEN}" \
                               -H "Accept: application/vnd.github.v3+json" \
                               "https://api.github.com/repos/appcircleio/appcircle-cli/issues/${CHANGE_ID}/comments" \
                               -d "{\"body\": $ESCAPED_COMMENT}" 2>/dev/null)
@@ -72,6 +73,7 @@ pipeline {
                 echo "=================================="
                 echo "🎯 PR validation complete - All checks passed! 🚀"
                 '''
+                }
             }
         }
 
