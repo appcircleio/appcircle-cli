@@ -82,7 +82,10 @@ pipeline {
 
         stage('Update Coverage Badges') {
             when {
-                branch 'develop'
+                allOf {
+                    branch 'develop'
+                    not { changelog '.*\\[skip ci\\].*' }
+                }
             }
             steps {
                 sh '''#!/bin/bash
@@ -178,7 +181,10 @@ pipeline {
 
         stage('Publish') {
             when {
-                not { changeRequest() }
+                allOf {
+                    not { changeRequest() }
+                    not { changelog '.*\\[skip ci\\].*' }
+                }
             }
             steps {
                 sh '''#!/bin/bash
