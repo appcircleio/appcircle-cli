@@ -1,4 +1,5 @@
 ![NPM Version](https://img.shields.io/npm/v/%40appcircle%2Fcli?label=@appcircle%2Fcli&labelColor=ff8e34&color=5a789e)
+![Coverage](https://img.shields.io/badge/coverage-75%25-green)
 
 # Appcircle Command Line Interface
 
