@@ -11,6 +11,7 @@
     "build": "rm -rf dist && tsc",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
+    "update-badges": "bash scripts/update-badges-local.sh",
     "postversion": "git push && git push --tags",
     "postuninstall": "node ./scripts/appcircle-uninstall.js",
     "check:package": "zx ./scripts/check-package.mjs",

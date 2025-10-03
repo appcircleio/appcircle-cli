@@ -5,7 +5,7 @@ pipeline {
     }
     environment {
         NPM_AUTH_TOKEN = credentials('Appcircle-CLI-NPM-Cred')
-        OZER_GITHUB_PAT = credentials('ozer-github-pat')
+        GITHUB_PAT = credentials('ozer-github-pat')
     }
     stages {
         stage('PR Validation') {
@@ -114,13 +114,24 @@ pipeline {
 
                 # Run tests to generate coverage
                 echo "🧪 Running tests to generate coverage..."
-                if ! npm test; then
+                TEST_OUTPUT=$(npm test 2>&1)
+                TEST_EXIT_CODE=$?
+
+                if [ $TEST_EXIT_CODE -ne 0 ]; then
                     echo "⚠️  Tests failed, skipping badge update"
                     exit 0
                 fi
 
-                # Generate new badges
-                BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null)
+                # Extract test count from output
+                TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -oP 'Tests\s+\K\d+(?=\s+passed)' | tail -1)
+
+                # Generate new badges with test count
+                if [ -n "$TESTS_PASSED" ]; then
+                    TEST_JSON="{\"passed\":$TESTS_PASSED}"
+                    BADGES=$(node scripts/parse-coverage.js badges "$TEST_JSON" 2>/dev/null)
+                else
+                    BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null)
+                fi
 
                 if [ $? -ne 0 ] || [ -z "$BADGES" ]; then
                     echo "⚠️  Failed to generate badges, skipping update"
@@ -135,10 +146,10 @@ pipeline {
                     # Backup README
                     cp README.md README.md.bak
 
-                    # Replace coverage badge line using a temp file
-                    grep -v "^!\\[Coverage\\]\\|^!\\[Branches\\]\\|^!\\[Functions\\]" README.md > README.md.tmp || true
+                    # Remove old badge lines (Coverage, Build, Tests, Branches, Functions)
+                    grep -v "^!\\[Coverage\\]\\|^!\\[Build\\]\\|^!\\[Tests\\]\\|^!\\[Branches\\]\\|^!\\[Functions\\]" README.md > README.md.tmp || true
 
-                    # Find the line number of NPM Version badge
+                    # Find the line number of NPM Version badge to insert after it
                     LINE_NUM=$(grep -n "^!\\[NPM Version\\]" README.md.tmp | cut -d: -f1)
 
                     if [ -n "$LINE_NUM" ]; then
@@ -166,18 +177,60 @@ pipeline {
                         echo "ℹ️  No changes to coverage badges"
                         rm -f README.md.bak
                     else
-                        # Commit and push with [skip ci] to avoid triggering another build
-                        git add README.md
-                        if git commit -m "docs: update coverage badges [skip ci]"; then
-                            if git push https://${OZER_GITHUB_PAT}@github.com/appcircleio/appcircle-cli.git HEAD:develop; then
-                                echo "✅ Coverage badges updated in README.md"
-                                rm -f README.md.bak
+                        # Create a new branch for the badge update
+                        BRANCH_NAME="coverage-badges-$(date +%Y%m%d-%H%M%S)"
+
+                        echo "📝 Creating branch: $BRANCH_NAME"
+                        if git checkout -b "$BRANCH_NAME"; then
+                            # Commit changes
+                            git add README.md
+                            if git commit -m "docs: update coverage badges [skip ci]"; then
+                                # Push the branch
+                                echo "📤 Pushing branch to remote..."
+                                if git push https://${GITHUB_PAT}@github.com/appcircleio/appcircle-cli.git "$BRANCH_NAME"; then
+                                    # Create PR using gh CLI
+                                    export GH_TOKEN="${GITHUB_PAT}"
+
+                                    echo "🔀 Creating pull request..."
+                                    if gh pr create --title "docs: update coverage badges [skip ci]" \
+                                        --body "🤖 Automated coverage badge update from Jenkins build #${BUILD_NUMBER}" \
+                                        --base develop \
+                                        --head "$BRANCH_NAME"; then
+
+                                        # Get the PR number
+                                        PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
+
+                                        if [ -n "$PR_NUMBER" ]; then
+                                            echo "✅ Created PR #${PR_NUMBER}"
+
+                                            # Merge PR with admin override to bypass branch protection
+                                            echo "🚀 Merging PR with admin override..."
+                                            if gh pr merge "$PR_NUMBER" --admin --squash --delete-branch; then
+                                                echo "✅ Coverage badges updated via PR #${PR_NUMBER}"
+                                                rm -f README.md.bak
+                                            else
+                                                echo "⚠️  Failed to merge PR #${PR_NUMBER}, restoring backup"
+                                                echo "💡 PR is still open, you can merge it manually"
+                                                mv README.md.bak README.md
+                                            fi
+                                        else
+                                            echo "⚠️  Failed to get PR number, restoring backup"
+                                            mv README.md.bak README.md
+                                        fi
+                                    else
+                                        echo "⚠️  Failed to create PR, restoring backup"
+                                        mv README.md.bak README.md
+                                    fi
+                                else
+                                    echo "⚠️  Failed to push branch, restoring backup"
+                                    mv README.md.bak README.md
+                                fi
                             else
-                                echo "⚠️  Failed to push changes, restoring backup"
+                                echo "⚠️  Failed to commit changes, restoring backup"
                                 mv README.md.bak README.md
                             fi
                         else
-                            echo "⚠️  Failed to commit changes, restoring backup"
+                            echo "⚠️  Failed to create branch, restoring backup"
                             mv README.md.bak README.md
                         fi
                     fi

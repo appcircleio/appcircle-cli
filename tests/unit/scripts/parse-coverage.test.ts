@@ -85,22 +85,32 @@ describe('parse-coverage.js helper functions', () => {
   });
 
   describe('generateBadges', () => {
-    it('should generate three badge lines', () => {
+    it('should generate coverage and build badges without test results', () => {
       const badges = generateBadges(mockCoverage);
+      const lines = badges.split('\n');
+
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toMatch(/^!\[Coverage\]/);
+      expect(lines[1]).toMatch(/^!\[Build\]/);
+    });
+
+    it('should generate all three badges with test results', () => {
+      const testResults = { passed: 606 };
+      const badges = generateBadges(mockCoverage, testResults);
       const lines = badges.split('\n');
 
       expect(lines).toHaveLength(3);
       expect(lines[0]).toMatch(/^!\[Coverage\]/);
-      expect(lines[1]).toMatch(/^!\[Branches\]/);
-      expect(lines[2]).toMatch(/^!\[Functions\]/);
+      expect(lines[1]).toMatch(/^!\[Build\]/);
+      expect(lines[2]).toMatch(/^!\[Tests\]/);
+      expect(badges).toContain('tests-606%20passed-brightgreen');
     });
 
-    it('should include correct percentages and colors', () => {
+    it('should include correct coverage percentage and color', () => {
       const badges = generateBadges(mockCoverage);
 
       expect(badges).toContain('coverage-75.85%25-yellow');
-      expect(badges).toContain('branches-89.12%25-brightgreen');
-      expect(badges).toContain('functions-89.81%25-brightgreen');
+      expect(badges).toContain('build-passing-brightgreen');
     });
 
     it('should use correct URL encoding for percentages', () => {
@@ -119,6 +129,7 @@ describe('parse-coverage.js helper functions', () => {
       const badges = generateBadges(perfectCoverage);
 
       expect(badges).toMatch(/coverage-100%25-brightgreen/);
+      expect(badges).toContain('build-passing-brightgreen');
     });
 
     it('should handle low coverage with red color', () => {
@@ -129,6 +140,15 @@ describe('parse-coverage.js helper functions', () => {
       const badges = generateBadges(lowCoverage);
 
       expect(badges).toMatch(/coverage-45\.5%25-red/);
+      expect(badges).toContain('build-passing-brightgreen');
+    });
+
+    it('should format test count with spaces in URL', () => {
+      const testResults = { passed: 3694 };
+      const badges = generateBadges(mockCoverage, testResults);
+
+      // Spaces in badge text should be encoded as %20
+      expect(badges).toContain('tests-3694%20passed-brightgreen');
     });
   });
 
