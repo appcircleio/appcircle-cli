@@ -184,7 +184,7 @@ enum StepStatus {
 /**
  * Create a clean terminal UX formatter that manages step state and ephemeral status
  */
-function createCleanTerminalFormatter() {
+export function createCleanTerminalFormatter() {
   const stepStates = new Map<string, {
     status: StepStatus;
     startTime: number;
