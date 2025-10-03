@@ -140,7 +140,7 @@ pipeline {
                 fi
 
                 echo "Generated badges:"
-                printf '%s\\n' "$BADGES"
+                echo "$BADGES"
 
                 # Update README.md with new badges
                 if grep -q "^!\\[Coverage\\]" README.md; then
@@ -156,12 +156,12 @@ pipeline {
                     if [ -n "$LINE_NUM" ]; then
                         # Insert new badges after NPM Version badge
                         head -n "$LINE_NUM" README.md.tmp > README.md.new
-                        printf '%s\\n' "$BADGES" >> README.md.new
+                        echo "$BADGES" >> README.md.new
                         tail -n +$((LINE_NUM + 1)) README.md.tmp >> README.md.new
                         mv README.md.new README.md
                     else
                         # If NPM Version badge not found, just prepend to file
-                        printf '%s\\n' "$BADGES" > README.md.new
+                        echo "$BADGES" > README.md.new
                         echo "" >> README.md.new
                         cat README.md.tmp >> README.md.new
                         mv README.md.new README.md
@@ -192,12 +192,7 @@ pipeline {
                                     echo "🔀 Creating pull request via GitHub API..."
 
                                     # Create PR using GitHub API
-                                    PR_RESPONSE=$(curl -s -X POST \
-                                        -H "Authorization: token ${GITHUB_PAT}" \
-                                        -H "Accept: application/vnd.github.v3+json" \
-                                        -H "Content-Type: application/json" \
-                                        "https://api.github.com/repos/appcircleio/appcircle-cli/pulls" \
-                                        -d "{\"title\":\"docs: update coverage badges [skip ci]\",\"body\":\"🤖 Automated coverage badge update from Jenkins build #${BUILD_NUMBER}\",\"head\":\"$BRANCH_NAME\",\"base\":\"develop\"}")
+                                    PR_RESPONSE=$(curl -s -X POST -H "Authorization: token ${GITHUB_PAT}" -H "Accept: application/vnd.github.v3+json" -H "Content-Type: application/json" "https://api.github.com/repos/appcircleio/appcircle-cli/pulls" -d "{\"title\":\"docs: update coverage badges [skip ci]\",\"body\":\"🤖 Automated coverage badge update from Jenkins build #${BUILD_NUMBER}\",\"head\":\"$BRANCH_NAME\",\"base\":\"develop\"}")
 
                                     # Extract PR number from response
                                     PR_NUMBER=$(echo "$PR_RESPONSE" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
@@ -208,13 +203,7 @@ pipeline {
                                         # Merge PR using GitHub API with bypass for branch protection
                                         # This requires the token to have admin permissions
                                         echo "🚀 Merging PR #${PR_NUMBER} (bypassing branch protection)..."
-                                        MERGE_RESPONSE=$(curl -s -w "\\nHTTP_STATUS:%{http_code}" -X PUT \
-                                            -H "Authorization: token ${GITHUB_PAT}" \
-                                            -H "Accept: application/vnd.github+json" \
-                                            -H "X-GitHub-Api-Version: 2022-11-28" \
-                                            -H "Content-Type: application/json" \
-                                            "https://api.github.com/repos/appcircleio/appcircle-cli/pulls/${PR_NUMBER}/merge" \
-                                            -d '{"merge_method":"squash"}')
+                                        MERGE_RESPONSE=$(curl -s -w "\\nHTTP_STATUS:%{http_code}" -X PUT -H "Authorization: token ${GITHUB_PAT}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" -H "Content-Type: application/json" "https://api.github.com/repos/appcircleio/appcircle-cli/pulls/${PR_NUMBER}/merge" -d '{"merge_method":"squash"}')
 
                                         # Extract HTTP status code
                                         HTTP_STATUS=$(echo "$MERGE_RESPONSE" | grep "HTTP_STATUS:" | cut -d':' -f2)
@@ -225,10 +214,7 @@ pipeline {
                                             echo "✅ PR #${PR_NUMBER} merged successfully"
 
                                             # Delete the branch
-                                            curl -s -X DELETE \
-                                                -H "Authorization: token ${GITHUB_PAT}" \
-                                                -H "Accept: application/vnd.github.v3+json" \
-                                                "https://api.github.com/repos/appcircleio/appcircle-cli/git/refs/heads/$BRANCH_NAME" > /dev/null
+                                            curl -s -X DELETE -H "Authorization: token ${GITHUB_PAT}" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/appcircleio/appcircle-cli/git/refs/heads/$BRANCH_NAME" > /dev/null
 
                                             echo "✅ Coverage badges updated via PR #${PR_NUMBER}"
                                             rm -f README.md.bak
