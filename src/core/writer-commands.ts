@@ -78,7 +78,7 @@ export const writeTestingDistributionCommand = (data: any): void => {
   }
 };
 
-const writeDistributionProfileList = (data: any): void => {
+export const writeDistributionProfileList = (data: any): void => {
   const validation = validateTableData(data?.data, 'No distribution profiles available.');
   if (!validation.isValid) {
     logInfo(validation.message!);
@@ -89,11 +89,11 @@ const writeDistributionProfileList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeDistributionProfileCreate = (data: any): void => {
+export const writeDistributionProfileCreate = (data: any): void => {
   logInfo(`\n${data.data.name} distribution profile created successfully!`);
 };
 
-const writeTestingGroupList = (data: any): void => {
+export const writeTestingGroupList = (data: any): void => {
   const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No testing group found');
   
   if (shouldDisplay) {
@@ -107,7 +107,7 @@ const writeTestingGroupList = (data: any): void => {
   }
 };
 
-const writeTestingGroupView = (data: any): void => {
+export const writeTestingGroupView = (data: any): void => {
   const group = data?.data;
   
   if (!group) {
@@ -168,7 +168,7 @@ export const writeBuildCommand = (data: any): void => {
   }
 };
 
-const writeBuildProfileList = (data: any): void => {
+export const writeBuildProfileList = (data: any): void => {
   const validation = validateTableData(data?.data, 'No build profiles available.');
   if (!validation.isValid) {
     logInfo(validation.message!);
@@ -179,12 +179,12 @@ const writeBuildProfileList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeBuildBranchList = (data: any): void => {
+export const writeBuildBranchList = (data: any): void => {
   const tableData = data?.data?.branches?.map(transformBranch) || [];
   logTable(tableData);
 };
 
-const writeBuildWorkflowList = (data: any): void => {
+export const writeBuildWorkflowList = (data: any): void => {
   const tableData = data?.data?.map((workflow: any) => ({
     'Workflow Id': workflow.id,
     'Workflow Name': workflow.workflowName,
@@ -193,7 +193,7 @@ const writeBuildWorkflowList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeBuildConfigurationList = (data: any): void => {
+export const writeBuildConfigurationList = (data: any): void => {
   const tableData = data?.data?.map((configuration: any) => ({
     'Configuration Id': safeGet(configuration, 'item1.id'),
     'Configuration Name': safeGet(configuration, 'item1.configurationName'),
@@ -202,7 +202,7 @@ const writeBuildConfigurationList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeBuildCommitList = (data: any): void => {
+export const writeBuildCommitList = (data: any): void => {
   const validation = validateTableData(data?.data, 'No commits available.');
   if (!validation.isValid) {
     logInfo(validation.message!);
@@ -213,7 +213,7 @@ const writeBuildCommitList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeBuildList = (data: any): void => {
+export const writeBuildList = (data: any): void => {
   const validation = validateTableData(data?.data?.builds, 'No builds available.');
   if (!validation.isValid) {
     logInfo(validation.message!);
@@ -224,7 +224,7 @@ const writeBuildList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeBuildVariableGroupList = (data: any): void => {
+export const writeBuildVariableGroupList = (data: any): void => {
   const tableData = data?.data?.map((x: any) => ({ 
     'Variable Groups ID': x.id, 
     'Variable Groups Name': x.name 
@@ -232,20 +232,20 @@ const writeBuildVariableGroupList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeBuildVariableGroupCreate = (data: any): void => {
+export const writeBuildVariableGroupCreate = (data: any): void => {
   logInfo(`\n${data?.data?.name} environment variable group created successfully!`);
 };
 
-const writeBuildVariableView = (data: any): void => {
+export const writeBuildVariableView = (data: any): void => {
   const tableData = data?.data?.map(transformEnvironmentVariable) || [];
   logTable(tableData);
 };
 
-const writeBuildVariableCreate = (data: any): void => {
+export const writeBuildVariableCreate = (data: any): void => {
   logInfo(`\n${data?.data?.key} environment variable created successfully!`);
 };
 
-const writeBuildActiveList = (data: any): void => {
+export const writeBuildActiveList = (data: any): void => {
   const validation = validateTableData(data?.data?.data, 'No active builds available.');
   if (!validation.isValid) {
     logInfo(validation.message!);
@@ -256,7 +256,7 @@ const writeBuildActiveList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeBuildView = (data: any): void => {
+export const writeBuildView = (data: any): void => {
   const build = data?.data;
   if (!build) {
     logInfo('No builds available.');
@@ -288,7 +288,7 @@ export const writeEnterpriseAppStoreCommand = (data: any): void => {
   }
 };
 
-const writeEnterpriseStoreProfileList = (data: any): void => {
+export const writeEnterpriseStoreProfileList = (data: any): void => {
   const validation = validateTableData(data?.data, 'No build profiles available.');
   if (!validation.isValid) {
     logInfo(validation.message!);
@@ -306,7 +306,7 @@ const writeEnterpriseStoreProfileList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeEnterpriseStoreVersionList = (data: any): void => {
+export const writeEnterpriseStoreVersionList = (data: any): void => {
   const validation = validateTableData(data?.data, 'No app versions available.');
   if (!validation.isValid) {
     logInfo(validation.message!);
@@ -317,12 +317,12 @@ const writeEnterpriseStoreVersionList = (data: any): void => {
   logTable(tableData);
 };
 
-const writeEnterpriseStoreVersionPublish = (data: any): void => {
+export const writeEnterpriseStoreVersionPublish = (data: any): void => {
   const tableData = [data?.data].map(transformEnterpriseStoreVersion);
   logTable(tableData);
 };
 
-const writeEnterpriseStoreVersionUnpublish = (data: any): void => {
+export const writeEnterpriseStoreVersionUnpublish = (data: any): void => {
   const validation = validateTableData([data?.data], 'No app versions available.');
   if (!validation.isValid) {
     logInfo(validation.message!);
@@ -333,7 +333,7 @@ const writeEnterpriseStoreVersionUnpublish = (data: any): void => {
   logTable(tableData);
 };
 
-const writeEnterpriseStoreVersionNotify = (data: any): void => {
+export const writeEnterpriseStoreVersionNotify = (data: any): void => {
   const validation = validateTableData(data?.data, 'No app versions available.');
   if (!validation.isValid) {
     logInfo(validation.message!);
@@ -342,11 +342,11 @@ const writeEnterpriseStoreVersionNotify = (data: any): void => {
   // Notification doesn't output table, just validates data
 };
 
-const writeEnterpriseStoreDownloadLink = (data: any): void => {
+export const writeEnterpriseStoreDownloadLink = (data: any): void => {
   logMessage(`Download Link: ${data?.data}`);
 };
 
-const transformEnterpriseStoreVersion = (buildProfile: any) => {
+export const transformEnterpriseStoreVersion = (buildProfile: any) => {
   return {
     'Version Name': buildProfile.name,
     Summary: buildProfile.summary,
@@ -384,7 +384,7 @@ export const writeOrganizationCommand = (data: any): void => {
   }
 };
 
-const writeOrganizationView = (data: any): void => {
+export const writeOrganizationView = (data: any): void => {
   const isAll = Array.isArray(data.data);
   const tableData = isAll ? data.data : [data.data];
   
@@ -395,7 +395,7 @@ const writeOrganizationView = (data: any): void => {
   logTable(transformedData);
 };
 
-const writeOrganizationUserView = (data: any): void => {
+export const writeOrganizationUserView = (data: any): void => {
   logMessage('\n- Users ↴ ');
   
   const users = data.data.users;
@@ -421,19 +421,19 @@ const writeOrganizationUserView = (data: any): void => {
   }
 };
 
-const writeOrganizationUserInvite = (data: any): void => {
+export const writeOrganizationUserInvite = (data: any): void => {
   logMessage('Invitation successfully sent.');
 };
 
-const writeOrganizationUserReInvite = (data: any): void => {
+export const writeOrganizationUserReInvite = (data: any): void => {
   logMessage('Re-invitation successfully sent again.');
 };
 
-const writeOrganizationUserRemove = (data: any): void => {
+export const writeOrganizationUserRemove = (data: any): void => {
   logMessage(`User "${data.data.email}" has been removed.`);
 };
 
-const writeOrganizationRoleView = (data: any): void => {
+export const writeOrganizationRoleView = (data: any): void => {
   logMessage('\n- Roles ↴ ');
   
   const roles = data.data?.roles;
@@ -481,7 +481,7 @@ export const writePublishCommand = (data: any): void => {
   }
 };
 
-const writePublishProfileCreate = (data: any): void => {
+export const writePublishProfileCreate = (data: any): void => {
   const tableData = [{
     'Id:': data.data.id,
     'Name:': data.data.name,
@@ -490,7 +490,7 @@ const writePublishProfileCreate = (data: any): void => {
   logTable(tableData);
 };
 
-const writePublishProfileRename = (data: any): void => {
+export const writePublishProfileRename = (data: any): void => {
   const tableData = [{
     'Id:': data.data.id,
     'Name:': data.data.name,
@@ -500,7 +500,7 @@ const writePublishProfileRename = (data: any): void => {
   logTable(tableData);
 };
 
-const writePublishProfileList = (data: any): void => {
+export const writePublishProfileList = (data: any): void => {
   const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No publish profile found');
   
   if (shouldDisplay) {
@@ -522,7 +522,7 @@ const writePublishProfileList = (data: any): void => {
   }
 };
 
-const writePublishVariableGroupList = (data: any): void => {
+export const writePublishVariableGroupList = (data: any): void => {
   const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No publish variable group found');
   
   if (shouldDisplay) {
@@ -538,7 +538,7 @@ const writePublishVariableGroupList = (data: any): void => {
   }
 };
 
-const writePublishVariableGroupView = (data: any): void => {
+export const writePublishVariableGroupView = (data: any): void => {
   const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No publish variable found');
   
   if (shouldDisplay) {
@@ -549,7 +549,7 @@ const writePublishVariableGroupView = (data: any): void => {
   }
 };
 
-const writePublishProfileSettingsAutopublish = (data: any): void => {
+export const writePublishProfileSettingsAutopublish = (data: any): void => {
   const tableData = [{
     'Id:': data.data.id,
     'Name:': data.data.name,
@@ -560,7 +560,7 @@ const writePublishProfileSettingsAutopublish = (data: any): void => {
   logTable(tableData);
 };
 
-const writePublishProfileVersionRC = (data: any): void => {
+export const writePublishProfileVersionRC = (data: any): void => {
   const tableData = [{
     'Id:': data.data.id,
     'Name:': data.data.name,
@@ -572,7 +572,7 @@ const writePublishProfileVersionRC = (data: any): void => {
   logTable(tableData);
 };
 
-const writePublishProfileVersionList = (data: any): void => {
+export const writePublishProfileVersionList = (data: any): void => {
   const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No app version found');
   
   if (shouldDisplay) {
@@ -590,7 +590,7 @@ const writePublishProfileVersionList = (data: any): void => {
   }
 };
 
-const writePublishProfileVersionView = (data: any): void => {
+export const writePublishProfileVersionView = (data: any): void => {
   const version = data.data;
   
   if (!version) {
@@ -612,7 +612,7 @@ const writePublishProfileVersionView = (data: any): void => {
   logTable(tableData);
 };
 
-const writePublishActiveList = (data: any): void => {
+export const writePublishActiveList = (data: any): void => {
   const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No active publishing process available.');
   
   if (shouldDisplay) {
@@ -633,7 +633,7 @@ const writePublishActiveList = (data: any): void => {
   }
 };
 
-const writePublishView = (data: any): void => {
+export const writePublishView = (data: any): void => {
   const publish = data.data;
   
   if (!publish) {
@@ -694,7 +694,7 @@ export const writeSigningIdentityCommand = (data: any): void => {
   }
 };
 
-const writeSigningCertificateList = (data: any): void => {
+export const writeSigningCertificateList = (data: any): void => {
   const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No iOS certificate found');
   
   if (shouldDisplay) {
@@ -711,7 +711,7 @@ const writeSigningCertificateList = (data: any): void => {
   }
 };
 
-const writeSigningCertificateUpload = (data: any): void => {
+export const writeSigningCertificateUpload = (data: any): void => {
   if (data.data) {
     const tableData = {
       'Certificate Id': data.data.id || '-',
@@ -726,7 +726,7 @@ const writeSigningCertificateUpload = (data: any): void => {
   }
 };
 
-const writeSigningCertificateCreate = (data: any): void => {
+export const writeSigningCertificateCreate = (data: any): void => {
   if (data.data) {
     const tableData = {
       'Certificate Id': data.data.id || '-',
@@ -740,7 +740,7 @@ const writeSigningCertificateCreate = (data: any): void => {
   }
 };
 
-const writeSigningCertificateView = (data: any): void => {
+export const writeSigningCertificateView = (data: any): void => {
   if (data.data) {
     const tableData = {
       'Certificate Id': data.data.id || '-',
@@ -757,7 +757,7 @@ const writeSigningCertificateView = (data: any): void => {
   }
 };
 
-const writeSigningKeystoreList = (data: any): void => {
+export const writeSigningKeystoreList = (data: any): void => {
   const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No Android keystore found');
   
   if (shouldDisplay) {
@@ -773,7 +773,7 @@ const writeSigningKeystoreList = (data: any): void => {
   }
 };
 
-const writeSigningKeystoreView = (data: any): void => {
+export const writeSigningKeystoreView = (data: any): void => {
   if (data.data) {
     const tableData = {
       'Keystore Id': data.data.id || '-',
@@ -789,7 +789,7 @@ const writeSigningKeystoreView = (data: any): void => {
   }
 };
 
-const writeSigningProvisioningProfileList = (data: any): void => {
+export const writeSigningProvisioningProfileList = (data: any): void => {
   const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No Provisioning Profile found');
   
   if (shouldDisplay) {
@@ -807,7 +807,7 @@ const writeSigningProvisioningProfileList = (data: any): void => {
   }
 };
 
-const writeSigningProvisioningProfileView = (data: any): void => {
+export const writeSigningProvisioningProfileView = (data: any): void => {
   const profile = data.data;
   
   if (profile) {

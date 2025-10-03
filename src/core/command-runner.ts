@@ -482,7 +482,7 @@ export function createCleanTerminalFormatter() {
 /**
  * Create a step summary formatter that shows only build steps and durations
  */
-function createStepSummaryFormatter() {
+export function createStepSummaryFormatter() {
   const stepStates = new Map<string, {
     status: StepStatus;
     startTime: number;
@@ -1270,7 +1270,7 @@ export const handleUnknownLoginCommand = (command: ProgramCommand): void => {
   }
 };
 
-const handleLoginCommand = async (command: ProgramCommand, params: any) => {
+export const handleLoginCommand = async (command: ProgramCommand, params: any) => {
   // Check if user is already logged in
   if (checkIfUserAlreadyLoggedIn()) {
     // Validate if the current token is still valid
@@ -1322,7 +1322,7 @@ export const displayLogoutSuccessMessage = (): void => {
   console.log('Successfully logged out from Appcircle.');
 };
 
-const handleLogoutCommand = async (command: ProgramCommand, params: any) => {
+export const handleLogoutCommand = async (command: ProgramCommand, params: any) => {
   // Check if user is logged in first
   if (!checkIfUserIsLoggedIn()) {
     throw new ProgramError('You are not currently logged in');
@@ -3116,7 +3116,7 @@ export const handleProvisioningProfileRemove = async (command: ProgramCommand, p
   }
 };
 
-const handleConfigCommand = (command: ProgramCommand) => {
+export const handleConfigCommand = (command: ProgramCommand) => {
   const action = command.name();
   const key = command.args()[0] || '';
   
@@ -3147,7 +3147,7 @@ const handleConfigCommand = (command: ProgramCommand) => {
   }
 };
 
-const handleOrganizationCommand = async (command: ProgramCommand, params: any) => {
+export const handleOrganizationCommand = async (command: ProgramCommand, params: any) => {
   // Organization validation and resolution
   if (params.organization && (!params.organizationId || params.organizationId === 'all' || params.organizationId === 'current')) {
     const organizations = await getOrganizations();
@@ -3959,7 +3959,7 @@ export const handlePublishView = async (command: ProgramCommand, params: any) =>
   });
 };
 
-const handlePublishCommand = async (command: ProgramCommand, params: any) => {
+export const handlePublishCommand = async (command: ProgramCommand, params: any) => {
   // Parameter validations
   validatePublishPlatform(params);
   await validatePublishProfileParams(command, params);
@@ -4076,7 +4076,7 @@ const handlePublishCommand = async (command: ProgramCommand, params: any) => {
   }
 };
 
-const handleBuildCommand = async (command: ProgramCommand, params:any) => {
+export const handleBuildCommand = async (command: ProgramCommand, params:any) => {
   // Build profile validation and resolution
   if (params.profile && !params.profileId) {
     const buildProfiles = await getBuildProfiles();
@@ -5537,7 +5537,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
   }
 }
 
-const handleDistributionCommand = async (command: ProgramCommand, params: any) => {
+export const handleDistributionCommand = async (command: ProgramCommand, params: any) => {
   // Validate parameters for commands that need them
   await validateDistributionProfileParams(command, params);
   await validateTestingGroupParams(command, params);
@@ -5576,7 +5576,7 @@ const handleDistributionCommand = async (command: ProgramCommand, params: any) =
 }
 
 
-const handleSigningIdentityCommand = async (command: ProgramCommand, params: any) => {
+export const handleSigningIdentityCommand = async (command: ProgramCommand, params: any) => {
   // Validate parameters for commands that need them
   await validateCertificateParams(command, params);
   await validateKeystoreParams(command, params);
@@ -5620,7 +5620,7 @@ const handleSigningIdentityCommand = async (command: ProgramCommand, params: any
   }
 }
 
-const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: any) => {
+export const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: any) => {
   // Validate enterprise profile and app version parameters
   await validateEnterpriseProfileParams(command, params);
   await validateEnterpriseAppVersionParams(command, params);
@@ -5656,7 +5656,7 @@ const handleEnterpriseAppStoreCommand = async (command: ProgramCommand, params: 
   }
 }
 
-async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; buildId?: string; branchId?: string; profileId?: string; profileName?: string; branchName?: string; path?: string; fileName?: string }, params?: any) {
+export async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; buildId?: string; branchId?: string; profileId?: string; profileName?: string; branchName?: string; path?: string; fileName?: string }, params?: any) {
   const progressSpinner = createOra('Preparing to download Build Logs...').start();
   
   let effectiveTaskId: string | null = null;
@@ -5906,7 +5906,7 @@ async function downloadBuildLogs(taskIdOrParams: string | { commitId?: string; b
   }
 }
 
-async function downloadPublishLogs(publishDetail: any, platform: string, publishProfileId: string, userProvidedPath?: string) {
+export async function downloadPublishLogs(publishDetail: any, platform: string, publishProfileId: string, userProvidedPath?: string) {
   if (!publishDetail || !publishDetail.id) {
     return;
   }
@@ -5999,7 +5999,7 @@ async function downloadPublishLogs(publishDetail: any, platform: string, publish
   }
 }
 
-async function checkPublishStatusDirectly(platform: string, publishProfileId: string, appVersionId: string): Promise<{status: number, detail?: any}> {
+export async function checkPublishStatusDirectly(platform: string, publishProfileId: string, appVersionId: string): Promise<{status: number, detail?: any}> {
   try {
     const url = `publish/v1/profiles/${platform}/${publishProfileId}/app-versions/${appVersionId}/publish`;
     
@@ -6023,7 +6023,7 @@ async function checkPublishStatusDirectly(platform: string, publishProfileId: st
   }
 }
 
-async function monitorPublishProcess(params: any) {
+export async function monitorPublishProcess(params: any) {
   const { platform, publishProfileId, appVersionId, publishId } = params;
   
   const progressSpinner = getConsoleOutputType() === 'json' ? 
@@ -6412,7 +6412,7 @@ async function monitorPublishProcess(params: any) {
   }
 }
 
-async function handleSuccessfulPublish(params: any, progressSpinner: any) {
+export async function handleSuccessfulPublish(params: any, progressSpinner: any) {
   try {
     const publishDetail = await getPublisDetailById(params);
     
@@ -6452,7 +6452,7 @@ async function handleSuccessfulPublish(params: any, progressSpinner: any) {
   }
 }
 
-async function handleFailedPublish(params: any, progressSpinner: any) {
+export async function handleFailedPublish(params: any, progressSpinner: any) {
   try {
     const publishDetail = await getPublisDetailById(params);
     console.log(chalk.red('\nPublish process did not complete successfully.'));
@@ -6493,7 +6493,7 @@ async function handleFailedPublish(params: any, progressSpinner: any) {
   }
 }
 
-function findCommandByParts(parts: string[], commandList: CommandType[]): CommandType | undefined {
+export function findCommandByParts(parts: string[], commandList: CommandType[]): CommandType | undefined {
   if (!parts.length) return undefined;
   const [head, ...tail] = parts;
   const found = commandList.find(cmd => cmd.command === head);
