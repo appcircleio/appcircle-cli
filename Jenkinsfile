@@ -1,5 +1,8 @@
 pipeline {
     agent { label 'agent'}
+    parameters {
+        booleanParam(name: 'PUBLISH', defaultValue: false, description: 'Trigger publish stage')
+    }
     environment {
         NPM_AUTH_TOKEN = credentials('Appcircle-CLI-NPM-Cred')
         OZER_GITHUB_PAT = credentials('ozer-github-pat')
@@ -181,7 +184,7 @@ pipeline {
 
         stage('Publish') {
             when {
-                expression { false }
+                expression { params.PUBLISH == true }
             }
             steps {
                 sh '''#!/bin/bash
