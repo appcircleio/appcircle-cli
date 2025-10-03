@@ -188,37 +188,59 @@ pipeline {
                                 # Push the branch
                                 echo "📤 Pushing branch to remote..."
                                 if git push https://${GITHUB_PAT}@github.com/appcircleio/appcircle-cli.git "$BRANCH_NAME"; then
-                                    # Create PR using gh CLI
-                                    export GH_TOKEN="${GITHUB_PAT}"
+                                    echo "🔀 Creating pull request via GitHub API..."
 
-                                    echo "🔀 Creating pull request..."
-                                    if gh pr create --title "docs: update coverage badges [skip ci]" \
-                                        --body "🤖 Automated coverage badge update from Jenkins build #${BUILD_NUMBER}" \
-                                        --base develop \
-                                        --head "$BRANCH_NAME"; then
+                                    # Create PR using GitHub API
+                                    PR_RESPONSE=$(curl -s -X POST \
+                                        -H "Authorization: token ${GITHUB_PAT}" \
+                                        -H "Accept: application/vnd.github.v3+json" \
+                                        -H "Content-Type: application/json" \
+                                        "https://api.github.com/repos/appcircleio/appcircle-cli/pulls" \
+                                        -d "{\"title\":\"docs: update coverage badges [skip ci]\",\"body\":\"🤖 Automated coverage badge update from Jenkins build #${BUILD_NUMBER}\",\"head\":\"$BRANCH_NAME\",\"base\":\"develop\"}")
 
-                                        # Get the PR number
-                                        PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
+                                    # Extract PR number from response
+                                    PR_NUMBER=$(echo "$PR_RESPONSE" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
 
-                                        if [ -n "$PR_NUMBER" ]; then
-                                            echo "✅ Created PR #${PR_NUMBER}"
+                                    if [ -n "$PR_NUMBER" ]; then
+                                        echo "✅ Created PR #${PR_NUMBER}"
 
-                                            # Merge PR with admin override to bypass branch protection
-                                            echo "🚀 Merging PR with admin override..."
-                                            if gh pr merge "$PR_NUMBER" --admin --squash --delete-branch; then
-                                                echo "✅ Coverage badges updated via PR #${PR_NUMBER}"
-                                                rm -f README.md.bak
-                                            else
-                                                echo "⚠️  Failed to merge PR #${PR_NUMBER}, restoring backup"
-                                                echo "💡 PR is still open, you can merge it manually"
-                                                mv README.md.bak README.md
-                                            fi
+                                        # Merge PR using GitHub API with bypass for branch protection
+                                        # This requires the token to have admin permissions
+                                        echo "🚀 Merging PR #${PR_NUMBER} (bypassing branch protection)..."
+                                        MERGE_RESPONSE=$(curl -s -w "\\nHTTP_STATUS:%{http_code}" -X PUT \
+                                            -H "Authorization: token ${GITHUB_PAT}" \
+                                            -H "Accept: application/vnd.github+json" \
+                                            -H "X-GitHub-Api-Version: 2022-11-28" \
+                                            -H "Content-Type: application/json" \
+                                            "https://api.github.com/repos/appcircleio/appcircle-cli/pulls/${PR_NUMBER}/merge" \
+                                            -d '{"merge_method":"squash"}')
+
+                                        # Extract HTTP status code
+                                        HTTP_STATUS=$(echo "$MERGE_RESPONSE" | grep "HTTP_STATUS:" | cut -d':' -f2)
+                                        MERGE_BODY=$(echo "$MERGE_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+                                        # Check if merge was successful (200 or 201)
+                                        if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "201" ]; then
+                                            echo "✅ PR #${PR_NUMBER} merged successfully"
+
+                                            # Delete the branch
+                                            curl -s -X DELETE \
+                                                -H "Authorization: token ${GITHUB_PAT}" \
+                                                -H "Accept: application/vnd.github.v3+json" \
+                                                "https://api.github.com/repos/appcircleio/appcircle-cli/git/refs/heads/$BRANCH_NAME" > /dev/null
+
+                                            echo "✅ Coverage badges updated via PR #${PR_NUMBER}"
+                                            rm -f README.md.bak
                                         else
-                                            echo "⚠️  Failed to get PR number, restoring backup"
+                                            echo "⚠️  Failed to merge PR #${PR_NUMBER} (HTTP ${HTTP_STATUS})"
+                                            echo "Response: $MERGE_BODY"
+                                            echo "💡 This may be due to branch protection rules. Ensure the PAT has admin permissions."
+                                            echo "💡 PR is open at: https://github.com/appcircleio/appcircle-cli/pull/${PR_NUMBER}"
                                             mv README.md.bak README.md
                                         fi
                                     else
-                                        echo "⚠️  Failed to create PR, restoring backup"
+                                        echo "⚠️  Failed to create PR"
+                                        echo "Response: $PR_RESPONSE"
                                         mv README.md.bak README.md
                                     fi
                                 else
