@@ -127,19 +127,21 @@ pipeline {
 
                 # Generate new badges with test count
                 if [ -n "$TESTS_PASSED" ]; then
-                    TEST_JSON="{\"passed\":$TESTS_PASSED}"
+                    TEST_JSON="{\\\"passed\\\":$TESTS_PASSED}"
                     BADGES=$(node scripts/parse-coverage.js badges "$TEST_JSON" 2>/dev/null)
+                    BADGE_EXIT_CODE=$?
                 else
                     BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null)
+                    BADGE_EXIT_CODE=$?
                 fi
 
-                if [ $? -ne 0 ] || [ -z "$BADGES" ]; then
+                if [ $BADGE_EXIT_CODE -ne 0 ] || [ -z "$BADGES" ]; then
                     echo "⚠️  Failed to generate badges, skipping update"
                     exit 0
                 fi
 
                 echo "Generated badges:"
-                echo "$BADGES"
+                printf '%s\\n' "$BADGES"
 
                 # Update README.md with new badges
                 if grep -q "^!\\[Coverage\\]" README.md; then
@@ -155,12 +157,12 @@ pipeline {
                     if [ -n "$LINE_NUM" ]; then
                         # Insert new badges after NPM Version badge
                         head -n "$LINE_NUM" README.md.tmp > README.md.new
-                        echo "$BADGES" >> README.md.new
+                        printf '%s\\n' "$BADGES" >> README.md.new
                         tail -n +$((LINE_NUM + 1)) README.md.tmp >> README.md.new
                         mv README.md.new README.md
                     else
                         # If NPM Version badge not found, just prepend to file
-                        echo "$BADGES" > README.md.new
+                        printf '%s\\n' "$BADGES" > README.md.new
                         echo "" >> README.md.new
                         cat README.md.tmp >> README.md.new
                         mv README.md.new README.md
