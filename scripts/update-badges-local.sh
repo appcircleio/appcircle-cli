@@ -19,7 +19,7 @@ fi
 echo "✅ Tests passed!"
 
 # Extract test count
-TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -oP 'Tests\s+\K\d+(?=\s+passed)' | tail -1)
+TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -oE 'Tests[[:space:]]+[0-9]+[[:space:]]+passed' | grep -oE '[0-9]+' | head -1)
 
 # Generate badges
 if [ -n "$TESTS_PASSED" ]; then
