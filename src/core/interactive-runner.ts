@@ -48,7 +48,7 @@ import { AppcircleExitError } from './AppcircleExitError';
 // Simple multiline input using readline for copy-paste support
 import * as readline from 'readline';
 
-const getSimpleMultilineInput = async (message: string): Promise<string> => {
+export const getSimpleMultilineInput = async (message: string): Promise<string> => {
   console.log(chalk.cyan('?'), message);
 
   return new Promise((resolve) => {
@@ -151,7 +151,7 @@ export const processParameterValue = (paramName: string, value: any): any => {
   return value;
 };
 
-const handleInteractiveParamsOrArguments = async (
+export const handleInteractiveParamsOrArguments = async (
   commandParams: CommandType['params'] | CommandType['arguments'] = []
 ): Promise<Record<string, any> | undefined> => {
   let params: any = {};
@@ -680,7 +680,7 @@ export const buildActionCallbackInput = (
 };
 
 // Step 4: Refactored main function using the helpers
-const handleCommandParamsAndArguments = async (selectedCommand: CommandType, parentCommand: any): Promise<ProgramCommand | undefined> => {
+export const handleCommandParamsAndArguments = async (selectedCommand: CommandType, parentCommand: any): Promise<ProgramCommand | undefined> => {
   // Get parameters interactively, return undefined if halt/error
   const params = await getInteractiveValues(selectedCommand.params);
   if (params === undefined) {
@@ -758,7 +758,7 @@ export const parseCommandIndex = (selectedActionName: string): number => {
 };
 
 // Step 8: Function to handle back navigation with DI for stack manipulation
-const handleBackNavigation = async (
+export const handleBackNavigation = async (
   handleSelectedCommandFn: typeof handleSelectedCommand,
   stackPop = () => navigationStack.pop(),
   getStackLength = () => navigationStack.length,
@@ -774,7 +774,7 @@ const handleBackNavigation = async (
 };
 
 // Step 9: Function to handle forward navigation with DI for stack manipulation
-const handleForwardNavigation = async (
+export const handleForwardNavigation = async (
   selectedCommand: CommandType,
   preparedCommand: ProgramCommand | undefined,
   handleSelectedCommandFn: typeof handleSelectedCommand,
@@ -785,7 +785,7 @@ const handleForwardNavigation = async (
 };
 
 // Step 10: Refactored main function using the helpers
-const handleSelectedCommand = async (command: CommandType, __parentCommand?: any): Promise<ProgramCommand | undefined> => {
+export const handleSelectedCommand = async (command: CommandType, __parentCommand?: any): Promise<ProgramCommand | undefined> => {
   // Step 1: Prepare command parameters and arguments
   const preparedCommand = await handleCommandParamsAndArguments(command, __parentCommand);
   
@@ -2096,7 +2096,7 @@ export const adjustCommandIndexForAuthGrouping = (selectedCommandIndex: number, 
   return adjustedIndex;
 };
 
-const runCommandsInteractivelyInner = async () => {
+export const runCommandsInteractivelyInner = async () => {
   let selectedCommand: (typeof Commands)[number];
   let selectedCommandDescription = '';
   let selectedCommandIndex = -1;
