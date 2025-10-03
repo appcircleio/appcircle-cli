@@ -39,6 +39,14 @@ pipeline {
                 fi
                 echo "✅ Unit tests passed! 🌟"
 
+                echo "📊 Checking coverage thresholds..."
+                if ! node scripts/parse-coverage.js check-threshold; then
+                    echo "❌ Coverage below minimum thresholds! 💔"
+                    echo "⚠️  This PR cannot be merged until coverage meets the requirements."
+                    exit 1
+                fi
+                echo "✅ Coverage thresholds met! 🎯"
+
                 echo "📊 Posting coverage report to PR..."
                 # This section is optional and won't fail the build
                 set +e  # Don't exit on error for coverage posting
