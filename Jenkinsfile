@@ -127,8 +127,7 @@ pipeline {
 
                 # Generate new badges with test count
                 if [ -n "$TESTS_PASSED" ]; then
-                    TEST_JSON="{\\\"passed\\\":$TESTS_PASSED}"
-                    BADGES=$(node scripts/parse-coverage.js badges "$TEST_JSON" 2>/dev/null)
+                    BADGES=$(node scripts/parse-coverage.js badges '{"passed":'$TESTS_PASSED'}' 2>/dev/null)
                     BADGE_EXIT_CODE=$?
                 else
                     BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null)
