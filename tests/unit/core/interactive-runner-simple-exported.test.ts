@@ -86,11 +86,11 @@ vi.mock('enquirer', () => ({
       selectedAction: '1. Test Command'
     }),
     AutoComplete: vi.fn().mockImplementation(() => ({
-      run: vi.fn().mockResolvedValue({ selectedAction: '1. Test Command' })
+      run: vi.fn().mockResolvedValue('1. Test Command')
     }))
   },
   AutoComplete: vi.fn().mockImplementation(() => ({
-    run: vi.fn().mockResolvedValue({ selectedAction: '1. Test Command' })
+    run: vi.fn().mockResolvedValue('1. Test Command')
   }))
 }))
 
