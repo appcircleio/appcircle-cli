@@ -103,6 +103,8 @@ pipeline {
                 # shellcheck shell=bash
                 set -e
 
+                echo "🚀 Testing badge update automation..."
+
                 # Configuration
                 REPO="appcircleio/appcircle-cli"
                 BASE_BRANCH="develop"
