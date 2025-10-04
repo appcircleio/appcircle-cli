@@ -91,8 +91,8 @@ git push "https://${GITHUB_PAT}@github.com/${REPO}.git" "$BRANCH_NAME" || die "F
 echo "🔀 Creating pull request..."
 PR_RESPONSE=$(api_call POST pulls "{\"title\":\"docs: update coverage badges [skip ci]\",\"body\":\"🤖 Automated coverage badge update from Jenkins build #${BUILD_NUMBER}\",\"head\":\"$BRANCH_NAME\",\"base\":\"$BASE_BRANCH\"}")
 
-# Extract PR number using jq-like parsing or grep
-PR_NUMBER=$(echo "$PR_RESPONSE" | grep -oP '"number":\s*\K[0-9]+' || echo "$PR_RESPONSE" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2 | tr -d ' ')
+# Extract PR number from response
+PR_NUMBER=$(echo "$PR_RESPONSE" | sed -n 's/.*"number":[[:space:]]*\([0-9]*\).*/\1/p' | head -1)
 
 if [ -z "$PR_NUMBER" ]; then
     echo "⚠️  Failed to create PR"
