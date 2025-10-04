@@ -101,153 +101,127 @@ pipeline {
             steps {
                 sh '''#!/bin/bash
                 # shellcheck shell=bash
-                set -x
-                set +e  # Don't fail the build if badge update fails
+                set -e
 
+                # Configuration
+                REPO="appcircleio/appcircle-cli"
+                BASE_BRANCH="develop"
+                GIT_USER_EMAIL="ozer@appcircle.io"
+                GIT_USER_NAME="Özer from Jenkins"
+
+                echo "🤖 Starting coverage badge update script..."
+
+                # Functions
+                die() {
+                    echo "⚠️  $1"
+                    [ -f README.md.bak ] && mv README.md.bak README.md
+                    exit 0
+                }
+
+                api_call() {
+                    local method=$1
+                    local endpoint=$2
+                    local data=$3
+
+                    curl -s -X "$method" \\
+                        -H "Authorization: token ${GITHUB_PAT}" \\
+                        -H "Accept: application/vnd.github+json" \\
+                        -H "X-GitHub-Api-Version: 2022-11-28" \\
+                        ${data:+-d "$data"} \\
+                        "https://api.github.com/repos/${REPO}/${endpoint}"
+                }
+
+                # Main script
                 echo "📊 Updating coverage badges in README..."
 
-                # Install dependencies if not already installed
-                if [ ! -d "node_modules" ]; then
-                    echo "📦 Installing dependencies..."
-                    yarn install
-                fi
+                # Install dependencies if needed
+                [ ! -d "node_modules" ] && yarn install
 
-                # Run tests to generate coverage
+                # Run tests
                 echo "🧪 Running tests to generate coverage..."
-                TEST_OUTPUT=$(npm test 2>&1)
-                TEST_EXIT_CODE=$?
+                TEST_OUTPUT=$(npm test 2>&1) || die "Tests failed, skipping badge update"
 
-                if [ $TEST_EXIT_CODE -ne 0 ]; then
-                    echo "⚠️  Tests failed, skipping badge update"
-                    exit 0
-                fi
-
-                # Extract test count from output
+                # Extract test count and generate badges
                 TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -oE 'Tests[[:space:]]+[0-9]+[[:space:]]+passed' | grep -oE '[0-9]+' | head -1)
-
-                # Generate new badges with test count
                 if [ -n "$TESTS_PASSED" ]; then
-                    BADGES=$(node scripts/parse-coverage.js badges '{"passed":'$TESTS_PASSED'}' 2>/dev/null)
-                    BADGE_EXIT_CODE=$?
+                    BADGES=$(node scripts/parse-coverage.js badges "{\\"passed\\":$TESTS_PASSED}" 2>/dev/null) || die "Failed to generate badges"
                 else
-                    BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null)
-                    BADGE_EXIT_CODE=$?
-                fi
-
-                if [ $BADGE_EXIT_CODE -ne 0 ] || [ -z "$BADGES" ]; then
-                    echo "⚠️  Failed to generate badges, skipping update"
-                    exit 0
+                    BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null) || die "Failed to generate badges"
                 fi
 
                 echo "Generated badges:"
                 echo "$BADGES"
 
-                # Update README.md with new badges
-                if grep -q "^!\\[Coverage\\]" README.md; then
-                    # Backup README
-                    cp README.md README.md.bak
+                # Update README
+                grep -q "^!\\[Coverage\\]" README.md || die "Coverage badge not found in README.md"
 
-                    # Remove old badge lines (Coverage, Build, Tests, Branches, Functions)
-                    grep -v "^!\\[Coverage\\]\\|^!\\[Build\\]\\|^!\\[Tests\\]\\|^!\\[Branches\\]\\|^!\\[Functions\\]" README.md > README.md.tmp || true
+                cp README.md README.md.bak
+                grep -v "^!\\[Coverage\\]\\|^!\\[Build\\]\\|^!\\[Tests\\]\\|^!\\[Branches\\]\\|^!\\[Functions\\]" README.md > README.md.tmp
 
-                    # Find the line number of NPM Version badge to insert after it
-                    LINE_NUM=$(grep -n "^!\\[NPM Version\\]" README.md.tmp | cut -d: -f1)
-
-                    if [ -n "$LINE_NUM" ]; then
-                        # Insert new badges after NPM Version badge
-                        head -n "$LINE_NUM" README.md.tmp > README.md.new
-                        echo "$BADGES" >> README.md.new
-                        tail -n +$((LINE_NUM + 1)) README.md.tmp >> README.md.new
-                        mv README.md.new README.md
-                    else
-                        # If NPM Version badge not found, just prepend to file
-                        echo "$BADGES" > README.md.new
-                        echo "" >> README.md.new
-                        cat README.md.tmp >> README.md.new
-                        mv README.md.new README.md
-                    fi
-
-                    rm -f README.md.tmp
-
-                    # Configure git
-                    git config user.email "ozer@appcircle.io"
-                    git config user.name "Özer from Jenkins"
-
-                    # Check if there are changes
-                    if git diff --quiet README.md; then
-                        echo "ℹ️  No changes to coverage badges"
-                        rm -f README.md.bak
-                    else
-                        # Create a new branch for the badge update
-                        BRANCH_NAME="coverage-badges-$(date +%Y%m%d-%H%M%S)"
-
-                        echo "📝 Creating branch: $BRANCH_NAME"
-                        if git checkout -b "$BRANCH_NAME"; then
-                            # Commit changes
-                            git add README.md
-                            if git commit -m "docs: update coverage badges [skip ci]"; then
-                                # Push the branch
-                                echo "📤 Pushing branch to remote..."
-                                if git push https://${GITHUB_PAT}@github.com/appcircleio/appcircle-cli.git "$BRANCH_NAME"; then
-                                    echo "🔀 Creating pull request via GitHub API..."
-
-                                    # Create PR using GitHub API
-                                    PR_RESPONSE=$(curl -s -X POST -H "Authorization: token ${GITHUB_PAT}" -H "Accept: application/vnd.github.v3+json" -H "Content-Type: application/json" "https://api.github.com/repos/appcircleio/appcircle-cli/pulls" -d "{\"title\":\"docs: update coverage badges [skip ci]\",\"body\":\"🤖 Automated coverage badge update from Jenkins build #${BUILD_NUMBER}\",\"head\":\"$BRANCH_NAME\",\"base\":\"develop\"}")
-
-                                    # Extract PR number from response
-                                    PR_NUMBER=$(echo "$PR_RESPONSE" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
-
-                                    if [ -n "$PR_NUMBER" ]; then
-                                        echo "✅ Created PR #${PR_NUMBER}"
-
-                                        # Merge PR using GitHub API with bypass for branch protection
-                                        # This requires the token to have admin permissions
-                                        echo "🚀 Merging PR #${PR_NUMBER} (bypassing branch protection)..."
-                                        MERGE_RESPONSE=$(curl -s -w "\\nHTTP_STATUS:%{http_code}" -X PUT -H "Authorization: token ${GITHUB_PAT}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" -H "Content-Type: application/json" "https://api.github.com/repos/appcircleio/appcircle-cli/pulls/${PR_NUMBER}/merge" -d '{"merge_method":"squash"}')
-
-                                        # Extract HTTP status code
-                                        HTTP_STATUS=$(echo "$MERGE_RESPONSE" | grep "HTTP_STATUS:" | cut -d':' -f2)
-                                        MERGE_BODY=$(echo "$MERGE_RESPONSE" | sed '/HTTP_STATUS:/d')
-
-                                        # Check if merge was successful (200 or 201)
-                                        if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "201" ]; then
-                                            echo "✅ PR #${PR_NUMBER} merged successfully"
-
-                                            # Delete the branch
-                                            curl -s -X DELETE -H "Authorization: token ${GITHUB_PAT}" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/appcircleio/appcircle-cli/git/refs/heads/$BRANCH_NAME" > /dev/null
-
-                                            echo "✅ Coverage badges updated via PR #${PR_NUMBER}"
-                                            rm -f README.md.bak
-                                        else
-                                            echo "⚠️  Failed to merge PR #${PR_NUMBER} (HTTP ${HTTP_STATUS})"
-                                            echo "Response: $MERGE_BODY"
-                                            echo "💡 This may be due to branch protection rules. Ensure the PAT has admin permissions."
-                                            echo "💡 PR is open at: https://github.com/appcircleio/appcircle-cli/pull/${PR_NUMBER}"
-                                            mv README.md.bak README.md
-                                        fi
-                                    else
-                                        echo "⚠️  Failed to create PR"
-                                        echo "Response: $PR_RESPONSE"
-                                        mv README.md.bak README.md
-                                    fi
-                                else
-                                    echo "⚠️  Failed to push branch, restoring backup"
-                                    mv README.md.bak README.md
-                                fi
-                            else
-                                echo "⚠️  Failed to commit changes, restoring backup"
-                                mv README.md.bak README.md
-                            fi
-                        else
-                            echo "⚠️  Failed to create branch, restoring backup"
-                            mv README.md.bak README.md
-                        fi
-                    fi
+                LINE_NUM=$(grep -n "^!\\[NPM Version\\]" README.md.tmp | cut -d: -f1)
+                if [ -n "$LINE_NUM" ]; then
+                    { head -n "$LINE_NUM" README.md.tmp; echo "$BADGES"; tail -n +$((LINE_NUM + 1)) README.md.tmp; } > README.md
                 else
-                    echo "⚠️  Coverage badge not found in README.md, skipping update"
+                    { echo "$BADGES"; echo ""; cat README.md.tmp; } > README.md
+                fi
+                rm -f README.md.tmp
+
+                # Check for changes
+                if git diff --quiet README.md; then
+                    echo "ℹ️  No changes to coverage badges"
+                    rm -f README.md.bak
+                    exit 0
                 fi
 
-                exit 0  # Always exit successfully
+                # Configure git and create PR
+                git config user.email "$GIT_USER_EMAIL"
+                git config user.name "$GIT_USER_NAME"
+
+                BRANCH_NAME="coverage-badges-$(date +%Y%m%d-%H%M%S)"
+                echo "📝 Creating branch: $BRANCH_NAME"
+
+                git checkout -b "$BRANCH_NAME" || die "Failed to create branch"
+                git add README.md
+                git commit -m "docs: update coverage badges [skip ci]" || die "Failed to commit changes"
+
+                echo "📤 Pushing branch to remote..."
+                git push "https://${GITHUB_PAT}@github.com/${REPO}.git" "$BRANCH_NAME" || die "Failed to push branch"
+
+                echo "🔀 Creating pull request..."
+                PR_RESPONSE=$(api_call POST pulls "{\\"title\\":\\"docs: update coverage badges [skip ci]\\",\\"body\\":\\"🤖 Automated coverage badge update from Jenkins build #${BUILD_NUMBER}\\",\\"head\\":\\"$BRANCH_NAME\\",\\"base\\":\\"$BASE_BRANCH\\"}")
+
+                # Extract PR number from response
+                PR_NUMBER=$(echo "$PR_RESPONSE" | sed -n 's/.*"number":[[:space:]]*\\([0-9]*\\).*/\\1/p' | head -1)
+
+                if [ -z "$PR_NUMBER" ]; then
+                    echo "⚠️  Failed to create PR"
+                    echo "Response: $PR_RESPONSE"
+                    die "Could not extract PR number from response"
+                fi
+
+                echo "✅ Created PR #${PR_NUMBER}: https://github.com/${REPO}/pull/${PR_NUMBER}"
+                echo "🚀 Attempting to merge PR #${PR_NUMBER}..."
+
+                MERGE_RESPONSE=$(api_call PUT "pulls/${PR_NUMBER}/merge" '{"merge_method":"squash"}')
+                if echo "$MERGE_RESPONSE" | grep -q '"merged":true'; then
+                    echo "✅ PR #${PR_NUMBER} merged successfully"
+                    api_call DELETE "git/refs/heads/$BRANCH_NAME" > /dev/null
+                    rm -f README.md.bak
+                else
+                    echo "⚠️  Could not auto-merge PR #${PR_NUMBER}"
+                    echo "💡 This may be due to:"
+                    echo "   - Branch protection rules requiring reviews"
+                    echo "   - Insufficient permissions on the PAT"
+                    echo "   - Required status checks not passing"
+                    echo ""
+                    echo "📋 PR is open and waiting for manual review/merge:"
+                    echo "   https://github.com/${REPO}/pull/${PR_NUMBER}"
+                    echo ""
+                    echo "Response: $MERGE_RESPONSE"
+                    rm -f README.md.bak
+                fi
+
+                exit 0
                 '''
             }
         }
