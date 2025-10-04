@@ -88,14 +88,20 @@ git commit -m "docs: update coverage badges [skip ci]" || die "Failed to commit 
 echo "📤 Pushing branch to remote..."
 git push "https://${GITHUB_PAT}@github.com/${REPO}.git" "$BRANCH_NAME" || die "Failed to push branch"
 
-echo "🔀 Creating and merging pull request..."
+echo "🔀 Creating pull request..."
 PR_RESPONSE=$(api_call POST pulls "{\"title\":\"docs: update coverage badges [skip ci]\",\"body\":\"🤖 Automated coverage badge update from Jenkins build #${BUILD_NUMBER}\",\"head\":\"$BRANCH_NAME\",\"base\":\"$BASE_BRANCH\"}")
-PR_NUMBER=$(echo "$PR_RESPONSE" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
 
-[ -z "$PR_NUMBER" ] && die "Failed to create PR: $PR_RESPONSE"
+# Extract PR number using jq-like parsing or grep
+PR_NUMBER=$(echo "$PR_RESPONSE" | grep -oP '"number":\s*\K[0-9]+' || echo "$PR_RESPONSE" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2 | tr -d ' ')
 
-echo "✅ Created PR #${PR_NUMBER}"
-echo "🚀 Merging PR #${PR_NUMBER}..."
+if [ -z "$PR_NUMBER" ]; then
+    echo "⚠️  Failed to create PR"
+    echo "Response: $PR_RESPONSE"
+    die "Could not extract PR number from response"
+fi
+
+echo "✅ Created PR #${PR_NUMBER}: https://github.com/${REPO}/pull/${PR_NUMBER}"
+echo "🚀 Attempting to merge PR #${PR_NUMBER}..."
 
 MERGE_RESPONSE=$(api_call PUT "pulls/${PR_NUMBER}/merge" '{"merge_method":"squash"}')
 if echo "$MERGE_RESPONSE" | grep -q '"merged":true'; then
@@ -103,10 +109,17 @@ if echo "$MERGE_RESPONSE" | grep -q '"merged":true'; then
     api_call DELETE "git/refs/heads/$BRANCH_NAME" > /dev/null
     rm -f README.md.bak
 else
-    echo "⚠️  Failed to merge PR #${PR_NUMBER}"
+    echo "⚠️  Could not auto-merge PR #${PR_NUMBER}"
+    echo "💡 This may be due to:"
+    echo "   - Branch protection rules requiring reviews"
+    echo "   - Insufficient permissions on the PAT"
+    echo "   - Required status checks not passing"
+    echo ""
+    echo "📋 PR is open and waiting for manual review/merge:"
+    echo "   https://github.com/${REPO}/pull/${PR_NUMBER}"
+    echo ""
     echo "Response: $MERGE_RESPONSE"
-    echo "💡 PR is open at: https://github.com/${REPO}/pull/${PR_NUMBER}"
-    mv README.md.bak README.md
+    rm -f README.md.bak
 fi
 
 exit 0
