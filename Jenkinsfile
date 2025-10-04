@@ -155,6 +155,7 @@ pipeline {
                 echo "$BADGES"
 
                 # Update README
+                echo "📝 Updating README.md with new badges..."
                 grep -q "^!\\[Coverage\\]" README.md || die "Coverage badge not found in README.md"
 
                 cp README.md README.md.bak
