@@ -11,7 +11,6 @@ GIT_USER_EMAIL="ozer@appcircle.io"
 GIT_USER_NAME="Özer from Jenkins"
 
 echo "🤖 Starting coverage badge update script..."
-echo "Repository: $GITHUB_PAT"
 
 # Functions
 die() {
@@ -45,7 +44,11 @@ TEST_OUTPUT=$(npm test 2>&1) || die "Tests failed, skipping badge update"
 
 # Extract test count and generate badges
 TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -oE 'Tests[[:space:]]+[0-9]+[[:space:]]+passed' | grep -oE '[0-9]+' | head -1)
-BADGES=$(node scripts/parse-coverage.js badges ${TESTS_PASSED:+"{\"passed\":$TESTS_PASSED}"} 2>/dev/null) || die "Failed to generate badges"
+if [ -n "$TESTS_PASSED" ]; then
+    BADGES=$(node scripts/parse-coverage.js badges "{\"passed\":$TESTS_PASSED}" 2>/dev/null) || die "Failed to generate badges"
+else
+    BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null) || die "Failed to generate badges"
+fi
 
 echo "Generated badges:"
 echo "$BADGES"
