@@ -15,7 +15,7 @@ echo "🤖 Starting coverage badge update script..."
 # Functions
 die() {
     echo "⚠️  $1"
-    [ -f README.md.bak ] && mv README.md.bak README.md
+    [ -f "$PROJECT_ROOT/README.md.bak" ] && mv "$PROJECT_ROOT/README.md.bak" "$PROJECT_ROOT/README.md"
     exit 0
 }
 
@@ -35,6 +35,10 @@ api_call() {
 # Main script
 echo "📊 Updating coverage badges in README..."
 
+# Get the project root directory (parent of scripts/)
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$PROJECT_ROOT"
+
 # Install dependencies if needed
 [ ! -d "node_modules" ] && yarn install
 
@@ -45,32 +49,32 @@ TEST_OUTPUT=$(npm test 2>&1) || die "Tests failed, skipping badge update"
 # Extract test count and generate badges
 TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -oE 'Tests[[:space:]]+[0-9]+[[:space:]]+passed' | grep -oE '[0-9]+' | head -1)
 if [ -n "$TESTS_PASSED" ]; then
-    BADGES=$(node scripts/parse-coverage.js badges "{\"passed\":$TESTS_PASSED}" 2>/dev/null) || die "Failed to generate badges"
+    BADGES=$(node "$PROJECT_ROOT/scripts/parse-coverage.js" badges "{\"passed\":$TESTS_PASSED}" 2>/dev/null) || die "Failed to generate badges"
 else
-    BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null) || die "Failed to generate badges"
+    BADGES=$(node "$PROJECT_ROOT/scripts/parse-coverage.js" badges 2>/dev/null) || die "Failed to generate badges"
 fi
 
 echo "Generated badges:"
 echo "$BADGES"
 
 # Update README
-grep -q "^!\\[Coverage\\]" README.md || die "Coverage badge not found in README.md"
+grep -q "^!\\[Coverage\\]" "$PROJECT_ROOT/README.md" || die "Coverage badge not found in README.md"
 
-cp README.md README.md.bak
-grep -v "^!\\[Coverage\\]\\|^!\\[Build\\]\\|^!\\[Tests\\]\\|^!\\[Branches\\]\\|^!\\[Functions\\]" README.md > README.md.tmp
+cp "$PROJECT_ROOT/README.md" "$PROJECT_ROOT/README.md.bak"
+grep -v "^!\\[Coverage\\]\\|^!\\[Build\\]\\|^!\\[Tests\\]\\|^!\\[Branches\\]\\|^!\\[Functions\\]" "$PROJECT_ROOT/README.md" > "$PROJECT_ROOT/README.md.tmp"
 
-LINE_NUM=$(grep -n "^!\\[NPM Version\\]" README.md.tmp | cut -d: -f1)
+LINE_NUM=$(grep -n "^!\\[NPM Version\\]" "$PROJECT_ROOT/README.md.tmp" | cut -d: -f1)
 if [ -n "$LINE_NUM" ]; then
-    { head -n "$LINE_NUM" README.md.tmp; echo "$BADGES"; tail -n +$((LINE_NUM + 1)) README.md.tmp; } > README.md
+    { head -n "$LINE_NUM" "$PROJECT_ROOT/README.md.tmp"; echo "$BADGES"; tail -n +$((LINE_NUM + 1)) "$PROJECT_ROOT/README.md.tmp"; } > "$PROJECT_ROOT/README.md"
 else
-    { echo "$BADGES"; echo ""; cat README.md.tmp; } > README.md
+    { echo "$BADGES"; echo ""; cat "$PROJECT_ROOT/README.md.tmp"; } > "$PROJECT_ROOT/README.md"
 fi
-rm -f README.md.tmp
+rm -f "$PROJECT_ROOT/README.md.tmp"
 
 # Check for changes
-if git diff --quiet README.md; then
+if git diff --quiet "$PROJECT_ROOT/README.md"; then
     echo "ℹ️  No changes to coverage badges"
-    rm -f README.md.bak
+    rm -f "$PROJECT_ROOT/README.md.bak"
     exit 0
 fi
 
@@ -82,7 +86,7 @@ BRANCH_NAME="coverage-badges-$(date +%Y%m%d-%H%M%S)"
 echo "📝 Creating branch: $BRANCH_NAME"
 
 git checkout -b "$BRANCH_NAME" || die "Failed to create branch"
-git add README.md
+git add "$PROJECT_ROOT/README.md"
 git commit -m "docs: update coverage badges [skip ci]" || die "Failed to commit changes"
 
 echo "📤 Pushing branch to remote..."
@@ -107,7 +111,7 @@ MERGE_RESPONSE=$(api_call PUT "pulls/${PR_NUMBER}/merge" '{"merge_method":"squas
 if echo "$MERGE_RESPONSE" | grep -q '"merged":true'; then
     echo "✅ PR #${PR_NUMBER} merged successfully"
     api_call DELETE "git/refs/heads/$BRANCH_NAME" > /dev/null
-    rm -f README.md.bak
+    rm -f "$PROJECT_ROOT/README.md.bak"
 else
     echo "⚠️  Could not auto-merge PR #${PR_NUMBER}"
     echo "💡 This may be due to:"
@@ -119,7 +123,7 @@ else
     echo "   https://github.com/${REPO}/pull/${PR_NUMBER}"
     echo ""
     echo "Response: $MERGE_RESPONSE"
-    rm -f README.md.bak
+    rm -f "$PROJECT_ROOT/README.md.bak"
 fi
 
 exit 0
