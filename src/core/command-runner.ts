@@ -5507,7 +5507,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       }
       throw new AppcircleExitError('', 1);
     }
-    if (!params.commitId) {
+    if (!params.commitId && !params.commitHash) {
       const desc = getLongDescriptionForCommand(command.fullCommandName);
       if (desc) {
         console.error(`\n${desc}\n`);
@@ -5521,12 +5521,23 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       }
       throw new AppcircleExitError('', 1);
     }
+    
     const spinner = createOra('Listing...').start();
     try {
-      const responseData = await getBuildsOfCommit(params);
+      // Resolve commitId from commitHash if commitHash is provided
+      let commitId = params.commitId;
+      if (!commitId && params.commitHash) {
+        const allCommitsByBranchId = await getCommits({ branchId: params.branchId });
+        const commit = allCommitsByBranchId?.find((c: any) => c.hash === params.commitHash);
+        if (!commit) {
+          throw new Error('Commit not found');
+        }
+        commitId = commit.id;
+      }
+      
+      const responseData = await getBuildsOfCommit({ ...params, commitId });
       if (!responseData || !responseData.builds || responseData.builds.length === 0) {
-        spinner.fail('No Builds available');
-        throw new AppcircleExitError('No Builds available', 1);
+        throw new Error('No builds found');
       }
       spinner.stop();
       const build = responseData?.builds?.find((build: any) => build.id === params.buildId);

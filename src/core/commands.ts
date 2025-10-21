@@ -738,7 +738,7 @@ LEARN MORE
 
 USAGE
   appcircle build view --profileId <uuid> --branchId <uuid> --commitId <uuid> --buildId <uuid>
-  appcircle build view --profile <string> --branch <string> --commitId <uuid> --buildId <uuid>
+  appcircle build view --profile <string> --branch <string> --commitHash <string> --buildId <uuid>
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
@@ -746,10 +746,22 @@ REQUIRED OPTIONS
   --branchId <uuid>     Branch ID (UUID format)
   --branch <string>     Branch name (alternative to --branchId)
   --commitId <uuid>     Commit ID (UUID format)
+  --commitHash <string> Git commit hash (alternative to --commitId)
   --buildId <uuid>      Build ID (UUID format)
 
+DESCRIPTION
+  View detailed information about a specific build. You can identify the commit using either:
+  - Appcircle's commit ID (--commitId), or
+  - Git commit hash (--commitHash)
+
 EXAMPLES
+  # Using Appcircle commit ID
   appcircle build view --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
+  
+  # Using Git commit hash
+  appcircle build view --profile "My iOS Project" --branch "main" --commitHash a1b2c3d4e5f6 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
+  
+  # Mixed usage with names
   appcircle build view --profile "My iOS Project" --branch "main" --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
 
 LEARN MORE
@@ -800,7 +812,16 @@ LEARN MORE
             description: 'Commit Message (ID) of your build',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
-            required: true,
+            required: false,
+          },
+          {
+            name: 'commitHash',
+            description: "Git commit hash (alternative to 'commitId')",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
           },
           {
             name: 'buildId',
