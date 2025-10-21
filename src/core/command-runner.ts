@@ -2809,13 +2809,17 @@ export const handleCertificateList = async (command: ProgramCommand) => {
 export const handleCertificateUpload = async (command: ProgramCommand, params: any) => {
   const spinner = createOra('Try to upload the Certificate').start();
   try {
-    const responseData = await uploadP12Certificate(params);
+    // Expand tilde and resolve path
+    const expandedPath = params.path ? path.resolve(params.path.replace(/^~/, os.homedir())) : params.path;
+    const responseData = await uploadP12Certificate({
+      ...params,
+      path: expandedPath
+    });
+    spinner.succeed('Certificate uploaded successfully.\n\n');
     commandWriter(CommandTypes.SIGNING_IDENTITY, {
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
-    spinner.text = `Certificate uploaded successfully.\n\n`;
-    spinner.succeed();
   } catch (e) {
     spinner.fail('Upload failed');
     throw e;
@@ -2947,9 +2951,13 @@ export const handleKeystoreCreate = async (command: ProgramCommand, params: any)
 export const handleKeystoreUpload = async (command: ProgramCommand, params: any) => {
   const spinner = createOra('Trying to upload the Keystore file').start();
   try {
-    await uploadAndroidKeystoreFile(params);
-    spinner.text = `Keystore file uploaded successfully.\n\n`;
-    spinner.succeed();
+    // Expand tilde and resolve path
+    const expandedPath = params.path ? path.resolve(params.path.replace(/^~/, os.homedir())) : params.path;
+    await uploadAndroidKeystoreFile({
+      ...params,
+      path: expandedPath
+    });
+    spinner.succeed('Keystore file uploaded successfully.\n\n');
   } catch (e) {
     spinner.fail('Upload failed: Keystore was tampered with, or password was incorrect');
   }
@@ -3039,9 +3047,13 @@ export const handleProvisioningProfileList = async (command: ProgramCommand) => 
 export const handleProvisioningProfileUpload = async (command: ProgramCommand, params: any) => {
   const spinner = createOra('Trying to upload the Provisioning Profile').start();
   try {
-    await uploadProvisioningProfile(params);
-    spinner.text = `Provisioning Profile uploaded successfully.\n\n`;
-    spinner.succeed();
+    // Expand tilde and resolve path
+    const expandedPath = params.path ? path.resolve(params.path.replace(/^~/, os.homedir())) : params.path;
+    await uploadProvisioningProfile({
+      ...params,
+      path: expandedPath
+    });
+    spinner.succeed('Provisioning Profile uploaded successfully.\n\n');
   } catch (e) {
     spinner.fail('Upload failed');
     throw e;

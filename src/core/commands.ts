@@ -1611,7 +1611,7 @@ EXAMPLES
   appcircle signing-identity certificate list
 
 LEARN MORE
-  Use 'appcircle signing-identity certificate upload --path <path> --password <password>' to upload new certificates.
+  Use 'appcircle signing-identity certificate upload --path <path>' to upload new certificates.
   Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to view certificate details.`,
             params:[],
           },
@@ -1621,17 +1621,24 @@ LEARN MORE
             longDescription: `Upload a new iOS certificate bundle to your organization
 
 USAGE
-  appcircle signing-identity certificate upload --path <path> --password <password>
+  appcircle signing-identity certificate upload --path <path> [--password <password>]
 
 REQUIRED OPTIONS
   --path <path>         Path to the certificate file (.p12 format)
-  --password <password> Certificate bundle password
+
+OPTIONAL OPTIONS
+  --password <password> Certificate bundle password (if the certificate is password-protected)
 
 DESCRIPTION
   Upload and install a new iOS certificate bundle (.p12 file) for code signing.
   The certificate will be available for use in your iOS build processes.
+  If your certificate is password-protected, provide the password using the --password option.
 
 EXAMPLES
+  # Upload a certificate without password
+  appcircle signing-identity certificate upload --path ./ios_distribution.p12
+  
+  # Upload a password-protected certificate
   appcircle signing-identity certificate upload --path ./ios_distribution.p12 --password "mypassword"
   appcircle signing-identity certificate upload --path ~/certificates/dev_cert.p12 --password "securepass"
 
@@ -1648,10 +1655,10 @@ LEARN MORE
               },
               {
                 name: 'password',
-                description: 'Certificate Password',
+                description: 'Certificate Password (optional)',
                 type: CommandParameterTypes.PASSWORD,
                 valueType: 'string',
-                required: true
+                required: false
               },
             ],
           },
