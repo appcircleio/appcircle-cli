@@ -3218,24 +3218,34 @@ ${users.map((user: any) => `  - ${user.email} (${user.fullName || 'No name'})`).
   params.role = Array.isArray(params.role) ? params.role : [params.role];
   if (command.fullCommandName === `${PROGRAM_NAME}-organization-view`) {
     const spinner = createOra('Listing Organizations...').start();
-    const response = params.organizationId === 'all' || !params.organizationId ? await getOrganizations() : await getOrganizationDetail(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.ORGANIZATION, {
-      fullCommandName: command.fullCommandName,
-      data: response,
-    });
+    try {
+      const response = params.organizationId === 'all' || !params.organizationId ? await getOrganizations() : await getOrganizationDetail(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.ORGANIZATION, {
+        fullCommandName: command.fullCommandName,
+        data: response,
+      });
+    } catch (error) {
+      spinner.stop();
+      throw error;
+    }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-view`) {
     const spinner = createOra('Listing Organization Users...').start();
-    const users = await getOrganizationUsersWithRoles(params);
-    const invitations = await getOrganizationInvitations(params);
-    spinner.succeed();
-    commandWriter(CommandTypes.ORGANIZATION, {
-      fullCommandName: command.fullCommandName,
-      data: {
-        users,
-        invitations,
-      },
-    });
+    try {
+      const users = await getOrganizationUsersWithRoles(params);
+      const invitations = await getOrganizationInvitations(params);
+      spinner.succeed();
+      commandWriter(CommandTypes.ORGANIZATION, {
+        fullCommandName: command.fullCommandName,
+        data: {
+          users,
+          invitations,
+        },
+      });
+    } catch (error) {
+      spinner.stop();
+      throw error;
+    }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-organization-user-invite`) {
     await inviteUserToOrganization({ organizationId: params.organizationId, email: params.email, role: params.role || [] });
     commandWriter(CommandTypes.ORGANIZATION, {
