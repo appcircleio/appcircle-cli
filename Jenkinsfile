@@ -244,6 +244,11 @@ pipeline {
 
                 echo "🚀 Starting Auto Alpha Version Publish 🚀"
                 echo "==========================================="
+                echo "📋 Build Info:"
+                echo "   Branch: ${GIT_BRANCH}"
+                echo "   Build Number: ${BUILD_NUMBER}"
+                echo "   Commit: ${GIT_COMMIT:0:8}"
+                echo "==========================================="
 
                 # Configuration
                 REPO="appcircleio/appcircle-cli"
