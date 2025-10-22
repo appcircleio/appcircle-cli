@@ -2077,7 +2077,7 @@ export const promptForFailedBuildLogs = async (finalStatusResponse: any, latestB
       throw err;
     }
     // For other errors, wrap them
-    throw new AppcircleExitError('Build failed, user chose to exit', 1);
+    throw new AppcircleExitError('Build failed', 1);
   }
 };
 
@@ -4969,7 +4969,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                 throw new AppcircleExitError('Build failed', 1);
               }
             } catch (err) {
-              throw new AppcircleExitError('Build failed, user chose to exit', 1);
+              throw new AppcircleExitError('Build failed', 1);
             }
           }
         } else {
@@ -4979,10 +4979,9 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       } catch (e) {
         if (interval) clearInterval(interval);
         if (e instanceof AppcircleExitError) {
-          if (e.code === 0 || e.message === '') {
-            throw e;
-          }
+          throw e;
         }
+        throw e;
       }
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`) {

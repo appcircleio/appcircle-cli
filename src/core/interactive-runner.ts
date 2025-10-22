@@ -2259,7 +2259,7 @@ export const runCommandsInteractively = async () => {
       if (err.code === 0) {
         process.exit(0);
       } else {
-        console.error(err.message);
+        console.error(chalk.red(`\n${err.message} (exit code: ${err.code})`));
         // Only restart in explicit interactive mode
         const argv = minimist(process.argv.slice(2));
         const isExplicitInteractiveMode = argv.i || argv.interactive;

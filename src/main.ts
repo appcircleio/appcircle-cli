@@ -40,7 +40,7 @@ export const handleError = (error: any) => {
       if (getConsoleOutputType() === 'json') {
         console.error(JSON.stringify(error));
       } else {
-        console.error(error.message);
+        console.error(chalk.red(`\n${error.message} (exit code: ${error.code})`));
       }
     }
     process.exit(error.code);
