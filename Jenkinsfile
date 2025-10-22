@@ -230,7 +230,10 @@ pipeline {
 
         stage('Publish') {
             when {
-                expression { params.PUBLISH == true }
+                anyOf {
+                    expression { params.PUBLISH == true }
+                    buildingTag()
+                }
             }
             steps {
                 sh '''#!/bin/bash
