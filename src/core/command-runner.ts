@@ -2038,7 +2038,7 @@ export const handleBuildFailureCompletion = async (finalStatusResponse: any, lat
     if (shouldDownloadLogs) {
       await downloadBuildLogsWithSpinner(commitId, buildId, params, defaultDownloadDir, downloadBuildLogs, responseData);
     }
-    throw new AppcircleExitError('Build completed', 0);
+    throw new AppcircleExitError('Build failed', 1);
   }
   
   // Interactive prompt for log download
@@ -4857,7 +4857,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                   logSpinner.fail(`Cannot download logs since the build failed: ${e.message}`);
                 }
               }
-              throw new AppcircleExitError('Build completed', 0);
+              throw new AppcircleExitError('Build failed', 1);
             }
             
             // Offer to download logs even on failure using enquirer
@@ -4910,7 +4910,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                     await downloadBuildLogs(responseData.queueItemId, { path: buildLogPath });
                   }
                   console.log(chalk.green('Build log downloaded successfully.'));
-                  throw new AppcircleExitError('', 0);
+                  throw new AppcircleExitError('Build failed', 1);
                 } catch (error: any) {
                   if (error instanceof AppcircleExitError) {
                     throw error;
