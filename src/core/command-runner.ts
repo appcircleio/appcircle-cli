@@ -1648,12 +1648,17 @@ export const validateCommandParameters = (params: any, requiredParams: string[],
 
 export const createListCommand = async (spinnerMessage: string, dataFunction: Function, params: any, commandType: CommandTypes, command: ProgramCommand) => {
   const spinner = createOra(spinnerMessage).start();
-  const responseData = await dataFunction(params);
-  spinner.stop();
-  commandWriter(commandType, {
-    fullCommandName: command.fullCommandName,
-    data: responseData,
-  });
+  try {
+    const responseData = await dataFunction(params);
+    spinner.stop();
+    commandWriter(commandType, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } catch (error) {
+    spinner.stop();
+    throw error;
+  }
 };
 
 // Build artifact download utilities - use utility version
@@ -2143,22 +2148,32 @@ export const validateEnterpriseAppVersionParams = async (command: ProgramCommand
 
 export const handleEnterpriseProfileList = async (command: ProgramCommand) => {
   const spinner = createOra('Listing Enterprise Profiles...').start();
-  const responseData = await getEnterpriseProfiles();
-  spinner.stop();
-  commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
-    fullCommandName: command.fullCommandName,
-    data: responseData,
-  });
+  try {
+    const responseData = await getEnterpriseProfiles();
+    spinner.stop();
+    commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } catch (error) {
+    spinner.stop();
+    throw error;
+  }
 };
 
 export const handleEnterpriseVersionList = async (command: ProgramCommand, params: any) => {
   const spinner = createOra('Listing Enterprise App Versions...').start();
-  const responseData = await getEnterpriseAppVersions(params);
-  spinner.stop();
-  commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
-    fullCommandName: command.fullCommandName,
-    data: responseData,
-  });
+  try {
+    const responseData = await getEnterpriseAppVersions(params);
+    spinner.stop();
+    commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } catch (error) {
+    spinner.stop();
+    throw error;
+  }
 };
 
 export const handleEnterpriseVersionPublish = async (command: ProgramCommand, params: any) => {
@@ -2417,17 +2432,22 @@ export const validateTestingGroupParams = async (command: ProgramCommand, params
 
 export const handleDistributionProfileList = async (command: ProgramCommand, params: any) => {
   const spinner = createOra('Listing Distribution Profiles...').start();
-  const responseData = await getDistributionProfiles(params);
-  if (!responseData || responseData.length === 0) {
-    spinner.text = 'No Distribution Profile available';
-    spinner.fail();
-    throw new AppcircleExitError('No Distribution Profile available', 1);
+  try {
+    const responseData = await getDistributionProfiles(params);
+    if (!responseData || responseData.length === 0) {
+      spinner.text = 'No Distribution Profile available';
+      spinner.fail();
+      throw new AppcircleExitError('No Distribution Profile available', 1);
+    }
+    spinner.stop();
+    commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } catch (error) {
+    spinner.stop();
+    throw error;
   }
-  spinner.stop();
-  commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
-    fullCommandName: command.fullCommandName,
-    data: responseData,
-  });
 };
 
 export const handleDistributionProfileCreate = async (command: ProgramCommand, params: any) => {
@@ -2592,24 +2612,34 @@ export const handleDistributionProfileAutoSend = async (command: ProgramCommand,
 
 export const handleTestingGroupList = async (command: ProgramCommand) => {
   const spinner = createOra('Listing Testing Groups...').start();
-  const responseData = await getTestingGroups();
-  spinner.stop();
-  commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
-    fullCommandName: command.fullCommandName,
-    data: responseData,
-  });
+  try {
+    const responseData = await getTestingGroups();
+    spinner.stop();
+    commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } catch (error) {
+    spinner.stop();
+    throw error;
+  }
 };
 
 export const handleTestingGroupView = async (command: ProgramCommand, params: any) => {
   await validateTestingGroupParams(command, params);
   
   const spinner = createOra('Getting Testing Group...').start();
-  const responseData = await getTestingGroupById({ testingGroupId: params.testingGroupId });
-  spinner.stop();
-  commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
-    fullCommandName: command.fullCommandName,
-    data: responseData,
-  });
+  try {
+    const responseData = await getTestingGroupById({ testingGroupId: params.testingGroupId });
+    spinner.stop();
+    commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } catch (error) {
+    spinner.stop();
+    throw error;
+  }
 };
 
 export const handleTestingGroupCreate = async (command: ProgramCommand, params: any) => {
