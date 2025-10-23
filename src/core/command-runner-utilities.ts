@@ -3,10 +3,9 @@
  * These functions handle specific command processing logic that can be tested independently
  */
 
-// Use require for CommonJS modules to ensure consistent behavior in both tests and production
-import path = require('path');
-import os = require('os');
-import fs = require('fs');
+import path from 'path';
+import os from 'os';
+import fs from 'fs';
 import { ProgramError } from './ProgramError';
 import { AppcircleExitError } from './AppcircleExitError';
 import { CURRENT_PARAM_VALUE, UNKNOWN_PARAM_VALUE, PROGRAM_NAME } from '../constant';
