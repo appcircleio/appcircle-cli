@@ -1,8 +1,5 @@
 pipeline {
     agent { label 'agent'}
-    parameters {
-        booleanParam(name: 'PUBLISH', defaultValue: false, description: 'Trigger publish stage')
-    }
     environment {
         NPM_AUTH_TOKEN = credentials('Appcircle-CLI-NPM-Cred')
         GITHUB_PAT = credentials('ozer-github-pat')
@@ -228,9 +225,77 @@ pipeline {
             }
         }
 
+        stage('Auto Publish Alpha') {
+            when {
+                allOf {
+                    anyOf {
+                        branch 'develop'
+                        branch pattern: 'pipeline/test-.*', comparator: 'REGEXP'
+                        branch pattern: 'fixes/.*', comparator: 'REGEXP'
+                        changeRequest()
+                    }
+                    not { changelog '.*\\[skip ci\\].*' }
+                    not { buildingTag() }
+                }
+            }
+            steps {
+                sh '''#!/bin/bash
+                # shellcheck shell=bash
+                set -x
+                set -euo pipefail
+
+                echo "🚀 Starting Auto Alpha Version Publish 🚀"
+                echo "==========================================="
+                echo "📋 Build Info:"
+                echo "   Branch: ${GIT_BRANCH}"
+                echo "   Build Number: ${BUILD_NUMBER}"
+                echo "   Commit: ${GIT_COMMIT:0:8}"
+                echo "==========================================="
+
+                # Configuration
+                REPO="appcircleio/appcircle-cli"
+                GIT_USER_EMAIL="ozer@appcircle.io"
+                GIT_USER_NAME="Özer from Jenkins"
+
+                # Install dependencies if needed
+                echo "📦 Installing dependencies..."
+                [ ! -d "node_modules" ] && yarn install
+
+                # Build the project
+                echo "⚙️  Building project..."
+                npm run build
+
+                # Run tests
+                echo "🧪 Running tests..."
+                npm test
+
+                # Configure git
+                git config user.email "$GIT_USER_EMAIL"
+                git config user.name "$GIT_USER_NAME"
+
+                # Bump alpha version
+                echo "📈 Bumping alpha version..."
+                npm run bump:version:alpha
+
+                # Get the new version and tag
+                NEW_VERSION=$(node -p "require('./package.json').version")
+                TAG="v${NEW_VERSION}"
+                echo "📌 New version: ${TAG}"
+
+                # Push tag to trigger publish stage
+                echo "📤 Pushing tag ${TAG} to remote..."
+                git push "https://${GITHUB_PAT}@github.com/${REPO}.git" "$TAG"
+
+                echo "✅ Alpha version ${TAG} created and pushed!"
+                echo "🎯 This will trigger the Publish stage automatically."
+                echo "==========================================="
+                '''
+            }
+        }
+
         stage('Publish') {
             when {
-                expression { params.PUBLISH == true }
+                buildingTag()
             }
             steps {
                 sh '''#!/bin/bash
