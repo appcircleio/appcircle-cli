@@ -3,9 +3,10 @@
  * These functions handle specific command processing logic that can be tested independently
  */
 
-import path from 'path';
-import os from 'os';
-import fs from 'fs';
+// Use require for CommonJS modules to ensure consistent behavior in both tests and production
+import path = require('path');
+import os = require('os');
+import fs = require('fs');
 import { ProgramError } from './ProgramError';
 import { AppcircleExitError } from './AppcircleExitError';
 import { CURRENT_PARAM_VALUE, UNKNOWN_PARAM_VALUE, PROGRAM_NAME } from '../constant';
@@ -58,17 +59,25 @@ export const validateParameterErrorFlag = (params: any): ValidationResult => {
 
 /**
  * Expands tilde (~) in file paths to home directory
+ * Only expands ~ at the beginning of the path (e.g., ~/Desktop or ~\Desktop)
  * @param filePath Path that may contain tilde
  * @returns Expanded path
  */
 export const expandTildeInPath = (filePath: string): string => {
   if (!filePath) return filePath;
   
+  const trimmedPath = filePath.trim();
   const homeDir = os.homedir();
-  if (filePath.includes('~')) {
-    return filePath.replace(/~/g, homeDir);
+  
+  // Only expand tilde if it's at the start of the path
+  if (trimmedPath === '~') {
+    return homeDir;
   }
-  return filePath;
+  if (trimmedPath.startsWith('~/') || trimmedPath.startsWith('~\\')) {
+    return path.join(homeDir, trimmedPath.slice(2));
+  }
+  
+  return trimmedPath;
 };
 
 /**

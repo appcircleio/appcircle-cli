@@ -1387,7 +1387,7 @@ export const handleConfigTrustAction = (trustAppcircleCertificate: any) => {
 
 // File validation and path handling utilities
 export const validateFileExists = (filePath: string, errorMessage: string) => {
-  const expandedPath = path.resolve(filePath.replace('~', os.homedir()));
+  const expandedPath = path.resolve(expandTildeInPath(filePath));
   if (!fs.existsSync(expandedPath)) {
     throw new AppcircleExitError(errorMessage, 1);
   }
@@ -1564,7 +1564,7 @@ export const promptUserAction = async (message: string, choices: { name: string,
 
 // Additional file path expansion and validation utilities
 export const expandAndValidateFilePath = (filePath: string, homeDir: string): string => {
-  const expandedPath = path.resolve(filePath.replace('~', homeDir));
+  const expandedPath = path.resolve(expandTildeInPath(filePath));
   if (!fs.existsSync(expandedPath)) {
     throw new Error(`File not found: ${expandedPath}`);
   }
@@ -1849,7 +1849,7 @@ export const monitorBuildProgress = async (taskId: string, params: any, getBuild
 export const handleBuildSuccessCompletion = async (finalStatusResponse: any, latestBuildId: string | null, params: any, responseData: any, downloadArtifact: Function, downloadBuildLogs: Function) => {
   const homeDir = os.homedir();
   const defaultDownloadDir = path.join(homeDir, 'Downloads');
-  const downloadPath = params.path || defaultDownloadDir;
+  const downloadPath = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
   
   // Check if automatic download parameters are provided
   const shouldDownloadLogs = params.downloadLogs === true || params['download-logs'] === true;
@@ -2888,7 +2888,7 @@ export const handleCertificateDownload = async (command: ProgramCommand, params:
     (certificate: any) => certificate.id === params.certificateId
   );
   const downloadPath = path.resolve(
-    (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
+    expandTildeInPath(params.path || path.join(os.homedir(), 'Downloads'))
   );
   const fileName = p12Cert ? p12Cert.filename : 'download.cer';
   const spinner = createOra(
@@ -2994,7 +2994,7 @@ export const handleKeystoreUpload = async (command: ProgramCommand, params: any)
 };
 
 export const handleKeystoreDownload = async (command: ProgramCommand, params: any) => {
-  const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
+  const downloadPath = path.resolve(expandTildeInPath(params.path || path.join(os.homedir(), 'Downloads')))
   const spinner = createOra(`Searching file...`).start();
   try {
     const keystoreDetail = await getKeystoreDetailById({ keystoreId: params.keystoreId });
@@ -3091,7 +3091,7 @@ export const handleProvisioningProfileUpload = async (command: ProgramCommand, p
 };
 
 export const handleProvisioningProfileDownload = async (command: ProgramCommand, params: any) => {
-  const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
+  const downloadPath = path.resolve(expandTildeInPath(params.path || path.join(os.homedir(), 'Downloads')))
   const spinner = createOra('Trying to download the Provisioning Profile').start();
   try {
     const profile = await getProvisioningProfileDetailById({ provisioningProfileId: params.provisioningProfileId });
@@ -3786,8 +3786,7 @@ export const handlePublishVersionDelete = async (command: ProgramCommand, params
 export const setupDownloadDirectoryForAppVersion = (params: any): string => {
   const homeDir = os.homedir();
   const defaultDownloadDir = path.join(homeDir, 'Downloads');
-  let targetDirectory = params.path ? params.path.replace('~', homeDir) : defaultDownloadDir;
-  targetDirectory = path.resolve(targetDirectory);
+  let targetDirectory = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
 
   if (!fs.existsSync(targetDirectory)) {
     fs.mkdirSync(targetDirectory, { recursive: true });
@@ -3862,7 +3861,7 @@ export const validateVariableGroupUploadFile = (params: any, spinner: any): stri
     }
   }
   
-  const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+  const expandedPath = path.resolve(expandTildeInPath(params.filePath));
   if (!fs.existsSync(expandedPath)) {
     spinner.fail('File not found');
     throw new AppcircleExitError('File not found', 1);
@@ -4272,6 +4271,15 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     }
     // If non-interactive and no parameter provided, use default (SUMMARY)
     
+    // Validate compatibility: --no-wait should not be used with monitoring modes
+    const hasNoWaitFlag = process.argv.includes('--no-wait');
+    if (hasNoWaitFlag && monitorMode !== BuildMonitorMode.NONE) {
+      console.warn(chalk.yellow('\n⚠ Warning: --no-wait flag is incompatible with monitoring modes.'));
+      console.warn(chalk.yellow('The build will return immediately without monitoring.'));
+      console.warn(chalk.gray('Tip: Use --monitor none with --no-wait, or remove --no-wait to enable monitoring.\n'));
+      monitorMode = BuildMonitorMode.NONE;
+    }
+    
     // Handle "None" monitor mode - just return Task/Build ID and exit
     if (monitorMode === BuildMonitorMode.NONE) {
       const spinner = createOra(`Generating Task ID...`).start();
@@ -4381,7 +4389,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         }
       }
     } catch (error: any) {
-      spinner.fail('Failed to start build');
+      // Only show failure message for actual errors, not for intentional AppcircleExitError
+      if (!(error instanceof AppcircleExitError)) {
+        spinner.fail('Failed to start build');
+      }
       throw error;
     }
 
@@ -4595,7 +4606,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             
             const homeDir = os.homedir();
             const defaultDownloadDir = path.join(homeDir, 'Downloads');
-            const downloadPath = params.path || defaultDownloadDir;
+            const downloadPath = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
             
             // Check if automatic download parameters are provided
             // Commander.js converts kebab-case to camelCase
@@ -4840,7 +4851,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             
             const homeDir = os.homedir();
             const defaultDownloadDir = path.join(homeDir, 'Downloads');
-            const downloadPath = params.path || defaultDownloadDir;
+            const downloadPath = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
             
             // Check if automatic download parameters are provided
             const shouldDownloadLogs = params.downloadLogs === true || params['download-logs'] === true;
@@ -5142,7 +5153,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     }
     const homeDir = os.homedir();
     const defaultDownloadDir = path.join(homeDir, 'Downloads');
-    let downloadPath = params.path ? path.resolve((params.path).replace('~', homeDir)) : defaultDownloadDir;
+    let downloadPath = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
     
     if (!fs.existsSync(downloadPath)) {
       try {
@@ -5331,7 +5342,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           params.variableGroupId = match[1];
         }
       }
-      const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+      const expandedPath = path.resolve(expandTildeInPath(params.filePath));
       if (!fs.existsSync(expandedPath)) {
         spinner.fail('File not found');
         throw new AppcircleExitError('File not found', 1);
@@ -5506,7 +5517,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           spinner.fail('File path is required for file type variables');
           process.exit(1);
         }
-        const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+        const expandedPath = path.resolve(expandTildeInPath(params.filePath));
         if (!fs.existsSync(expandedPath)) {
           spinner.fail('File not exists');
           process.exit(1);
@@ -5853,7 +5864,7 @@ export async function downloadBuildLogs(taskIdOrParams: string | { commitId?: st
 
     if (providedPath) {
       if (typeof providedPath === 'string' && providedPath.trim() !== "") {
-        const cliPath = path.resolve(providedPath.trim().replace('~', homeDir));
+        const cliPath = path.resolve(expandTildeInPath(providedPath));
         if (!fs.existsSync(cliPath)) {
           try {
             fs.mkdirSync(cliPath, { recursive: true });
@@ -5982,7 +5993,7 @@ export async function downloadPublishLogs(publishDetail: any, platform: string, 
     const defaultDownloadDir = path.join(homeDir, 'Downloads');
 
     if (userProvidedPath && userProvidedPath.trim() !== "") {
-        finalDownloadPath = path.resolve(userProvidedPath.trim().replace('~', homeDir));
+        finalDownloadPath = path.resolve(expandTildeInPath(userProvidedPath));
         if (!fs.existsSync(finalDownloadPath)) {
             try {
                 fs.mkdirSync(finalDownloadPath, { recursive: true });
