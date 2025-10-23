@@ -26,19 +26,24 @@ vi.mock('../../../src/utils/size-limit', () => ({
 }));
 
 // Mock command-runner-utilities for extractVariableGroupId and new functions
-vi.mock('../../../src/core/command-runner-utilities', () => ({
-  extractVariableGroupId: vi.fn((id) => id),
-  validateFileForUpload: vi.fn().mockReturnValue({
-    isValid: true,
-    resolvedPath: '/resolved/path.apk'
-  }),
-  validateFileSizeForUpload: vi.fn().mockReturnValue({
-    isValid: true,
-    stats: { size: 1024 },
-    maxBytes: 3 * 1024 * 1024 * 1024
-  }),
-  generateArtifactFileName: vi.fn().mockReturnValue('artifacts-123456.zip')
-}));
+vi.mock('../../../src/core/command-runner-utilities', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return {
+    ...actual,
+    extractVariableGroupId: vi.fn((id) => id),
+    expandTildeInPath: actual.expandTildeInPath, // Use the real implementation
+    validateFileForUpload: vi.fn().mockReturnValue({
+      isValid: true,
+      resolvedPath: '/resolved/path.apk'
+    }),
+    validateFileSizeForUpload: vi.fn().mockReturnValue({
+      isValid: true,
+      stats: { size: 1024 },
+      maxBytes: 3 * 1024 * 1024 * 1024
+    }),
+    generateArtifactFileName: vi.fn().mockReturnValue('artifacts-123456.zip')
+  };
+});
 
 // Import functions to test
 import {

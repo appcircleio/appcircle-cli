@@ -703,7 +703,8 @@ describe('Command Runner - Comprehensive Tests', () => {
       command.name = vi.fn().mockReturnValue('start');
 
       // Should trigger build command handler but exit immediately due to --no-wait
-      await expect(runCommand(command)).rejects.toThrow('Build queued successfully');
+      // The error message has been changed to "Task ID generated" in the new implementation
+      await expect(runCommand(command)).rejects.toThrow('Task ID generated');
       expect(command.isGroupCommand).toHaveBeenCalledWith(CommandTypes.BUILD);
       
       // Restore original argv
