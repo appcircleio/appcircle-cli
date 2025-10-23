@@ -231,6 +231,10 @@ pipeline {
                     anyOf {
                         branch 'develop'
                         branch pattern: 'pipeline/test-.*', comparator: 'REGEXP'
+                        allOf {
+                            changeRequest()
+                            changeRequest target: 'develop'
+                        }
                     }
                     not { changelog '.*\\[skip ci\\].*' }
                     not { buildingTag() }
