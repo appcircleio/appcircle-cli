@@ -4219,25 +4219,49 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     const monitorParam = command.opts()['monitor'];
     const executionModeParam = command.opts()['executionMode']; // For backward compatibility
     
+    // Validate --monitor parameter if provided
+    const monitorFlagIndex = process.argv.indexOf('--monitor');
+    const hasMonitorFlag = monitorFlagIndex !== -1;
+    let hasInvalidMonitorValue = false;
+    
+    if (hasMonitorFlag && !monitorParam) {
+      // --monitor flag exists but no value was provided (or Commander.js will catch it)
+      // This happens when --monitor is the last argument or followed by another flag
+      const nextArg = process.argv[monitorFlagIndex + 1];
+      if (!nextArg || nextArg.startsWith('--')) {
+        hasInvalidMonitorValue = true;
+      }
+    }
+    
     // Check for new --monitor parameter first
     if (monitorParam) {
       // New monitor parameter provided - use it
-      switch (monitorParam.toLowerCase()) {
-        case 'none':
-          monitorMode = BuildMonitorMode.NONE;
-          break;
-        case 'summary':
-          monitorMode = BuildMonitorMode.SUMMARY;
-          break;
-        case 'steps':
-          monitorMode = BuildMonitorMode.STEPS;
-          break;
-        case 'verbose':
-          monitorMode = BuildMonitorMode.VERBOSE;
-          break;
-        default:
-          console.warn(`Warning: Unknown monitor mode '${monitorParam}'. Using 'summary' mode.`);
-          monitorMode = BuildMonitorMode.SUMMARY;
+      // Check if the value is a string (not true/false from Commander.js when flag is used without value)
+      if (typeof monitorParam === 'string') {
+        const validMonitorModes = ['none', 'summary', 'steps', 'verbose'];
+        const lowerMonitorParam = monitorParam.toLowerCase();
+        
+        if (validMonitorModes.includes(lowerMonitorParam)) {
+          switch (lowerMonitorParam) {
+            case 'none':
+              monitorMode = BuildMonitorMode.NONE;
+              break;
+            case 'summary':
+              monitorMode = BuildMonitorMode.SUMMARY;
+              break;
+            case 'steps':
+              monitorMode = BuildMonitorMode.STEPS;
+              break;
+            case 'verbose':
+              monitorMode = BuildMonitorMode.VERBOSE;
+              break;
+          }
+        } else {
+          hasInvalidMonitorValue = true;
+        }
+      } else {
+        // monitorParam is true/false - means flag was used without value
+        hasInvalidMonitorValue = true;
       }
     } else if (executionModeParam) {
       // Legacy --execution-mode parameter provided - map to new monitor modes
@@ -4273,11 +4297,16 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     
     // Validate parameter compatibility and collect all errors
     const hasNoWaitFlag = process.argv.includes('--no-wait');
-    const hasMonitorFlag = process.argv.includes('--monitor');
     const requestsDownload = params.downloadArtifacts || params['download-artifacts'] || 
                             params.downloadLogs || params['download-logs'];
     
     const validationErrors: string[] = [];
+    
+    // Check for invalid --monitor value
+    if (hasInvalidMonitorValue) {
+      const providedValue = monitorParam || '(missing)';
+      validationErrors.push(`Invalid value for --monitor: '${providedValue}'. Valid options are: none, summary, steps, verbose`);
+    }
     
     // Check for --monitor with --no-wait
     if (hasNoWaitFlag && hasMonitorFlag && monitorMode !== BuildMonitorMode.NONE) {

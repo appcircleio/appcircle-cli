@@ -30,9 +30,10 @@ export const createCommands = (program: any, commands: typeof Commands, actionCb
           // Boolean parameters don't need value type specification
           comandPrg.option(`--${param.name}`, param.longDescription || param.description, param.defaultValue);
         } else {
-          param.required !== false
-            ? comandPrg.requiredOption(`--${param.name} <${param.valueType}>`, param.longDescription || param.description)
-            : comandPrg.option(`--${param.name} <${param.valueType}>`, param.longDescription || param.description, param.defaultValue);
+          // Use optional syntax [type] for all non-boolean parameters to allow custom validation
+          // This lets us provide better error messages for missing or invalid values
+          // Required parameters are validated in our custom validation logic
+          comandPrg.option(`--${param.name} [${param.valueType}]`, param.longDescription || param.description, param.defaultValue);
         }
       });
     comandPrg.action(() => actionCb);

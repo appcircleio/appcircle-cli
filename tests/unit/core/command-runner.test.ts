@@ -817,6 +817,70 @@ describe('Command Runner - Comprehensive Tests', () => {
       // Restore original argv
       process.argv = originalArgv;
     });
+
+    it('should reject invalid --monitor value', async () => {
+      const config = await import('../../../src/config');
+      const services = await import('../../../src/services');
+      
+      // Mock config to show existing token (authenticated)
+      vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('existing_token');
+      
+      // Mock service to return build success response
+      vi.mocked(services.startBuild).mockResolvedValue({ 
+        taskId: 'mock-task-id', 
+        message: 'Build queued successfully' 
+      });
+      
+      // Mock process.argv to include invalid monitor value
+      const originalArgv = process.argv;
+      process.argv = [...process.argv, '--monitor', 'invalid'];
+      
+      const params = { 
+        profileId: 'profile_123',
+        workflowId: 'workflow_456',
+        monitor: 'invalid' // Invalid monitor value
+      };
+      const command = createMockCommand('appcircle-build-start', params, CommandTypes.BUILD);
+      command.name = vi.fn().mockReturnValue('start');
+
+      // Should throw error about invalid monitor value
+      await expect(runCommand(command)).rejects.toThrow('Invalid parameter combination');
+      
+      // Restore original argv
+      process.argv = originalArgv;
+    });
+
+    it('should reject --monitor flag without value', async () => {
+      const config = await import('../../../src/config');
+      const services = await import('../../../src/services');
+      
+      // Mock config to show existing token (authenticated)
+      vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('existing_token');
+      
+      // Mock service to return build success response
+      vi.mocked(services.startBuild).mockResolvedValue({ 
+        taskId: 'mock-task-id', 
+        message: 'Build queued successfully' 
+      });
+      
+      // Mock process.argv with --monitor but no value (next arg is another flag)
+      const originalArgv = process.argv;
+      process.argv = [...process.argv, '--monitor'];
+      
+      const params = { 
+        profileId: 'profile_123',
+        workflowId: 'workflow_456',
+        monitor: true // Commander.js sets this to true when flag has no value
+      };
+      const command = createMockCommand('appcircle-build-start', params, CommandTypes.BUILD);
+      command.name = vi.fn().mockReturnValue('start');
+
+      // Should throw error about missing monitor value
+      await expect(runCommand(command)).rejects.toThrow('Invalid parameter combination');
+      
+      // Restore original argv
+      process.argv = originalArgv;
+    });
   });
 
   describe('📊 Command Flow Coverage', () => {
