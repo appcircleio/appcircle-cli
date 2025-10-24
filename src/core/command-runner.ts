@@ -4271,13 +4271,41 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     }
     // If non-interactive and no parameter provided, use default (SUMMARY)
     
-    // Validate compatibility: --no-wait should not be used with monitoring modes
+    // Validate parameter compatibility and collect all errors
     const hasNoWaitFlag = process.argv.includes('--no-wait');
-    if (hasNoWaitFlag && monitorMode !== BuildMonitorMode.NONE) {
-      console.warn(chalk.yellow('\n⚠ Warning: --no-wait flag is incompatible with monitoring modes.'));
-      console.warn(chalk.yellow('The build will return immediately without monitoring.'));
-      console.warn(chalk.gray('Tip: Use --monitor none with --no-wait, or remove --no-wait to enable monitoring.\n'));
+    const hasMonitorFlag = process.argv.includes('--monitor');
+    const requestsDownload = params.downloadArtifacts || params['download-artifacts'] || 
+                            params.downloadLogs || params['download-logs'];
+    
+    const validationErrors: string[] = [];
+    
+    // Check for --monitor with --no-wait
+    if (hasNoWaitFlag && hasMonitorFlag && monitorMode !== BuildMonitorMode.NONE) {
+      validationErrors.push('Cannot use --monitor with --no-wait');
+    }
+    
+    // Check for download options with --no-wait or --monitor none
+    if (hasNoWaitFlag && requestsDownload) {
+      validationErrors.push('Cannot use --download-artifacts or --download-logs with --no-wait');
+    }
+    
+    // If --no-wait is used, always set monitor mode to NONE regardless of other settings
+    if (hasNoWaitFlag) {
       monitorMode = BuildMonitorMode.NONE;
+    }
+    
+    // Check for download options with --monitor none (after mode is set)
+    if (!hasNoWaitFlag && monitorMode === BuildMonitorMode.NONE && requestsDownload) {
+      validationErrors.push('Cannot use --download-artifacts or --download-logs with --monitor none');
+    }
+    
+    // If there are validation errors, display them and exit
+    if (validationErrors.length > 0) {
+      console.error(chalk.red('\n✖ Error: Incompatible parameters detected. Reasons:'));
+      validationErrors.forEach((error, index) => {
+        console.error(chalk.yellow(`   ${index + 1}. ${error}`));
+      });
+      throw new AppcircleExitError('Invalid parameter combination', 1);
     }
     
     // Handle "None" monitor mode - just return Task/Build ID and exit

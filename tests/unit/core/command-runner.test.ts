@@ -720,6 +720,103 @@ describe('Command Runner - Comprehensive Tests', () => {
       expect(command.opts()).toEqual(params);
       expect(command.name()).toBe('status');
     });
+
+    it('should reject --no-wait with --download-artifacts', async () => {
+      const config = await import('../../../src/config');
+      const services = await import('../../../src/services');
+      
+      // Mock config to show existing token (authenticated)
+      vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('existing_token');
+      
+      // Mock service to return build success response
+      vi.mocked(services.startBuild).mockResolvedValue({ 
+        taskId: 'mock-task-id', 
+        message: 'Build queued successfully' 
+      });
+      
+      // Mock process.argv to include --no-wait flag
+      const originalArgv = process.argv;
+      process.argv = [...process.argv, '--no-wait'];
+      
+      const params = { 
+        profileId: 'profile_123',
+        workflowId: 'workflow_456',
+        downloadArtifacts: true // This should cause error with --no-wait
+      };
+      const command = createMockCommand('appcircle-build-start', params, CommandTypes.BUILD);
+      command.name = vi.fn().mockReturnValue('start');
+
+      // Should throw error about incompatible parameters
+      await expect(runCommand(command)).rejects.toThrow('Invalid parameter combination');
+      
+      // Restore original argv
+      process.argv = originalArgv;
+    });
+
+    it('should reject --no-wait with --download-logs', async () => {
+      const config = await import('../../../src/config');
+      const services = await import('../../../src/services');
+      
+      // Mock config to show existing token (authenticated)
+      vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('existing_token');
+      
+      // Mock service to return build success response
+      vi.mocked(services.startBuild).mockResolvedValue({ 
+        taskId: 'mock-task-id', 
+        message: 'Build queued successfully' 
+      });
+      
+      // Mock process.argv to include --no-wait flag
+      const originalArgv = process.argv;
+      process.argv = [...process.argv, '--no-wait'];
+      
+      const params = { 
+        profileId: 'profile_123',
+        workflowId: 'workflow_456',
+        'download-logs': true // This should cause error with --no-wait
+      };
+      const command = createMockCommand('appcircle-build-start', params, CommandTypes.BUILD);
+      command.name = vi.fn().mockReturnValue('start');
+
+      // Should throw error about incompatible parameters
+      await expect(runCommand(command)).rejects.toThrow('Invalid parameter combination');
+      
+      // Restore original argv
+      process.argv = originalArgv;
+    });
+
+    it('should reject --monitor none with --download-artifacts', async () => {
+      const config = await import('../../../src/config');
+      const services = await import('../../../src/services');
+      
+      // Mock config to show existing token (authenticated)
+      vi.mocked(config.readEnviromentConfigVariable).mockReturnValue('existing_token');
+      
+      // Mock service to return build success response
+      vi.mocked(services.startBuild).mockResolvedValue({ 
+        taskId: 'mock-task-id', 
+        message: 'Build queued successfully' 
+      });
+      
+      // Mock process.argv to include --monitor none flag
+      const originalArgv = process.argv;
+      process.argv = [...process.argv, '--monitor', 'none'];
+      
+      const params = { 
+        profileId: 'profile_123',
+        workflowId: 'workflow_456',
+        downloadArtifacts: true, // This should cause error with --monitor none
+        monitor: 'none'
+      };
+      const command = createMockCommand('appcircle-build-start', params, CommandTypes.BUILD);
+      command.name = vi.fn().mockReturnValue('start');
+
+      // Should throw error about incompatible parameters
+      await expect(runCommand(command)).rejects.toThrow('Invalid parameter combination');
+      
+      // Restore original argv
+      process.argv = originalArgv;
+    });
   });
 
   describe('📊 Command Flow Coverage', () => {
