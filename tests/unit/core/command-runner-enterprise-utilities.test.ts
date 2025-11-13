@@ -336,6 +336,24 @@ describe('Command Runner Enterprise & Organization Utilities', () => {
 
   describe('File Upload Utilities', () => {
     describe('validateAndPrepareUploadFile', () => {
+      it('should throw error when appPath is undefined', () => {
+        expect(() => {
+          validateAndPrepareUploadFile(undefined as any);
+        }).toThrow(AppcircleExitError);
+        expect(() => {
+          validateAndPrepareUploadFile(undefined as any);
+        }).toThrow('The --app parameter is required');
+      });
+
+      it('should throw error when appPath is empty string', () => {
+        expect(() => {
+          validateAndPrepareUploadFile('');
+        }).toThrow(AppcircleExitError);
+        expect(() => {
+          validateAndPrepareUploadFile('');
+        }).toThrow('The --app parameter is required');
+      });
+
       it('should return expanded path and file details for valid file', () => {
         mockOs.homedir.mockReturnValue('/home/user');
         mockPath.resolve.mockReturnValue('/home/user/app.ipa');
@@ -427,7 +445,7 @@ describe('Command Runner Enterprise & Organization Utilities', () => {
         ]);
 
         const mockCommand = { fullCommandName: 'appcircle-testing-distribution-upload' };
-        const params = { distProfile: 'Distribution Profile 1' };
+        const params = { distProfile: 'Distribution Profile 1', app: '/path/to/app.apk' };
         
         await validateDistributionProfileParams(mockCommand as any, params);
         
@@ -441,7 +459,7 @@ describe('Command Runner Enterprise & Organization Utilities', () => {
         ]);
 
         const mockCommand = { fullCommandName: 'appcircle-testing-distribution-upload' };
-        const params = { distProfile: 'NonExistent Profile' };
+        const params = { distProfile: 'NonExistent Profile', app: '/path/to/app.apk' };
         
         await expect(
           validateDistributionProfileParams(mockCommand as any, params)

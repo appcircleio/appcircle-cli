@@ -311,6 +311,24 @@ describe('Command Runner File Validation', () => {
   });
 
   describe('validateAndPrepareUploadFile', () => {
+    it('should throw error when appPath is undefined', () => {
+      expect(() => {
+        validateAndPrepareUploadFile(undefined as any);
+      }).toThrow(AppcircleExitError);
+      expect(() => {
+        validateAndPrepareUploadFile(undefined as any);
+      }).toThrow('The --app parameter is required');
+    });
+
+    it('should throw error when appPath is empty string', () => {
+      expect(() => {
+        validateAndPrepareUploadFile('');
+      }).toThrow(AppcircleExitError);
+      expect(() => {
+        validateAndPrepareUploadFile('');
+      }).toThrow('The --app parameter is required');
+    });
+
     it('should validate and prepare file for upload', () => {
       const mockStats = { size: 1024 * 1024 }; // 1MB
       (fs.existsSync as any).mockReturnValue(true);

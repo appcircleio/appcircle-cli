@@ -198,7 +198,8 @@ describe('Testing Distribution Command Utilities', () => {
 
     mockParams = {
       distProfileId: 'profile-123',
-      testingGroupId: 'group-456'
+      testingGroupId: 'group-456',
+      app: '/path/to/app.apk'
     };
   });
 
@@ -229,7 +230,7 @@ describe('Testing Distribution Command Utilities', () => {
 
     it('should resolve profile name to ID for upload command', async () => {
       mockCommand.fullCommandName = 'appcircle-testing-distribution-upload';
-      mockParams = { distProfile: 'TestProfile' };
+      mockParams = { distProfile: 'TestProfile', app: '/path/to/app.apk' };
       
       (getDistributionProfiles as any).mockResolvedValue([
         { id: 'profile-123', name: 'TestProfile' },
@@ -243,7 +244,7 @@ describe('Testing Distribution Command Utilities', () => {
 
     it('should throw error when profile name not found', async () => {
       mockCommand.fullCommandName = 'appcircle-testing-distribution-upload';
-      mockParams = { distProfile: 'NonExistentProfile' };
+      mockParams = { distProfile: 'NonExistentProfile', app: '/path/to/app.apk' };
       
       (getDistributionProfiles as any).mockResolvedValue([
         { id: 'profile-123', name: 'TestProfile' }
