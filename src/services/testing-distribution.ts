@@ -35,9 +35,10 @@ export async function getLatestAppVersionId(options: OptionsType<{ distProfileId
 }
 
 // New function to get the latest app version ID with a minimum wait for new uploads
-export async function getLatestAppVersionIdAfterUpload(options: OptionsType<{ distProfileId: string; expectedFileSize?: number; fileName?: string }>) {
-    // Give some time for the new version to appear in the API
-    await new Promise(resolve => setTimeout(resolve, 3000));
+export async function getLatestAppVersionIdAfterUpload(options: OptionsType<{ distProfileId: string; expectedFileSize?: number; fileName?: string; isAab?: boolean }>) {
+    // AAB files need more processing time, so wait longer
+    const waitTime = options.isAab ? 8000 : 3000; // 8 seconds for AAB, 3 seconds for others
+    await new Promise(resolve => setTimeout(resolve, waitTime));
 
     const profile = await getDistributionProfileById(options);
     if (profile && profile.appVersions && profile.appVersions.length > 0) {
@@ -46,19 +47,41 @@ export async function getLatestAppVersionIdAfterUpload(options: OptionsType<{ di
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
 
+        // AAB files may need more time to process, so use a longer time window
+        const recentlyCreatedWindow = options.isAab ? 60000 : 30000; // 60 seconds for AAB, 30 seconds for others
+
         // If we have expected file size or name, try to match the most recent version
         if (options.expectedFileSize || options.fileName) {
             for (const version of sortedVersions) {
-                const isRecentlyCreated = new Date().getTime() - new Date(version.createdAt).getTime() < 30000; // Within 30 seconds
+                const isRecentlyCreated = new Date().getTime() - new Date(version.createdAt).getTime() < recentlyCreatedWindow;
 
                 if (isRecentlyCreated) {
                     // Additional checks can be added here if needed
                     if (options.expectedFileSize && version.size && Math.abs(version.size - options.expectedFileSize) < 1000) {
                         return version.id;
                     }
-                    if (options.fileName && version.fileName && version.fileName.includes(options.fileName)) {
-                        return version.id;
+                    
+                    // More flexible filename matching: try exact match, includes match, and base name match
+                    if (options.fileName && version.fileName) {
+                        const fileNameLower = options.fileName.toLowerCase();
+                        const versionFileNameLower = version.fileName.toLowerCase();
+                        
+                        // Exact match or contains match
+                        if (versionFileNameLower.includes(fileNameLower) || fileNameLower.includes(versionFileNameLower)) {
+                            return version.id;
+                        }
+                        
+                        // Try matching base name (without extension) for AAB files
+                        // as the backend might normalize or change the filename
+                        if (options.isAab) {
+                            const baseName = path.parse(options.fileName).name.toLowerCase();
+                            const versionBaseName = path.parse(version.fileName).name.toLowerCase();
+                            if (versionBaseName.includes(baseName) || baseName.includes(versionBaseName)) {
+                                return version.id;
+                            }
+                        }
                     }
+                    
                     // If no specific matching criteria, return the most recent one
                     if (!options.expectedFileSize && !options.fileName) {
                         return version.id;
@@ -67,7 +90,7 @@ export async function getLatestAppVersionIdAfterUpload(options: OptionsType<{ di
             }
         }
 
-        // Fallback to most recent version
+        // Fallback to most recent version (especially useful for AAB files where matching might fail)
         return sortedVersions[0].id;
     }
     return null;

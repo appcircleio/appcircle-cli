@@ -2280,6 +2280,10 @@ export const handleEnterpriseVersionNotify = async (command: ProgramCommand, par
 };
 
 export const validateAndPrepareUploadFile = (appPath: string) => {
+  if (!appPath) {
+    throw new AppcircleExitError('The --app parameter is required. Please provide the path to your app file (.ipa for iOS, .apk/.aab for Android).', 1);
+  }
+  
   let expandedPath = appPath;
   if (expandedPath.includes('~')) {
     expandedPath = expandedPath.replace(/~/g, os.homedir());
@@ -2389,6 +2393,14 @@ export const validateDistributionProfileParams = async (command: ProgramCommand,
       throw new AppcircleExitError('Either --distProfileId or --distProfile parameter is required', 1);
     }
 
+    if (!params.app) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('The --app parameter is required. Please provide the path to your app file (.ipa for iOS, .apk/.aab for Android).', 1);
+    }
+
     // Resolve profile name to ID if needed
     if (params.distProfile && !params.distProfileId) {
       const profiles = await getDistributionProfiles(params);
@@ -2492,6 +2504,9 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
       if (params.message) {
         spinner.text = 'Upload completed. Updating release notes...';
 
+        // Detect if this is an AAB file (AAB files need special handling)
+        const isAab = fileName.toLowerCase().endsWith('.aab');
+
         // First, try to get version ID directly from commitFileResponse
         let versionIdToUpdate = null;
 
@@ -2508,21 +2523,39 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
         if (!versionIdToUpdate) {
           spinner.text = 'Searching for uploaded app version...';
 
-          try {
-            versionIdToUpdate = await getLatestAppVersionIdAfterUpload({
-              distProfileId: params.distProfileId,
-              expectedFileSize: stats.size,
-              fileName: fileName
-            });
-          } catch (error: any) {
-            console.warn('Could not retrieve version ID using enhanced method, falling back to basic method');
+          // For AAB files, retry the enhanced method a few times as they need more processing time
+          const enhancedMethodAttempts = isAab ? 2 : 1;
+          for (let attempt = 1; attempt <= enhancedMethodAttempts; attempt++) {
+            try {
+              if (attempt > 1) {
+                spinner.text = `Searching for uploaded app version (attempt ${attempt}/${enhancedMethodAttempts})...`;
+                // Wait a bit longer before retrying for AAB files
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              }
+              
+              versionIdToUpdate = await getLatestAppVersionIdAfterUpload({
+                distProfileId: params.distProfileId,
+                expectedFileSize: stats.size,
+                fileName: fileName,
+                isAab: isAab
+              });
+              
+              if (versionIdToUpdate) {
+                break; // Found it, exit the retry loop
+              }
+            } catch (error: any) {
+              if (attempt === enhancedMethodAttempts) {
+                console.warn('Could not retrieve version ID using enhanced method, falling back to basic method');
+              }
+            }
           }
 
           // Final fallback to the basic method if enhanced method fails
+          // AAB files may need more retry attempts due to longer processing time
           if (!versionIdToUpdate) {
             let attempts = 0;
-            const maxAttempts = 3;
-            const retryDelay = 2000; // 2 seconds
+            const maxAttempts = isAab ? 5 : 3; // More attempts for AAB files
+            const retryDelay = isAab ? 3000 : 2000; // Longer delay for AAB files (3 seconds vs 2 seconds)
 
             while (!versionIdToUpdate && attempts < maxAttempts) {
               attempts++;
@@ -3636,6 +3669,10 @@ export const handlePublishProfileRename = async (command: ProgramCommand, params
 };
 
 export const validateFileForUpload = (filePath: string, originalPath: string) => {
+  if (!filePath) {
+    throw new AppcircleExitError('The --app parameter is required. Please provide the path to your app file (.ipa for iOS, .apk/.aab for Android).', 1);
+  }
+  
   const expandedPath = expandTildeInPath(filePath);
   const resolvedPath = path.resolve(expandedPath);
   

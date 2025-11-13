@@ -50,6 +50,7 @@ import * as readline from 'readline';
 
 export const getSimpleMultilineInput = async (message: string): Promise<string> => {
   console.log(chalk.cyan('?'), message);
+  console.log(chalk.gray('(Press Enter twice to finish)'));
 
   return new Promise((resolve) => {
     const rl = readline.createInterface({
