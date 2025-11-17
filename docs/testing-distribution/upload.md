@@ -26,7 +26,7 @@ appcircle testing-distribution upload [options]
 - Release notes are supported for both APK and AAB files
 - In interactive mode, you can enter multi-line release notes:
   - Type your release notes line by line
-  - Press Enter twice to finish entering release notes
+  - Leave two blank lines to finish entering release notes
   - You can include line breaks and formatting in your release notes
 
 ## Note on File Size Limits

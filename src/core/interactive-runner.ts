@@ -50,7 +50,7 @@ import * as readline from 'readline';
 
 export const getSimpleMultilineInput = async (message: string): Promise<string> => {
   console.log(chalk.cyan('?'), message);
-  console.log(chalk.gray('(Press Enter twice to finish)'));
+  console.log(chalk.gray('(Leave two blank lines to finish)'));
 
   return new Promise((resolve) => {
     const rl = readline.createInterface({
@@ -59,24 +59,29 @@ export const getSimpleMultilineInput = async (message: string): Promise<string> 
       terminal: true
     });
 
-    let lines: string[] = [];
-    let emptyLineCount = 0;
+  let lines: string[] = [];
+  let emptyLineCount = 0;
 
-    const onLine = (line: string) => {
-      if (line.trim() === '') {
-        emptyLineCount++;
-        if (emptyLineCount >= 2) {
-          // Two empty lines = finish
-          rl.close();
-          resolve(lines.join('\n').trim());
-          return;
+  const onLine = (line: string) => {
+    if (line.trim() === '') {
+      emptyLineCount++;
+      if (emptyLineCount >= 2) {
+        // Two consecutive empty lines = finish
+        // Remove the last empty line that was added
+        if (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+          lines.pop();
         }
-      } else {
-        emptyLineCount = 0;
+        rl.close();
+        resolve(lines.join('\n').trim());
+        return;
       }
-
+      // Add the empty line for single Enter press
       lines.push(line);
-    };
+    } else {
+      emptyLineCount = 0;
+      lines.push(line);
+    }
+  };
 
     rl.on('line', onLine);
     rl.on('close', () => {
