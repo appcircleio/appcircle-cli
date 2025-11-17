@@ -2306,17 +2306,86 @@ export const validateAndPrepareUploadFile = (appPath: string) => {
 };
 
 export const handleUploadError = (uploadError: any, spinner: any) => {
-  if (uploadError.response?.data?.message?.includes('The file is too large')) {
-    spinner.fail(`File size exceeds the maximum allowed limit of 3 GB.`);
-    throw new AppcircleExitError('File size exceeds the maximum allowed limit of 3 GB.', 1);
-  } else if (uploadError instanceof ProgramError) {
-    spinner.fail(uploadError.message);
-    throw new AppcircleExitError(uploadError.message, 1);
-  } else if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
-    spinner.fail(`API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).`);
-    throw new AppcircleExitError('API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).', 1);
+  // Get error messages from different sources
+  // API can return error as response.data.message (object) or response.data (string)
+  const responseData = uploadError.response?.data;
+  const apiMessage = typeof responseData === 'string' ? responseData : (responseData?.message || '');
+  const axiosMessage = uploadError.message || '';
+  const statusCode = uploadError.response?.status;
+  
+  // Check for file size errors first
+  if (apiMessage.includes('The file is too large') || axiosMessage.includes('The file is too large')) {
+    if (spinner && typeof spinner.stop === 'function') {
+      spinner.stop();
+    }
+    const errorMessage = 'File size exceeds the maximum allowed limit of 3 GB.';
+    console.error(errorMessage + '\n');
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail(errorMessage);
+    }
+    throw new AppcircleExitError('', 1);
   }
-  spinner.fail(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+  
+  // Check for ProgramError
+  if (uploadError instanceof ProgramError) {
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail(uploadError.message);
+    }
+    throw new AppcircleExitError(uploadError.message, 1);
+  }
+  
+  // Check for API response format errors
+  if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
+    if (spinner && typeof spinner.stop === 'function') {
+      spinner.stop();
+    }
+    const errorMessage = 'API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).';
+    console.error(errorMessage + '\n');
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail(errorMessage);
+    }
+    throw new AppcircleExitError('', 1);
+  }
+  
+  // Handle file extension errors with better messaging
+  // Check both API message and axios message (which may contain the API message concatenated)
+  const combinedMessage = (apiMessage + ' ' + axiosMessage).toLowerCase();
+  const isFileExtensionError = 
+    combinedMessage.includes('extension') || 
+    combinedMessage.includes('file extension') ||
+    combinedMessage.includes('not match file extension') ||
+    combinedMessage.includes('match file extension') ||
+    combinedMessage.includes('extension is') ||
+    /extension\s+is\s+\.\w+/.test(combinedMessage) ||
+    /not\s+match\s+file\s+extension/i.test(combinedMessage) ||
+    // Also check if axios message contains "Bad Request" followed by extension-related text
+    (axiosMessage && /bad\s+request.*extension/i.test(axiosMessage.toLowerCase()));
+  
+  if (isFileExtensionError) {
+    if (spinner && typeof spinner.stop === 'function') {
+      spinner.stop();
+    }
+    console.error('Invalid file type. Extension should be .ipa, .apk, or .aab.\n');
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail('Request failed with status code 400 Bad Request.');
+    }
+    throw new AppcircleExitError('', 1);
+  }
+  
+  // For other errors with status code
+  if (statusCode) {
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail(`Request failed with status code ${statusCode} ${uploadError.response?.statusText || 'Bad Request'}.`);
+    }
+    if (apiMessage && apiMessage.trim()) {
+      console.error('\n' + apiMessage);
+    }
+    throw new AppcircleExitError(apiMessage || axiosMessage || 'Upload failed', 1);
+  }
+  
+  if (spinner && typeof spinner.fail === 'function') {
+    spinner.fail(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+  }
   throw uploadError;
 };
 
@@ -2486,13 +2555,13 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
 
     const { expandedPath, fileName, stats } = validateAndPrepareUploadFile(params.app);
     
-    const uploadResponse = await getTestingDistributionUploadInformation({
-      fileName,
-      fileSize: stats.size,
-      distProfileId: params.distProfileId,
-    });
-    
     try {
+      const uploadResponse = await getTestingDistributionUploadInformation({
+        fileName,
+        fileSize: stats.size,
+        distProfileId: params.distProfileId,
+      });
+      
       await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
       const commitFileResponse = await commitTestingDistributionFileUpload({
         fileId: uploadResponse.fileId,
@@ -3715,14 +3784,68 @@ export const handleReleaseCandidateMarking = async (params: any, shouldMarkAsRel
   }
 };
 
-export const handlePublishUploadError = (uploadError: any): never => {
-  if (uploadError.response?.data?.message?.includes('The file is too large')) {
-    throw new AppcircleExitError('File size exceeds the maximum allowed limit of 3 GB.', 1);
-  } else if (uploadError instanceof ProgramError) {
-    throw new AppcircleExitError(uploadError.message, 1);
-  } else if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
-    throw new AppcircleExitError('API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).', 1);
+export const handlePublishUploadError = (uploadError: any, spinner?: any): never => {
+  // Get error messages from different sources
+  // API can return error as response.data.message (object) or response.data (string)
+  const responseData = uploadError.response?.data;
+  const apiMessage = typeof responseData === 'string' ? responseData : (responseData?.message || '');
+  const axiosMessage = uploadError.message || '';
+  const statusCode = uploadError.response?.status;
+  
+  // Check for file size errors
+  if (apiMessage.includes('The file is too large') || axiosMessage.includes('The file is too large')) {
+    const errorMessage = 'File size exceeds the maximum allowed limit of 3 GB.';
+    if (spinner) {
+      spinner.stop();
+    }
+    console.error(errorMessage + '\n');
+    if (spinner) {
+      spinner.fail(`Request failed with status code ${statusCode || 400} Bad Request.`);
+    }
+    throw new AppcircleExitError(errorMessage, 1);
   }
+  
+  // Check for ProgramError
+  if (uploadError instanceof ProgramError) {
+    throw new AppcircleExitError(uploadError.message, 1);
+  }
+  
+  // Check for API response format errors
+  if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
+    const errorMessage = 'API response format error';
+    if (spinner) {
+      spinner.stop();
+    }
+    console.error(errorMessage + '. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).\n');
+    if (spinner) {
+      spinner.fail(`Request failed with status code ${statusCode || 500} ${uploadError.response?.statusText || 'Internal Server Error'}.`);
+    }
+    throw new AppcircleExitError(errorMessage, 1);
+  }
+  
+  // Handle file extension errors with better messaging
+  const combinedMessage = (apiMessage + ' ' + axiosMessage).toLowerCase();
+  const isFileExtensionError = 
+    combinedMessage.includes('extension') || 
+    combinedMessage.includes('file extension') ||
+    combinedMessage.includes('not match file extension') ||
+    combinedMessage.includes('match file extension') ||
+    combinedMessage.includes('extension is') ||
+    /extension\s+is\s+\.\w+/.test(combinedMessage) ||
+    /not\s+match\s+file\s+extension/i.test(combinedMessage) ||
+    (axiosMessage && /bad\s+request.*extension/i.test(axiosMessage.toLowerCase()));
+  
+  if (isFileExtensionError) {
+    if (spinner) {
+      spinner.stop();
+    }
+    console.error('Invalid file type. Extension should be .ipa, .apk, or .aab.\n');
+    if (spinner) {
+      spinner.fail('Request failed with status code 400 Bad Request.');
+    }
+    throw new AppcircleExitError('', 1);
+  }
+  
   throw uploadError; // Re-throw to be caught by the outer catch
 };
 
