@@ -34,6 +34,85 @@ export async function getLatestAppVersionId(options: OptionsType<{ distProfileId
     return null;
 }
 
+// New function to get app version after upload using task completion and time-based filtering
+// This is the most reliable method: waits for task completion and filters versions created after upload start time
+export async function getAppVersionAfterUploadWithTaskCompletion(options: {
+    distProfileId: string;
+    taskId: string;
+    uploadStartTime: number; // Upload başlama zamanı (ms)
+    expectedFileSize?: number;
+    fileName?: string;
+    waitForTaskCompletion: (taskId: string) => Promise<void>;
+}): Promise<string | null> {
+    await options.waitForTaskCompletion(options.taskId);
+    
+    // Helper function to get and filter versions
+    const getVersionsAfterUpload = (profileData: any) => {
+        if (!profileData || !profileData.appVersions || profileData.appVersions.length === 0) {
+            return [];
+        }
+        return profileData.appVersions.filter((version: any) => {
+            if (!version.createdAt) return false;
+            const versionCreatedTime = new Date(version.createdAt).getTime();
+            return versionCreatedTime >= options.uploadStartTime;
+        });
+    };
+    
+    // First attempt: get profile and filter versions
+    const profile = await getDistributionProfileById({ 
+        distProfileId: options.distProfileId 
+    });
+    
+    let versionsAfterUpload = getVersionsAfterUpload(profile);
+    
+    // If no versions found after upload, retry once (backend might need more time)
+    if (versionsAfterUpload.length === 0) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const profileRetry = await getDistributionProfileById({ 
+            distProfileId: options.distProfileId 
+        });
+        versionsAfterUpload = getVersionsAfterUpload(profileRetry);
+    }
+    
+    const matchingVersions = versionsAfterUpload.filter((version: any) => {
+        let matchesSize = true;
+        let matchesFileName = true;
+        
+        if (options.expectedFileSize && version.size) {
+            const sizeDiff = Math.abs(version.size - options.expectedFileSize);
+            matchesSize = sizeDiff < 500; // 500 byte tolerans
+        }
+        
+        if (options.fileName && version.fileName) {
+            const fileNameLower = options.fileName.toLowerCase();
+            const versionFileNameLower = version.fileName.toLowerCase();
+            matchesFileName = fileNameLower === versionFileNameLower;
+        }
+        
+        return matchesSize && matchesFileName;
+    });
+    
+    if (matchingVersions.length > 0) {
+        const sorted = matchingVersions.sort((a: any, b: any) => {
+            const timeA = new Date(a.createdAt).getTime();
+            const timeB = new Date(b.createdAt).getTime();
+            return timeB - timeA; // En yeni önce
+        });
+        return sorted[0].id;
+    }
+    
+    if (versionsAfterUpload.length > 0) {
+        const sorted = versionsAfterUpload.sort((a: any, b: any) => {
+            const timeA = new Date(a.createdAt).getTime();
+            const timeB = new Date(b.createdAt).getTime();
+            return timeB - timeA;
+        });
+        return sorted[0].id;
+    }
+    
+    return null;
+}
+
 // New function to get the latest app version ID with a minimum wait for new uploads
 export async function getLatestAppVersionIdAfterUpload(options: OptionsType<{ distProfileId: string; expectedFileSize?: number; fileName?: string; isAab?: boolean }>) {
     // AAB files need more processing time, so wait longer

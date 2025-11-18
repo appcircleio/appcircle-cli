@@ -150,6 +150,7 @@ import {
   updateTestingDistributionReleaseNotes,
   getLatestAppVersionId,
   getLatestAppVersionIdAfterUpload,
+  getAppVersionAfterUploadWithTaskCompletion,
   getBuildStatusFromQueue,
   downloadTaskLog,
   createSubOrganization,
@@ -2555,6 +2556,8 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
 
     const { expandedPath, fileName, stats } = validateAndPrepareUploadFile(params.app);
     
+    const uploadStartTime = new Date().getTime();
+    
     try {
       const uploadResponse = await getTestingDistributionUploadInformation({
         fileName,
@@ -2592,7 +2595,27 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
           versionIdSource = 'commitFileResponse.appVersionId';
         }
 
-        // If we couldn't get version ID from response, use the specialized function for post-upload scenarios
+        if (!versionIdToUpdate && commitFileResponse.taskId) {
+          spinner.text = 'Waiting for task completion and finding uploaded app...';
+          
+          try {
+            versionIdToUpdate = await getAppVersionAfterUploadWithTaskCompletion({
+              distProfileId: params.distProfileId,
+              taskId: commitFileResponse.taskId,
+              uploadStartTime: uploadStartTime,
+              expectedFileSize: stats.size,
+              fileName: fileName,
+              waitForTaskCompletion: waitForTaskCompletion
+            });
+            
+            if (versionIdToUpdate) {
+              versionIdSource = 'getAppVersionAfterUploadWithTaskCompletion';
+            }
+          } catch (error: any) {
+            console.warn('Task completion method failed, trying fallback methods');
+          }
+        }
+
         if (!versionIdToUpdate) {
           spinner.text = 'Searching for uploaded app version...';
 
