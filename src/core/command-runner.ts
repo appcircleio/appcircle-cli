@@ -2578,14 +2578,18 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
 
         // First, try to get version ID directly from commitFileResponse
         let versionIdToUpdate = null;
+        let versionIdSource = null;
 
         // Check various possible fields in the response that might contain the version ID
         if (commitFileResponse.versionId) {
           versionIdToUpdate = commitFileResponse.versionId;
+          versionIdSource = 'commitFileResponse.versionId';
         } else if (commitFileResponse.id) {
           versionIdToUpdate = commitFileResponse.id;
+          versionIdSource = 'commitFileResponse.id';
         } else if (commitFileResponse.appVersionId) {
           versionIdToUpdate = commitFileResponse.appVersionId;
+          versionIdSource = 'commitFileResponse.appVersionId';
         }
 
         // If we couldn't get version ID from response, use the specialized function for post-upload scenarios
@@ -2610,6 +2614,7 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
               });
               
               if (versionIdToUpdate) {
+                versionIdSource = `getLatestAppVersionIdAfterUpload (attempt ${attempt})`;
                 break; // Found it, exit the retry loop
               }
             } catch (error: any) {
@@ -2638,6 +2643,9 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
                 versionIdToUpdate = await getLatestAppVersionId({
                   distProfileId: params.distProfileId
                 });
+                if (versionIdToUpdate) {
+                  versionIdSource = `getLatestAppVersionId (fallback attempt ${attempts})`;
+                }
               } catch (error: any) {
                 // Retry silently
               }
@@ -2647,12 +2655,18 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
 
         if (versionIdToUpdate) {
           spinner.text = 'Version ID found. Updating release notes...';
-          await updateTestingDistributionReleaseNotes({
-            distProfileId: params.distProfileId,
-            versionId: versionIdToUpdate,
-            message: params.message
-          });
-          spinner.text = `App uploaded and release notes updated successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+          
+          try {
+            await updateTestingDistributionReleaseNotes({
+              distProfileId: params.distProfileId,
+              versionId: versionIdToUpdate,
+              message: params.message
+            });
+            spinner.text = `App uploaded and release notes updated successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
+          } catch (updateError: any) {
+            spinner.text = `App uploaded successfully but release notes update failed.\n\nTaskId: ${commitFileResponse.taskId}\nError: ${updateError.message}`;
+            throw updateError;
+          }
         } else {
           spinner.text = `App uploaded successfully but could not update release notes.\n\nTaskId: ${commitFileResponse.taskId}`;
           console.warn('Warning: Could not retrieve version ID to update release notes. The app was uploaded successfully.');
@@ -3773,13 +3787,41 @@ export const waitForTaskCompletion = async (taskId: string): Promise<void> => {
   }
 };
 
-export const handleReleaseCandidateMarking = async (params: any, shouldMarkAsReleaseCandidate: boolean): Promise<void> => {
+export const handleReleaseCandidateMarking = async (params: any, shouldMarkAsReleaseCandidate: boolean, commitFileResponse?: any): Promise<void> => {
   if(shouldMarkAsReleaseCandidate){
-    let appVersionList = await getAppVersions(params);
-    const appVersion = appVersionList.shift();
-    await setAppVersionReleaseCandidateStatus({...params, appVersionId: appVersion.id, releaseCandidate: true});
+    let appVersionIdToUse = null;
+    
+    // First, try to get appVersionId directly from commitFileResponse
+    if (commitFileResponse) {
+      if (commitFileResponse.appVersionId) {
+        appVersionIdToUse = commitFileResponse.appVersionId;
+      } else if (commitFileResponse.versionId) {
+        appVersionIdToUse = commitFileResponse.versionId;
+      } else if (commitFileResponse.id) {
+        appVersionIdToUse = commitFileResponse.id;
+      }
+    }
+    
+    // If we couldn't get version ID from response, fetch and sort app versions by creation time
+    if (!appVersionIdToUse) {
+      let appVersionList = await getAppVersions(params);
+      
+      // Sort by creation time, newest first (to ensure we get the latest uploaded app)
+      if (appVersionList && appVersionList.length > 0) {
+        const sortedVersions = [...appVersionList].sort((a: any, b: any) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA; // Newest first
+        });
+        appVersionIdToUse = sortedVersions[0].id;
+      } else {
+        throw new Error('No app versions found to mark as release candidate');
+      }
+    }
+    
+    await setAppVersionReleaseCandidateStatus({...params, appVersionId: appVersionIdToUse, releaseCandidate: true});
     if(params.summary !== undefined && params.summary !== null && params.summary.trim() !== ""){
-      await setAppVersionReleaseNote({ ...params, appVersionId: appVersion.id });
+      await setAppVersionReleaseNote({ ...params, appVersionId: appVersionIdToUse });
     }
   }
 };
@@ -3865,7 +3907,7 @@ export const handlePublishVersionUpload = async (command: ProgramCommand, params
       await waitForTaskCompletion(commitFileResponse.taskId);
       
       const shouldMarkAsReleaseCandidate = params.markAsRc || false;
-      await handleReleaseCandidateMarking(params, shouldMarkAsReleaseCandidate);
+      await handleReleaseCandidateMarking(params, shouldMarkAsReleaseCandidate, commitFileResponse);
       
       spinner.text = `App version uploaded ${shouldMarkAsReleaseCandidate ? 'and marked as release candidate' : ''} successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
       spinner.succeed();

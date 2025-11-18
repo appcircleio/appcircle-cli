@@ -41,57 +41,120 @@ export async function getLatestAppVersionIdAfterUpload(options: OptionsType<{ di
     await new Promise(resolve => setTimeout(resolve, waitTime));
 
     const profile = await getDistributionProfileById(options);
+    
     if (profile && profile.appVersions && profile.appVersions.length > 0) {
         // Sort by creation time, newest first
         const sortedVersions = [...profile.appVersions].sort((a: any, b: any) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
 
-        // AAB files may need more time to process, so use a longer time window
-        const recentlyCreatedWindow = options.isAab ? 60000 : 30000; // 60 seconds for AAB, 30 seconds for others
+        // Use a stricter time window to ensure we only match very recent uploads
+        // This prevents matching older uploads when multiple uploads happen quickly
+        const strictWindow = options.isAab ? 20000 : 15000; // 20 seconds for AAB, 15 seconds for others (reduced from 30)
+        const currentTime = new Date().getTime();
 
-        // If we have expected file size or name, try to match the most recent version
+        // Collect all potential matches first, then return the absolute newest one
+        const potentialMatches: Array<{ version: any; score: number; createdAt: number }> = [];
+
+        // If we have expected file size or name, try to match versions
         if (options.expectedFileSize || options.fileName) {
             for (const version of sortedVersions) {
-                const isRecentlyCreated = new Date().getTime() - new Date(version.createdAt).getTime() < recentlyCreatedWindow;
+                const versionCreatedTime = new Date(version.createdAt).getTime();
+                const ageMs = currentTime - versionCreatedTime;
+                const isVeryRecentlyCreated = ageMs < strictWindow;
 
-                if (isRecentlyCreated) {
-                    // Additional checks can be added here if needed
-                    if (options.expectedFileSize && version.size && Math.abs(version.size - options.expectedFileSize) < 1000) {
-                        return version.id;
-                    }
-                    
-                    // More flexible filename matching: try exact match, includes match, and base name match
-                    if (options.fileName && version.fileName) {
-                        const fileNameLower = options.fileName.toLowerCase();
-                        const versionFileNameLower = version.fileName.toLowerCase();
-                        
-                        // Exact match or contains match
-                        if (versionFileNameLower.includes(fileNameLower) || fileNameLower.includes(versionFileNameLower)) {
-                            return version.id;
-                        }
-                        
-                        // Try matching base name (without extension) for AAB files
-                        // as the backend might normalize or change the filename
-                        if (options.isAab) {
-                            const baseName = path.parse(options.fileName).name.toLowerCase();
-                            const versionBaseName = path.parse(version.fileName).name.toLowerCase();
-                            if (versionBaseName.includes(baseName) || baseName.includes(versionBaseName)) {
-                                return version.id;
-                            }
-                        }
-                    }
-                    
-                    // If no specific matching criteria, return the most recent one
-                    if (!options.expectedFileSize && !options.fileName) {
-                        return version.id;
-                    }
+                // Only consider versions created very recently
+                if (!isVeryRecentlyCreated) {
+                    continue;
                 }
+
+                let matchesSize = false;
+                let matchesFileName = false;
+                let score = 0; // Higher score = better match
+                
+                // Check file size match (within 500 bytes tolerance - stricter than before)
+                if (options.expectedFileSize && version.size) {
+                    const sizeDiff = Math.abs(version.size - options.expectedFileSize);
+                    if (sizeDiff < 500) {
+                        matchesSize = true;
+                        score += 10; // Size match adds to score
+                        // Exact size match gets higher score
+                        if (sizeDiff === 0) {
+                            score += 5;
+                        }
+                    }
+                } else if (!options.expectedFileSize) {
+                    matchesSize = true; // No size requirement
+                }
+                
+                // Check filename match
+                if (options.fileName && version.fileName) {
+                    const fileNameLower = options.fileName.toLowerCase();
+                    const versionFileNameLower = version.fileName.toLowerCase();
+                    
+                    // Exact match gets highest score
+                    if (versionFileNameLower === fileNameLower) {
+                        matchesFileName = true;
+                        score += 20; // Exact filename match
+                    } else if (versionFileNameLower.includes(fileNameLower) || fileNameLower.includes(versionFileNameLower)) {
+                        matchesFileName = true;
+                        score += 10; // Partial filename match
+                    } else if (options.isAab) {
+                        // For AAB files, try matching base name (without extension)
+                        const baseName = path.parse(options.fileName).name.toLowerCase();
+                        const versionBaseName = path.parse(version.fileName).name.toLowerCase();
+                        if (versionBaseName === baseName) {
+                            matchesFileName = true;
+                            score += 15; // Exact base name match
+                        } else if (versionBaseName.includes(baseName) || baseName.includes(versionBaseName)) {
+                            matchesFileName = true;
+                            score += 8; // Partial base name match
+                        }
+                    }
+                } else if (!options.fileName) {
+                    matchesFileName = true; // No filename requirement
+                }
+                
+                // If we have both size and filename, require both to match for highest confidence
+                if (options.expectedFileSize && options.fileName) {
+                    if (matchesSize && matchesFileName) {
+                        // Add bonus for being very recent (newer = higher score)
+                        score += Math.max(0, 100 - Math.floor(ageMs / 100)); // Up to 100 points for recency
+                        potentialMatches.push({ version, score, createdAt: versionCreatedTime });
+                    }
+                } else if (matchesSize || matchesFileName) {
+                    // If we only have one criterion, match on that but with lower priority
+                    score += Math.max(0, 50 - Math.floor(ageMs / 200)); // Up to 50 points for recency
+                    potentialMatches.push({ version, score, createdAt: versionCreatedTime });
+                }
+            }
+            
+            // If we found matches, return the one with highest score (which will be the newest with best match)
+            if (potentialMatches.length > 0) {
+                // Sort by score (descending), then by creation time (newest first) as tiebreaker
+                potentialMatches.sort((a, b) => {
+                    if (b.score !== a.score) {
+                        return b.score - a.score;
+                    }
+                    return b.createdAt - a.createdAt; // Newer first
+                });
+                
+                return potentialMatches[0].version.id;
             }
         }
 
-        // Fallback to most recent version (especially useful for AAB files where matching might fail)
-        return sortedVersions[0].id;
+        // Fallback: only return most recent version if it was created very recently (within strict window)
+        // This prevents updating release notes for an old app
+        const fallbackWindow = options.isAab ? 20000 : 15000; // Same window as above
+        const mostRecentVersion = sortedVersions[0];
+        if (mostRecentVersion && mostRecentVersion.createdAt) {
+            const versionCreatedTime = new Date(mostRecentVersion.createdAt).getTime();
+            const ageMs = currentTime - versionCreatedTime;
+            const isVeryRecentlyCreated = ageMs < fallbackWindow;
+            if (isVeryRecentlyCreated) {
+                return mostRecentVersion.id;
+            }
+        }
     }
     return null;
 }
