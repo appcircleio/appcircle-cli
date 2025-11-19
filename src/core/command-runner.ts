@@ -147,10 +147,6 @@ import {
   commitPublishFileUpload,
   getEnterpriseUploadInformation,
   commitEnterpriseFileUpload,
-  updateTestingDistributionReleaseNotes,
-  getLatestAppVersionId,
-  getLatestAppVersionIdAfterUpload,
-  getAppVersionAfterUploadWithTaskCompletion,
   getBuildStatusFromQueue,
   downloadTaskLog,
   createSubOrganization,
@@ -2567,8 +2563,6 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
 
     const { expandedPath, fileName, stats } = validateAndPrepareUploadFile(params.app);
     
-    const uploadStartTime = new Date().getTime();
-    
     try {
       const uploadResponse = await getTestingDistributionUploadInformation({
         fileName,
@@ -2585,131 +2579,7 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
         message: params.message
       });
 
-      // Update release notes if message is provided
-      if (params.message) {
-        spinner.text = 'Upload completed. Updating release notes...';
-
-        // Detect if this is an AAB file (AAB files need special handling)
-        const isAab = fileName.toLowerCase().endsWith('.aab');
-
-        // First, try to get version ID directly from commitFileResponse
-        let versionIdToUpdate = null;
-        let versionIdSource = null;
-
-        // Check various possible fields in the response that might contain the version ID
-        if (commitFileResponse.versionId) {
-          versionIdToUpdate = commitFileResponse.versionId;
-          versionIdSource = 'commitFileResponse.versionId';
-        } else if (commitFileResponse.id) {
-          versionIdToUpdate = commitFileResponse.id;
-          versionIdSource = 'commitFileResponse.id';
-        } else if (commitFileResponse.appVersionId) {
-          versionIdToUpdate = commitFileResponse.appVersionId;
-          versionIdSource = 'commitFileResponse.appVersionId';
-        }
-
-        if (!versionIdToUpdate && commitFileResponse.taskId) {
-          spinner.text = 'Waiting for task completion and finding uploaded app...';
-          
-          try {
-            versionIdToUpdate = await getAppVersionAfterUploadWithTaskCompletion({
-              distProfileId: params.distProfileId,
-              taskId: commitFileResponse.taskId,
-              uploadStartTime: uploadStartTime,
-              expectedFileSize: stats.size,
-              fileName: fileName,
-              waitForTaskCompletion: waitForTaskCompletion
-            });
-            
-            if (versionIdToUpdate) {
-              versionIdSource = 'getAppVersionAfterUploadWithTaskCompletion';
-            }
-          } catch (error: any) {
-            console.warn('Task completion method failed, trying fallback methods');
-          }
-        }
-
-        if (!versionIdToUpdate) {
-          spinner.text = 'Searching for uploaded app version...';
-
-          // For AAB files, retry the enhanced method a few times as they need more processing time
-          const enhancedMethodAttempts = isAab ? 2 : 1;
-          for (let attempt = 1; attempt <= enhancedMethodAttempts; attempt++) {
-            try {
-              if (attempt > 1) {
-                spinner.text = `Searching for uploaded app version (attempt ${attempt}/${enhancedMethodAttempts})...`;
-                // Wait a bit longer before retrying for AAB files
-                await new Promise(resolve => setTimeout(resolve, 5000));
-              }
-              
-              versionIdToUpdate = await getLatestAppVersionIdAfterUpload({
-                distProfileId: params.distProfileId,
-                expectedFileSize: stats.size,
-                fileName: fileName,
-                isAab: isAab
-              });
-              
-              if (versionIdToUpdate) {
-                versionIdSource = `getLatestAppVersionIdAfterUpload (attempt ${attempt})`;
-                break; // Found it, exit the retry loop
-              }
-            } catch (error: any) {
-              if (attempt === enhancedMethodAttempts) {
-                console.warn('Could not retrieve version ID using enhanced method, falling back to basic method');
-              }
-            }
-          }
-
-          // Final fallback to the basic method if enhanced method fails
-          // AAB files may need more retry attempts due to longer processing time
-          if (!versionIdToUpdate) {
-            let attempts = 0;
-            const maxAttempts = isAab ? 5 : 3; // More attempts for AAB files
-            const retryDelay = isAab ? 3000 : 2000; // Longer delay for AAB files (3 seconds vs 2 seconds)
-
-            while (!versionIdToUpdate && attempts < maxAttempts) {
-              attempts++;
-              spinner.text = `Getting version ID (fallback attempt ${attempts}/${maxAttempts})...`;
-
-              if (attempts > 1) {
-                await new Promise(resolve => setTimeout(resolve, retryDelay));
-              }
-
-              try {
-                versionIdToUpdate = await getLatestAppVersionId({
-                  distProfileId: params.distProfileId
-                });
-                if (versionIdToUpdate) {
-                  versionIdSource = `getLatestAppVersionId (fallback attempt ${attempts})`;
-                }
-              } catch (error: any) {
-                // Retry silently
-              }
-            }
-          }
-        }
-
-        if (versionIdToUpdate) {
-          spinner.text = 'Version ID found. Updating release notes...';
-          
-          try {
-            await updateTestingDistributionReleaseNotes({
-              distProfileId: params.distProfileId,
-              versionId: versionIdToUpdate,
-              message: params.message
-            });
-            spinner.text = `App uploaded and release notes updated successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
-          } catch (updateError: any) {
-            spinner.text = `App uploaded successfully but release notes update failed.\n\nTaskId: ${commitFileResponse.taskId}\nError: ${updateError.message}`;
-            throw updateError;
-          }
-        } else {
-          spinner.text = `App uploaded successfully but could not update release notes.\n\nTaskId: ${commitFileResponse.taskId}`;
-          console.warn('Warning: Could not retrieve version ID to update release notes. The app was uploaded successfully.');
-        }
-      } else {
-        spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
-      }
+      spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
 
       commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
         fullCommandName: command.fullCommandName,
