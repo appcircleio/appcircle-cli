@@ -2398,7 +2398,13 @@ export const handleEnterpriseVersionUploadForProfile = async (command: ProgramCo
     
     try {
       await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
-      const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName, entProfileId: params.entProfileId});
+      const commitFileResponse = await commitEnterpriseFileUpload({
+        fileId: uploadResponse.fileId,
+        fileName,
+        entProfileId: params.entProfileId,
+        customTag: params.customTag,
+        message: params.message
+      });
       commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
         fullCommandName: command.fullCommandName,
         data: commitFileResponse,
@@ -2424,7 +2430,12 @@ export const handleEnterpriseVersionUploadWithoutProfile = async (command: Progr
     
     try {
       await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
-      const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName});
+      const commitFileResponse = await commitEnterpriseFileUpload({
+        fileId: uploadResponse.fileId,
+        fileName,
+        customTag: params.customTag,
+        message: params.message
+      });
       commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
         fullCommandName: command.fullCommandName,
         data: commitFileResponse,
@@ -2569,7 +2580,9 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
       const commitFileResponse = await commitTestingDistributionFileUpload({
         fileId: uploadResponse.fileId,
         fileName,
-        distProfileId: params.distProfileId
+        distProfileId: params.distProfileId,
+        customTag: params.customTag,
+        message: params.message
       });
 
       // Update release notes if message is provided
@@ -3926,7 +3939,14 @@ export const handlePublishVersionUpload = async (command: ProgramCommand, params
     
     try {
       await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
-      const commitFileResponse = await commitPublishFileUpload({fileId: uploadResponse.fileId, fileName, publishProfileId: params.publishProfileId, platform: params.platform});
+      const commitFileResponse = await commitPublishFileUpload({
+        fileId: uploadResponse.fileId,
+        fileName,
+        publishProfileId: params.publishProfileId,
+        platform: params.platform,
+        customTag: params.customTag,
+        message: params.message
+      });
       await waitForTaskCompletion(commitFileResponse.taskId);
       
       const shouldMarkAsReleaseCandidate = params.markAsRc || false;

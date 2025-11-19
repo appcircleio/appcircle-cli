@@ -311,9 +311,21 @@ export async function getTestingDistributionUploadInformation(
   return res.data;
 }
 
-export async function commitTestingDistributionFileUpload(options: OptionsType<{ fileId: string; fileName: string; distProfileId: string }>) {
+export async function commitTestingDistributionFileUpload(options: OptionsType<{ fileId: string; fileName: string; distProfileId: string; customTag?: string; message?: string }>) {
+  const requestBody: { fileId: string; fileName: string; customTag?: string; message?: string } = {
+    fileId: options.fileId,
+    fileName: options.fileName,
+  };
+  
+  if (options.customTag !== undefined && options.customTag !== null) {
+    requestBody.customTag = options.customTag;
+  }
+  
+  if (options.message !== undefined && options.message !== null) {
+    requestBody.message = options.message;
+  }
 
-  const commitFileResponse = await appcircleApi.post(`distribution/v1/profiles/${options.distProfileId}/app-versions?action=commitFileUpload`,{fileId: options.fileId, fileName: options.fileName},{
+  const commitFileResponse = await appcircleApi.post(`distribution/v1/profiles/${options.distProfileId}/app-versions?action=commitFileUpload`, requestBody, {
     headers: {
       ...getHeaders(),
     },
