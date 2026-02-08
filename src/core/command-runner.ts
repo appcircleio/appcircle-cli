@@ -147,9 +147,6 @@ import {
   commitPublishFileUpload,
   getEnterpriseUploadInformation,
   commitEnterpriseFileUpload,
-  updateTestingDistributionReleaseNotes,
-  getLatestAppVersionId,
-  getLatestAppVersionIdAfterUpload,
   getBuildStatusFromQueue,
   downloadTaskLog,
   createSubOrganization,
@@ -1387,7 +1384,7 @@ export const handleConfigTrustAction = (trustAppcircleCertificate: any) => {
 
 // File validation and path handling utilities
 export const validateFileExists = (filePath: string, errorMessage: string) => {
-  const expandedPath = path.resolve(filePath.replace('~', os.homedir()));
+  const expandedPath = path.resolve(expandTildeInPath(filePath));
   if (!fs.existsSync(expandedPath)) {
     throw new AppcircleExitError(errorMessage, 1);
   }
@@ -1564,7 +1561,7 @@ export const promptUserAction = async (message: string, choices: { name: string,
 
 // Additional file path expansion and validation utilities
 export const expandAndValidateFilePath = (filePath: string, homeDir: string): string => {
-  const expandedPath = path.resolve(filePath.replace('~', homeDir));
+  const expandedPath = path.resolve(expandTildeInPath(filePath));
   if (!fs.existsSync(expandedPath)) {
     throw new Error(`File not found: ${expandedPath}`);
   }
@@ -1849,7 +1846,7 @@ export const monitorBuildProgress = async (taskId: string, params: any, getBuild
 export const handleBuildSuccessCompletion = async (finalStatusResponse: any, latestBuildId: string | null, params: any, responseData: any, downloadArtifact: Function, downloadBuildLogs: Function) => {
   const homeDir = os.homedir();
   const defaultDownloadDir = path.join(homeDir, 'Downloads');
-  const downloadPath = params.path || defaultDownloadDir;
+  const downloadPath = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
   
   // Check if automatic download parameters are provided
   const shouldDownloadLogs = params.downloadLogs === true || params['download-logs'] === true;
@@ -2077,7 +2074,7 @@ export const promptForFailedBuildLogs = async (finalStatusResponse: any, latestB
       throw err;
     }
     // For other errors, wrap them
-    throw new AppcircleExitError('Build failed, user chose to exit', 1);
+    throw new AppcircleExitError('Build failed', 1);
   }
 };
 
@@ -2280,6 +2277,10 @@ export const handleEnterpriseVersionNotify = async (command: ProgramCommand, par
 };
 
 export const validateAndPrepareUploadFile = (appPath: string) => {
+  if (!appPath) {
+    throw new AppcircleExitError('The --app parameter is required. Please provide the path to your app file (.ipa for iOS, .apk/.aab for Android).', 1);
+  }
+  
   let expandedPath = appPath;
   if (expandedPath.includes('~')) {
     expandedPath = expandedPath.replace(/~/g, os.homedir());
@@ -2302,17 +2303,86 @@ export const validateAndPrepareUploadFile = (appPath: string) => {
 };
 
 export const handleUploadError = (uploadError: any, spinner: any) => {
-  if (uploadError.response?.data?.message?.includes('The file is too large')) {
-    spinner.fail(`File size exceeds the maximum allowed limit of 3 GB.`);
-    throw new AppcircleExitError('File size exceeds the maximum allowed limit of 3 GB.', 1);
-  } else if (uploadError instanceof ProgramError) {
-    spinner.fail(uploadError.message);
-    throw new AppcircleExitError(uploadError.message, 1);
-  } else if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
-    spinner.fail(`API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).`);
-    throw new AppcircleExitError('API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).', 1);
+  // Get error messages from different sources
+  // API can return error as response.data.message (object) or response.data (string)
+  const responseData = uploadError.response?.data;
+  const apiMessage = typeof responseData === 'string' ? responseData : (responseData?.message || '');
+  const axiosMessage = uploadError.message || '';
+  const statusCode = uploadError.response?.status;
+  
+  // Check for file size errors first
+  if (apiMessage.includes('The file is too large') || axiosMessage.includes('The file is too large')) {
+    if (spinner && typeof spinner.stop === 'function') {
+      spinner.stop();
+    }
+    const errorMessage = 'File size exceeds the maximum allowed limit of 3 GB.';
+    console.error(errorMessage + '\n');
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail(errorMessage);
+    }
+    throw new AppcircleExitError('', 1);
   }
-  spinner.fail(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+  
+  // Check for ProgramError
+  if (uploadError instanceof ProgramError) {
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail(uploadError.message);
+    }
+    throw new AppcircleExitError(uploadError.message, 1);
+  }
+  
+  // Check for API response format errors
+  if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
+    if (spinner && typeof spinner.stop === 'function') {
+      spinner.stop();
+    }
+    const errorMessage = 'API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).';
+    console.error(errorMessage + '\n');
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail(errorMessage);
+    }
+    throw new AppcircleExitError('', 1);
+  }
+  
+  // Handle file extension errors with better messaging
+  // Check both API message and axios message (which may contain the API message concatenated)
+  const combinedMessage = (apiMessage + ' ' + axiosMessage).toLowerCase();
+  const isFileExtensionError = 
+    combinedMessage.includes('extension') || 
+    combinedMessage.includes('file extension') ||
+    combinedMessage.includes('not match file extension') ||
+    combinedMessage.includes('match file extension') ||
+    combinedMessage.includes('extension is') ||
+    /extension\s+is\s+\.\w+/.test(combinedMessage) ||
+    /not\s+match\s+file\s+extension/i.test(combinedMessage) ||
+    // Also check if axios message contains "Bad Request" followed by extension-related text
+    (axiosMessage && /bad\s+request.*extension/i.test(axiosMessage.toLowerCase()));
+  
+  if (isFileExtensionError) {
+    if (spinner && typeof spinner.stop === 'function') {
+      spinner.stop();
+    }
+    console.error('Invalid file type. Extension should be .ipa, .apk, or .aab.\n');
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail('Request failed with status code 400 Bad Request.');
+    }
+    throw new AppcircleExitError('', 1);
+  }
+  
+  // For other errors with status code
+  if (statusCode) {
+    if (spinner && typeof spinner.fail === 'function') {
+      spinner.fail(`Request failed with status code ${statusCode} ${uploadError.response?.statusText || 'Bad Request'}.`);
+    }
+    if (apiMessage && apiMessage.trim()) {
+      console.error('\n' + apiMessage);
+    }
+    throw new AppcircleExitError(apiMessage || axiosMessage || 'Upload failed', 1);
+  }
+  
+  if (spinner && typeof spinner.fail === 'function') {
+    spinner.fail(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+  }
   throw uploadError;
 };
 
@@ -2324,7 +2394,13 @@ export const handleEnterpriseVersionUploadForProfile = async (command: ProgramCo
     
     try {
       await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
-      const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName, entProfileId: params.entProfileId});
+      const commitFileResponse = await commitEnterpriseFileUpload({
+        fileId: uploadResponse.fileId,
+        fileName,
+        entProfileId: params.entProfileId,
+        customTag: params.customTag,
+        message: params.message
+      });
       commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
         fullCommandName: command.fullCommandName,
         data: commitFileResponse,
@@ -2350,7 +2426,12 @@ export const handleEnterpriseVersionUploadWithoutProfile = async (command: Progr
     
     try {
       await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
-      const commitFileResponse = await commitEnterpriseFileUpload({fileId: uploadResponse.fileId, fileName});
+      const commitFileResponse = await commitEnterpriseFileUpload({
+        fileId: uploadResponse.fileId,
+        fileName,
+        customTag: params.customTag,
+        message: params.message
+      });
       commandWriter(CommandTypes.ENTERPRISE_APP_STORE, {
         fullCommandName: command.fullCommandName,
         data: commitFileResponse,
@@ -2387,6 +2468,14 @@ export const validateDistributionProfileParams = async (command: ProgramCommand,
         console.error(`\n${desc}\n`);
       }
       throw new AppcircleExitError('Either --distProfileId or --distProfile parameter is required', 1);
+    }
+
+    if (!params.app) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('The --app parameter is required. Please provide the path to your app file (.ipa for iOS, .apk/.aab for Android).', 1);
     }
 
     // Resolve profile name to ID if needed
@@ -2474,90 +2563,23 @@ export const handleDistributionUpload = async (command: ProgramCommand, params: 
 
     const { expandedPath, fileName, stats } = validateAndPrepareUploadFile(params.app);
     
-    const uploadResponse = await getTestingDistributionUploadInformation({
-      fileName,
-      fileSize: stats.size,
-      distProfileId: params.distProfileId,
-    });
-    
     try {
+      const uploadResponse = await getTestingDistributionUploadInformation({
+        fileName,
+        fileSize: stats.size,
+        distProfileId: params.distProfileId,
+      });
+      
       await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
       const commitFileResponse = await commitTestingDistributionFileUpload({
         fileId: uploadResponse.fileId,
         fileName,
-        distProfileId: params.distProfileId
+        distProfileId: params.distProfileId,
+        customTag: params.customTag,
+        message: params.message
       });
 
-      // Update release notes if message is provided
-      if (params.message) {
-        spinner.text = 'Upload completed. Updating release notes...';
-
-        // First, try to get version ID directly from commitFileResponse
-        let versionIdToUpdate = null;
-
-        // Check various possible fields in the response that might contain the version ID
-        if (commitFileResponse.versionId) {
-          versionIdToUpdate = commitFileResponse.versionId;
-        } else if (commitFileResponse.id) {
-          versionIdToUpdate = commitFileResponse.id;
-        } else if (commitFileResponse.appVersionId) {
-          versionIdToUpdate = commitFileResponse.appVersionId;
-        }
-
-        // If we couldn't get version ID from response, use the specialized function for post-upload scenarios
-        if (!versionIdToUpdate) {
-          spinner.text = 'Searching for uploaded app version...';
-
-          try {
-            versionIdToUpdate = await getLatestAppVersionIdAfterUpload({
-              distProfileId: params.distProfileId,
-              expectedFileSize: stats.size,
-              fileName: fileName
-            });
-          } catch (error: any) {
-            console.warn('Could not retrieve version ID using enhanced method, falling back to basic method');
-          }
-
-          // Final fallback to the basic method if enhanced method fails
-          if (!versionIdToUpdate) {
-            let attempts = 0;
-            const maxAttempts = 3;
-            const retryDelay = 2000; // 2 seconds
-
-            while (!versionIdToUpdate && attempts < maxAttempts) {
-              attempts++;
-              spinner.text = `Getting version ID (fallback attempt ${attempts}/${maxAttempts})...`;
-
-              if (attempts > 1) {
-                await new Promise(resolve => setTimeout(resolve, retryDelay));
-              }
-
-              try {
-                versionIdToUpdate = await getLatestAppVersionId({
-                  distProfileId: params.distProfileId
-                });
-              } catch (error: any) {
-                // Retry silently
-              }
-            }
-          }
-        }
-
-        if (versionIdToUpdate) {
-          spinner.text = 'Version ID found. Updating release notes...';
-          await updateTestingDistributionReleaseNotes({
-            distProfileId: params.distProfileId,
-            versionId: versionIdToUpdate,
-            message: params.message
-          });
-          spinner.text = `App uploaded and release notes updated successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
-        } else {
-          spinner.text = `App uploaded successfully but could not update release notes.\n\nTaskId: ${commitFileResponse.taskId}`;
-          console.warn('Warning: Could not retrieve version ID to update release notes. The app was uploaded successfully.');
-        }
-      } else {
-        spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
-      }
+      spinner.text = `App uploaded successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
 
       commandWriter(CommandTypes.TESTING_DISTRIBUTION, {
         fullCommandName: command.fullCommandName,
@@ -2888,7 +2910,7 @@ export const handleCertificateDownload = async (command: ProgramCommand, params:
     (certificate: any) => certificate.id === params.certificateId
   );
   const downloadPath = path.resolve(
-    (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
+    expandTildeInPath(params.path || path.join(os.homedir(), 'Downloads'))
   );
   const fileName = p12Cert ? p12Cert.filename : 'download.cer';
   const spinner = createOra(
@@ -2994,7 +3016,7 @@ export const handleKeystoreUpload = async (command: ProgramCommand, params: any)
 };
 
 export const handleKeystoreDownload = async (command: ProgramCommand, params: any) => {
-  const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
+  const downloadPath = path.resolve(expandTildeInPath(params.path || path.join(os.homedir(), 'Downloads')))
   const spinner = createOra(`Searching file...`).start();
   try {
     const keystoreDetail = await getKeystoreDetailById({ keystoreId: params.keystoreId });
@@ -3091,7 +3113,7 @@ export const handleProvisioningProfileUpload = async (command: ProgramCommand, p
 };
 
 export const handleProvisioningProfileDownload = async (command: ProgramCommand, params: any) => {
-  const downloadPath = (params.path || path.join(os.homedir(), 'Downloads')).replace('~', os.homedir())
+  const downloadPath = path.resolve(expandTildeInPath(params.path || path.join(os.homedir(), 'Downloads')))
   const spinner = createOra('Trying to download the Provisioning Profile').start();
   try {
     const profile = await getProvisioningProfileDetailById({ provisioningProfileId: params.provisioningProfileId });
@@ -3636,6 +3658,10 @@ export const handlePublishProfileRename = async (command: ProgramCommand, params
 };
 
 export const validateFileForUpload = (filePath: string, originalPath: string) => {
+  if (!filePath) {
+    throw new AppcircleExitError('The --app parameter is required. Please provide the path to your app file (.ipa for iOS, .apk/.aab for Android).', 1);
+  }
+  
   const expandedPath = expandTildeInPath(filePath);
   const resolvedPath = path.resolve(expandedPath);
   
@@ -3667,25 +3693,107 @@ export const waitForTaskCompletion = async (taskId: string): Promise<void> => {
   }
 };
 
-export const handleReleaseCandidateMarking = async (params: any, shouldMarkAsReleaseCandidate: boolean): Promise<void> => {
+export const handleReleaseCandidateMarking = async (params: any, shouldMarkAsReleaseCandidate: boolean, commitFileResponse?: any): Promise<void> => {
   if(shouldMarkAsReleaseCandidate){
-    let appVersionList = await getAppVersions(params);
-    const appVersion = appVersionList.shift();
-    await setAppVersionReleaseCandidateStatus({...params, appVersionId: appVersion.id, releaseCandidate: true});
+    let appVersionIdToUse = null;
+    
+    // First, try to get appVersionId directly from commitFileResponse
+    if (commitFileResponse) {
+      if (commitFileResponse.appVersionId) {
+        appVersionIdToUse = commitFileResponse.appVersionId;
+      } else if (commitFileResponse.versionId) {
+        appVersionIdToUse = commitFileResponse.versionId;
+      } else if (commitFileResponse.id) {
+        appVersionIdToUse = commitFileResponse.id;
+      }
+    }
+    
+    // If we couldn't get version ID from response, fetch and sort app versions by creation time
+    if (!appVersionIdToUse) {
+      let appVersionList = await getAppVersions(params);
+      
+      // Sort by creation time, newest first (to ensure we get the latest uploaded app)
+      if (appVersionList && appVersionList.length > 0) {
+        const sortedVersions = [...appVersionList].sort((a: any, b: any) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA; // Newest first
+        });
+        appVersionIdToUse = sortedVersions[0].id;
+      } else {
+        throw new Error('No app versions found to mark as release candidate');
+      }
+    }
+    
+    await setAppVersionReleaseCandidateStatus({...params, appVersionId: appVersionIdToUse, releaseCandidate: true});
     if(params.summary !== undefined && params.summary !== null && params.summary.trim() !== ""){
-      await setAppVersionReleaseNote({ ...params, appVersionId: appVersion.id });
+      await setAppVersionReleaseNote({ ...params, appVersionId: appVersionIdToUse });
     }
   }
 };
 
-export const handlePublishUploadError = (uploadError: any): never => {
-  if (uploadError.response?.data?.message?.includes('The file is too large')) {
-    throw new AppcircleExitError('File size exceeds the maximum allowed limit of 3 GB.', 1);
-  } else if (uploadError instanceof ProgramError) {
-    throw new AppcircleExitError(uploadError.message, 1);
-  } else if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
-    throw new AppcircleExitError('API response format error. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).', 1);
+export const handlePublishUploadError = (uploadError: any, spinner?: any): never => {
+  // Get error messages from different sources
+  // API can return error as response.data.message (object) or response.data (string)
+  const responseData = uploadError.response?.data;
+  const apiMessage = typeof responseData === 'string' ? responseData : (responseData?.message || '');
+  const axiosMessage = uploadError.message || '';
+  const statusCode = uploadError.response?.status;
+  
+  // Check for file size errors
+  if (apiMessage.includes('The file is too large') || axiosMessage.includes('The file is too large')) {
+    const errorMessage = 'File size exceeds the maximum allowed limit of 3 GB.';
+    if (spinner) {
+      spinner.stop();
+    }
+    console.error(errorMessage + '\n');
+    if (spinner) {
+      spinner.fail(`Request failed with status code ${statusCode || 400} Bad Request.`);
+    }
+    throw new AppcircleExitError(errorMessage, 1);
   }
+  
+  // Check for ProgramError
+  if (uploadError instanceof ProgramError) {
+    throw new AppcircleExitError(uploadError.message, 1);
+  }
+  
+  // Check for API response format errors
+  if (uploadError.message && uploadError.message.includes('Cannot read properties')) {
+    const errorMessage = 'API response format error';
+    if (spinner) {
+      spinner.stop();
+    }
+    console.error(errorMessage + '. Please check your connection settings (AUTH_HOSTNAME and API_HOSTNAME).\n');
+    if (spinner) {
+      spinner.fail(`Request failed with status code ${statusCode || 500} ${uploadError.response?.statusText || 'Internal Server Error'}.`);
+    }
+    throw new AppcircleExitError(errorMessage, 1);
+  }
+  
+  // Handle file extension errors with better messaging
+  const combinedMessage = (apiMessage + ' ' + axiosMessage).toLowerCase();
+  const isFileExtensionError = 
+    combinedMessage.includes('extension') || 
+    combinedMessage.includes('file extension') ||
+    combinedMessage.includes('not match file extension') ||
+    combinedMessage.includes('match file extension') ||
+    combinedMessage.includes('extension is') ||
+    /extension\s+is\s+\.\w+/.test(combinedMessage) ||
+    /not\s+match\s+file\s+extension/i.test(combinedMessage) ||
+    (axiosMessage && /bad\s+request.*extension/i.test(axiosMessage.toLowerCase()));
+  
+  if (isFileExtensionError) {
+    if (spinner) {
+      spinner.stop();
+    }
+    console.error('Invalid file type. Extension should be .ipa, .apk, or .aab.\n');
+    if (spinner) {
+      spinner.fail('Request failed with status code 400 Bad Request.');
+    }
+    throw new AppcircleExitError('', 1);
+  }
+  
   throw uploadError; // Re-throw to be caught by the outer catch
 };
 
@@ -3701,11 +3809,18 @@ export const handlePublishVersionUpload = async (command: ProgramCommand, params
     
     try {
       await uploadArtifactWithSignedUrl({ app: expandedPath, uploadInfo: uploadResponse });
-      const commitFileResponse = await commitPublishFileUpload({fileId: uploadResponse.fileId, fileName, publishProfileId: params.publishProfileId, platform: params.platform});
+      const commitFileResponse = await commitPublishFileUpload({
+        fileId: uploadResponse.fileId,
+        fileName,
+        publishProfileId: params.publishProfileId,
+        platform: params.platform,
+        customTag: params.customTag,
+        message: params.message
+      });
       await waitForTaskCompletion(commitFileResponse.taskId);
       
       const shouldMarkAsReleaseCandidate = params.markAsRc || false;
-      await handleReleaseCandidateMarking(params, shouldMarkAsReleaseCandidate);
+      await handleReleaseCandidateMarking(params, shouldMarkAsReleaseCandidate, commitFileResponse);
       
       spinner.text = `App version uploaded ${shouldMarkAsReleaseCandidate ? 'and marked as release candidate' : ''} successfully.\n\nTaskId: ${commitFileResponse.taskId}`;
       spinner.succeed();
@@ -3786,8 +3901,7 @@ export const handlePublishVersionDelete = async (command: ProgramCommand, params
 export const setupDownloadDirectoryForAppVersion = (params: any): string => {
   const homeDir = os.homedir();
   const defaultDownloadDir = path.join(homeDir, 'Downloads');
-  let targetDirectory = params.path ? params.path.replace('~', homeDir) : defaultDownloadDir;
-  targetDirectory = path.resolve(targetDirectory);
+  let targetDirectory = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
 
   if (!fs.existsSync(targetDirectory)) {
     fs.mkdirSync(targetDirectory, { recursive: true });
@@ -3862,7 +3976,7 @@ export const validateVariableGroupUploadFile = (params: any, spinner: any): stri
     }
   }
   
-  const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+  const expandedPath = path.resolve(expandTildeInPath(params.filePath));
   if (!fs.existsSync(expandedPath)) {
     spinner.fail('File not found');
     throw new AppcircleExitError('File not found', 1);
@@ -4220,25 +4334,49 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     const monitorParam = command.opts()['monitor'];
     const executionModeParam = command.opts()['executionMode']; // For backward compatibility
     
+    // Validate --monitor parameter if provided
+    const monitorFlagIndex = process.argv.indexOf('--monitor');
+    const hasMonitorFlag = monitorFlagIndex !== -1;
+    let hasInvalidMonitorValue = false;
+    
+    if (hasMonitorFlag && !monitorParam) {
+      // --monitor flag exists but no value was provided (or Commander.js will catch it)
+      // This happens when --monitor is the last argument or followed by another flag
+      const nextArg = process.argv[monitorFlagIndex + 1];
+      if (!nextArg || nextArg.startsWith('--')) {
+        hasInvalidMonitorValue = true;
+      }
+    }
+    
     // Check for new --monitor parameter first
     if (monitorParam) {
       // New monitor parameter provided - use it
-      switch (monitorParam.toLowerCase()) {
-        case 'none':
-          monitorMode = BuildMonitorMode.NONE;
-          break;
-        case 'summary':
-          monitorMode = BuildMonitorMode.SUMMARY;
-          break;
-        case 'steps':
-          monitorMode = BuildMonitorMode.STEPS;
-          break;
-        case 'verbose':
-          monitorMode = BuildMonitorMode.VERBOSE;
-          break;
-        default:
-          console.warn(`Warning: Unknown monitor mode '${monitorParam}'. Using 'summary' mode.`);
-          monitorMode = BuildMonitorMode.SUMMARY;
+      // Check if the value is a string (not true/false from Commander.js when flag is used without value)
+      if (typeof monitorParam === 'string') {
+        const validMonitorModes = ['none', 'summary', 'steps', 'verbose'];
+        const lowerMonitorParam = monitorParam.toLowerCase();
+        
+        if (validMonitorModes.includes(lowerMonitorParam)) {
+          switch (lowerMonitorParam) {
+            case 'none':
+              monitorMode = BuildMonitorMode.NONE;
+              break;
+            case 'summary':
+              monitorMode = BuildMonitorMode.SUMMARY;
+              break;
+            case 'steps':
+              monitorMode = BuildMonitorMode.STEPS;
+              break;
+            case 'verbose':
+              monitorMode = BuildMonitorMode.VERBOSE;
+              break;
+          }
+        } else {
+          hasInvalidMonitorValue = true;
+        }
+      } else {
+        // monitorParam is true/false - means flag was used without value
+        hasInvalidMonitorValue = true;
       }
     } else if (executionModeParam) {
       // Legacy --execution-mode parameter provided - map to new monitor modes
@@ -4271,6 +4409,48 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       monitorMode = modeSelection.mode;
     }
     // If non-interactive and no parameter provided, use default (SUMMARY)
+    
+    // Validate parameter compatibility and collect all errors
+    const hasNoWaitFlag = process.argv.includes('--no-wait');
+    const requestsDownload = params.downloadArtifacts || params['download-artifacts'] || 
+                            params.downloadLogs || params['download-logs'];
+    
+    const validationErrors: string[] = [];
+    
+    // Check for invalid --monitor value
+    if (hasInvalidMonitorValue) {
+      const providedValue = monitorParam || '(missing)';
+      validationErrors.push(`Invalid value for --monitor: '${providedValue}'. Valid options are: none, summary, steps, verbose`);
+    }
+    
+    // Check for --monitor with --no-wait
+    if (hasNoWaitFlag && hasMonitorFlag && monitorMode !== BuildMonitorMode.NONE) {
+      validationErrors.push('Cannot use --monitor with --no-wait');
+    }
+    
+    // Check for download options with --no-wait or --monitor none
+    if (hasNoWaitFlag && requestsDownload) {
+      validationErrors.push('Cannot use --download-artifacts or --download-logs with --no-wait');
+    }
+    
+    // If --no-wait is used, always set monitor mode to NONE regardless of other settings
+    if (hasNoWaitFlag) {
+      monitorMode = BuildMonitorMode.NONE;
+    }
+    
+    // Check for download options with --monitor none (after mode is set)
+    if (!hasNoWaitFlag && monitorMode === BuildMonitorMode.NONE && requestsDownload) {
+      validationErrors.push('Cannot use --download-artifacts or --download-logs with --monitor none');
+    }
+    
+    // If there are validation errors, display them and exit
+    if (validationErrors.length > 0) {
+      console.error(chalk.red('\n✖ Error: Incompatible parameters detected. Reasons:'));
+      validationErrors.forEach((error, index) => {
+        console.error(chalk.yellow(`   ${index + 1}. ${error}`));
+      });
+      throw new AppcircleExitError('Invalid parameter combination', 1);
+    }
     
     // Handle "None" monitor mode - just return Task/Build ID and exit
     if (monitorMode === BuildMonitorMode.NONE) {
@@ -4381,7 +4561,10 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         }
       }
     } catch (error: any) {
-      spinner.fail('Failed to start build');
+      // Only show failure message for actual errors, not for intentional AppcircleExitError
+      if (!(error instanceof AppcircleExitError)) {
+        spinner.fail('Failed to start build');
+      }
       throw error;
     }
 
@@ -4595,7 +4778,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             
             const homeDir = os.homedir();
             const defaultDownloadDir = path.join(homeDir, 'Downloads');
-            const downloadPath = params.path || defaultDownloadDir;
+            const downloadPath = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
             
             // Check if automatic download parameters are provided
             // Commander.js converts kebab-case to camelCase
@@ -4840,7 +5023,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
             
             const homeDir = os.homedir();
             const defaultDownloadDir = path.join(homeDir, 'Downloads');
-            const downloadPath = params.path || defaultDownloadDir;
+            const downloadPath = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
             
             // Check if automatic download parameters are provided
             const shouldDownloadLogs = params.downloadLogs === true || params['download-logs'] === true;
@@ -4969,7 +5152,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
                 throw new AppcircleExitError('Build failed', 1);
               }
             } catch (err) {
-              throw new AppcircleExitError('Build failed, user chose to exit', 1);
+              throw new AppcircleExitError('Build failed', 1);
             }
           }
         } else {
@@ -4979,10 +5162,9 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       } catch (e) {
         if (interval) clearInterval(interval);
         if (e instanceof AppcircleExitError) {
-          if (e.code === 0 || e.message === '') {
-            throw e;
-          }
+          throw e;
         }
+        throw e;
       }
     }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-list`) {
@@ -5143,7 +5325,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
     }
     const homeDir = os.homedir();
     const defaultDownloadDir = path.join(homeDir, 'Downloads');
-    let downloadPath = params.path ? path.resolve((params.path).replace('~', homeDir)) : defaultDownloadDir;
+    let downloadPath = params.path ? path.resolve(expandTildeInPath(params.path)) : defaultDownloadDir;
     
     if (!fs.existsSync(downloadPath)) {
       try {
@@ -5332,7 +5514,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           params.variableGroupId = match[1];
         }
       }
-      const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+      const expandedPath = path.resolve(expandTildeInPath(params.filePath));
       if (!fs.existsSync(expandedPath)) {
         spinner.fail('File not found');
         throw new AppcircleExitError('File not found', 1);
@@ -5507,7 +5689,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
           spinner.fail('File path is required for file type variables');
           process.exit(1);
         }
-        const expandedPath = path.resolve(params.filePath.replace('~', os.homedir()));
+        const expandedPath = path.resolve(expandTildeInPath(params.filePath));
         if (!fs.existsSync(expandedPath)) {
           spinner.fail('File not exists');
           process.exit(1);
@@ -5854,7 +6036,7 @@ export async function downloadBuildLogs(taskIdOrParams: string | { commitId?: st
 
     if (providedPath) {
       if (typeof providedPath === 'string' && providedPath.trim() !== "") {
-        const cliPath = path.resolve(providedPath.trim().replace('~', homeDir));
+        const cliPath = path.resolve(expandTildeInPath(providedPath));
         if (!fs.existsSync(cliPath)) {
           try {
             fs.mkdirSync(cliPath, { recursive: true });
@@ -5983,7 +6165,7 @@ export async function downloadPublishLogs(publishDetail: any, platform: string, 
     const defaultDownloadDir = path.join(homeDir, 'Downloads');
 
     if (userProvidedPath && userProvidedPath.trim() !== "") {
-        finalDownloadPath = path.resolve(userProvidedPath.trim().replace('~', homeDir));
+        finalDownloadPath = path.resolve(expandTildeInPath(userProvidedPath));
         if (!fs.existsSync(finalDownloadPath)) {
             try {
                 fs.mkdirSync(finalDownloadPath, { recursive: true });

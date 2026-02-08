@@ -198,7 +198,8 @@ describe('Testing Distribution Command Utilities', () => {
 
     mockParams = {
       distProfileId: 'profile-123',
-      testingGroupId: 'group-456'
+      testingGroupId: 'group-456',
+      app: '/path/to/app.apk'
     };
   });
 
@@ -229,7 +230,7 @@ describe('Testing Distribution Command Utilities', () => {
 
     it('should resolve profile name to ID for upload command', async () => {
       mockCommand.fullCommandName = 'appcircle-testing-distribution-upload';
-      mockParams = { distProfile: 'TestProfile' };
+      mockParams = { distProfile: 'TestProfile', app: '/path/to/app.apk' };
       
       (getDistributionProfiles as any).mockResolvedValue([
         { id: 'profile-123', name: 'TestProfile' },
@@ -243,7 +244,7 @@ describe('Testing Distribution Command Utilities', () => {
 
     it('should throw error when profile name not found', async () => {
       mockCommand.fullCommandName = 'appcircle-testing-distribution-upload';
-      mockParams = { distProfile: 'NonExistentProfile' };
+      mockParams = { distProfile: 'NonExistentProfile', app: '/path/to/app.apk' };
       
       (getDistributionProfiles as any).mockResolvedValue([
         { id: 'profile-123', name: 'TestProfile' }
@@ -391,7 +392,78 @@ describe('Testing Distribution Command Utilities', () => {
       expect(commitTestingDistributionFileUpload).toHaveBeenCalledWith({
         fileId: 'file-123',
         fileName: 'app.ipa',
-        distProfileId: 'profile-123'
+        distProfileId: 'profile-123',
+        customTag: undefined,
+        message: 'Release notes'
+      });
+      expect(mockSpinner.succeed).toHaveBeenCalled();
+    });
+
+    it('should upload app with customTag successfully', async () => {
+      const mockProfiles = [{ id: 'profile-123', name: 'TestProfile' }];
+      const mockUploadResponse = { fileId: 'file-123' };
+      const mockCommitResponse = { taskId: 'task-456' };
+      
+      mockParams = { 
+        distProfileId: 'profile-123', 
+        app: '/test/app.ipa', 
+        message: 'Release notes',
+        customTag: 'v1.2.3'
+      };
+      
+      (getDistributionProfiles as any).mockResolvedValue(mockProfiles);
+      (getTestingDistributionUploadInformation as any).mockResolvedValue(mockUploadResponse);
+      (uploadArtifactWithSignedUrl as any).mockResolvedValue({});
+      (commitTestingDistributionFileUpload as any).mockResolvedValue(mockCommitResponse);
+      
+      // Mock file validation utilities
+      const mockStats = { size: 1000000 }; // 1MB
+      (fs.existsSync as any).mockReturnValue(true);
+      (fs.statSync as any).mockReturnValue(mockStats);
+      (getMaxUploadBytes as any).mockReturnValue(5000000); // 5MB limit
+      (path.resolve as any).mockReturnValue('/resolved/test/app.ipa');
+      (path.basename as any).mockReturnValue('app.ipa');
+
+      await handleDistributionUpload(mockCommand, mockParams);
+      
+      expect(commitTestingDistributionFileUpload).toHaveBeenCalledWith({
+        fileId: 'file-123',
+        fileName: 'app.ipa',
+        distProfileId: 'profile-123',
+        customTag: 'v1.2.3',
+        message: 'Release notes'
+      });
+      expect(mockSpinner.succeed).toHaveBeenCalled();
+    });
+
+    it('should upload app without message successfully', async () => {
+      const mockProfiles = [{ id: 'profile-123', name: 'TestProfile' }];
+      const mockUploadResponse = { fileId: 'file-123' };
+      const mockCommitResponse = { taskId: 'task-456' };
+      
+      mockParams = { distProfileId: 'profile-123', app: '/test/app.ipa' };
+      
+      (getDistributionProfiles as any).mockResolvedValue(mockProfiles);
+      (getTestingDistributionUploadInformation as any).mockResolvedValue(mockUploadResponse);
+      (uploadArtifactWithSignedUrl as any).mockResolvedValue({});
+      (commitTestingDistributionFileUpload as any).mockResolvedValue(mockCommitResponse);
+      
+      // Mock file validation utilities
+      const mockStats = { size: 1000000 }; // 1MB
+      (fs.existsSync as any).mockReturnValue(true);
+      (fs.statSync as any).mockReturnValue(mockStats);
+      (getMaxUploadBytes as any).mockReturnValue(5000000); // 5MB limit
+      (path.resolve as any).mockReturnValue('/resolved/test/app.ipa');
+      (path.basename as any).mockReturnValue('app.ipa');
+
+      await handleDistributionUpload(mockCommand, mockParams);
+      
+      expect(commitTestingDistributionFileUpload).toHaveBeenCalledWith({
+        fileId: 'file-123',
+        fileName: 'app.ipa',
+        distProfileId: 'profile-123',
+        customTag: undefined,
+        message: undefined
       });
       expect(mockSpinner.succeed).toHaveBeenCalled();
     });

@@ -189,7 +189,7 @@ describe('Command Runner Validation Functions', () => {
     };
 
     it('should pass when distProfileId is provided', async () => {
-      const params = { distProfileId: 'dist-123' };
+      const params = { distProfileId: 'dist-123', app: '/path/to/app.apk' };
       
       await expect(validateDistributionProfileParams(mockCommand as any, params))
         .resolves.not.toThrow();
@@ -202,11 +202,21 @@ describe('Command Runner Validation Functions', () => {
       ];
       (services.getDistributionProfiles as any).mockResolvedValue(mockProfiles);
       
-      const params = { distProfile: 'Test Distribution' };
+      const params = { distProfile: 'Test Distribution', app: '/path/to/app.apk' };
       
       await validateDistributionProfileParams(mockCommand as any, params);
       
       expect(params.distProfileId).toBe('dist-123');
+    });
+
+    it('should throw error when app parameter is missing', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const params = { distProfileId: 'dist-123' };
+      
+      await expect(validateDistributionProfileParams(mockCommand as any, params))
+        .rejects.toThrow('The --app parameter is required');
+      
+      consoleSpy.mockRestore();
     });
 
     it('should throw AppcircleExitError when neither parameter provided', async () => {

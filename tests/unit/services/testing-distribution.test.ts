@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock API dependencies - must be declared before vi.mock
 vi.mock('../../../src/services/api.js', () => ({
@@ -20,6 +20,8 @@ import {
   getDistributionProfiles,
   getDistributionProfileById,
   getLatestAppVersionId,
+  getLatestAppVersionIdAfterUpload,
+  getAppVersionAfterUploadWithTaskCompletion,
   updateDistributionProfileSettings,
   createDistributionProfile,
   getTestingGroups,
@@ -152,6 +154,565 @@ describe('Testing Distribution Service', () => {
         const result = await getLatestAppVersionId({ distProfileId: 'profile-1' })
 
         expect(result).toBe('v1')
+      })
+    })
+
+    describe('getLatestAppVersionIdAfterUpload', () => {
+      beforeEach(() => {
+        vi.useFakeTimers()
+      })
+
+      afterEach(() => {
+        vi.useRealTimers()
+        vi.clearAllMocks()
+      })
+
+      it('should return newest version when multiple uploads have same filename', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 5000).toISOString() // 5 seconds ago (older)
+            },
+            {
+              id: 'v2',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 2000).toISOString() // 2 seconds ago (newer)
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const promise = getLatestAppVersionIdAfterUpload({
+          distProfileId: 'profile-1',
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          isAab: false
+        })
+
+        // Advance timers to handle the 3 second wait
+        await vi.advanceTimersByTimeAsync(3000)
+        
+        const result = await promise
+
+        // Should return the newest version (v2)
+        expect(result).toBe('v2')
+      })
+
+      it('should match by both size and filename when both provided', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 3000).toISOString()
+            },
+            {
+              id: 'v2',
+              fileName: 'different.apk',
+              size: 2000000,
+              createdAt: new Date(now - 2000).toISOString()
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const promise = getLatestAppVersionIdAfterUpload({
+          distProfileId: 'profile-1',
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          isAab: false
+        })
+
+        await vi.advanceTimersByTimeAsync(3000)
+        const result = await promise
+
+        // Should match v1 by both size and filename, even though v2 is newer
+        expect(result).toBe('v1')
+      })
+
+      it('should prefer exact filename match over partial match', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 3000).toISOString()
+            },
+            {
+              id: 'v2',
+              fileName: 'app-release-signed.apk',
+              size: 1000000,
+              createdAt: new Date(now - 2000).toISOString()
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const promise = getLatestAppVersionIdAfterUpload({
+          distProfileId: 'profile-1',
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          isAab: false
+        })
+
+        await vi.advanceTimersByTimeAsync(3000)
+        const result = await promise
+
+        // Should prefer exact match (v1) even if v2 is newer
+        expect(result).toBe('v1')
+      })
+
+      it('should use stricter time window to avoid matching old uploads', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 20000).toISOString() // 20 seconds ago (too old)
+            },
+            {
+              id: 'v2',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 5000).toISOString() // 5 seconds ago (within window)
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const promise = getLatestAppVersionIdAfterUpload({
+          distProfileId: 'profile-1',
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          isAab: false
+        })
+
+        await vi.advanceTimersByTimeAsync(3000)
+        const result = await promise
+
+        // Should return v2 (within 15 second window), not v1 (too old)
+        expect(result).toBe('v2')
+      })
+
+      it('should return null when no versions match within time window', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 20000).toISOString() // 20 seconds ago (too old)
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const promise = getLatestAppVersionIdAfterUpload({
+          distProfileId: 'profile-1',
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          isAab: false
+        })
+
+        await vi.advanceTimersByTimeAsync(3000)
+        const result = await promise
+
+        // Should return null as v1 is outside the strict time window
+        expect(result).toBeNull()
+      })
+
+      it('should handle AAB files with longer wait time and window', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.aab',
+              size: 2000000,
+              createdAt: new Date(now - 25000).toISOString() // 25 seconds ago
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const promise = getLatestAppVersionIdAfterUpload({
+          distProfileId: 'profile-1',
+          expectedFileSize: 2000000,
+          fileName: 'app-release.aab',
+          isAab: true
+        })
+
+        await vi.advanceTimersByTimeAsync(8000)
+        const result = await promise
+
+        // For AAB, 25 seconds is within the 20 second window, but wait time is 8 seconds
+        // After waiting, it should be 33 seconds old, which is outside 20 second window
+        // So it should return null
+        expect(result).toBeNull()
+      })
+
+      it('should score and select best match when multiple versions match', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000001, // 1 byte difference
+              createdAt: new Date(now - 5000).toISOString()
+            },
+            {
+              id: 'v2',
+              fileName: 'app-release.apk',
+              size: 1000000, // Exact match
+              createdAt: new Date(now - 3000).toISOString() // Newer
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const promise = getLatestAppVersionIdAfterUpload({
+          distProfileId: 'profile-1',
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          isAab: false
+        })
+
+        await vi.advanceTimersByTimeAsync(3000)
+        const result = await promise
+
+        // Should prefer v2 (exact size match and newer)
+        expect(result).toBe('v2')
+      })
+
+      it('should return null when profile has no app versions', async () => {
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: []
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const promise = getLatestAppVersionIdAfterUpload({
+          distProfileId: 'profile-1',
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          isAab: false
+        })
+
+        await vi.advanceTimersByTimeAsync(3000)
+        const result = await promise
+
+        expect(result).toBeNull()
+      })
+    })
+
+    describe('getAppVersionAfterUploadWithTaskCompletion', () => {
+      beforeEach(() => {
+        vi.useFakeTimers()
+      })
+
+      afterEach(() => {
+        vi.useRealTimers()
+        vi.clearAllMocks()
+      })
+
+      it('should return newest version created after upload start time', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const uploadStartTime = now - 1000 // 1 saniye önce upload başladı
+        const mockWaitForTaskCompletion = vi.fn().mockResolvedValue(undefined)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 5000).toISOString() // Upload öncesi ❌
+            },
+            {
+              id: 'v2',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 500).toISOString() // Upload sonrası ✅
+            },
+            {
+              id: 'v3',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 200).toISOString() // Upload sonrası, daha yeni ✅
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const result = await getAppVersionAfterUploadWithTaskCompletion({
+          distProfileId: 'profile-1',
+          taskId: 'task-123',
+          uploadStartTime: uploadStartTime,
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          waitForTaskCompletion: mockWaitForTaskCompletion
+        })
+
+        // v3 seçilmeli (upload sonrası, en yeni, eşleşiyor)
+        expect(result).toBe('v3')
+        expect(mockWaitForTaskCompletion).toHaveBeenCalledWith('task-123')
+      })
+
+      it('should filter out versions created before upload start time', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const uploadStartTime = now - 1000 // 1 saniye önce upload başladı
+        const mockWaitForTaskCompletion = vi.fn().mockResolvedValue(undefined)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 5000).toISOString() // Upload öncesi ❌ FİLTRELENMELİ
+            },
+            {
+              id: 'v2',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 500).toISOString() // Upload sonrası ✅
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const result = await getAppVersionAfterUploadWithTaskCompletion({
+          distProfileId: 'profile-1',
+          taskId: 'task-123',
+          uploadStartTime: uploadStartTime,
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          waitForTaskCompletion: mockWaitForTaskCompletion
+        })
+
+        // v2 seçilmeli (v1 filtrelenmiş olmalı)
+        expect(result).toBe('v2')
+      })
+
+      it('should match by both file size and filename', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const uploadStartTime = now - 1000
+        const mockWaitForTaskCompletion = vi.fn().mockResolvedValue(undefined)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 500).toISOString() // ✅ Eşleşiyor
+            },
+            {
+              id: 'v2',
+              fileName: 'different.apk',
+              size: 1000000,
+              createdAt: new Date(now - 300).toISOString() // ❌ Dosya adı farklı
+            },
+            {
+              id: 'v3',
+              fileName: 'app-release.apk',
+              size: 2000000,
+              createdAt: new Date(now - 200).toISOString() // ❌ Boyut farklı
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const result = await getAppVersionAfterUploadWithTaskCompletion({
+          distProfileId: 'profile-1',
+          taskId: 'task-123',
+          uploadStartTime: uploadStartTime,
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          waitForTaskCompletion: mockWaitForTaskCompletion
+        })
+
+        // v1 seçilmeli (hem boyut hem dosya adı eşleşiyor)
+        expect(result).toBe('v1')
+      })
+
+      it('should retry if no versions found after task completion', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const uploadStartTime = now - 1000
+        const mockWaitForTaskCompletion = vi.fn().mockResolvedValue(undefined)
+
+        // İlk çağrı: hiç versiyon yok
+        mockAppcircleApi.get
+          .mockResolvedValueOnce({ 
+            data: { 
+              id: 'profile-1', 
+              appVersions: [] 
+            } 
+          })
+          // İkinci çağrı (retry): versiyon var
+          .mockResolvedValueOnce({ 
+            data: { 
+              id: 'profile-1',
+              appVersions: [
+                {
+                  id: 'v1',
+                  fileName: 'app-release.apk',
+                  size: 1000000,
+                  createdAt: new Date(now - 500).toISOString()
+                }
+              ]
+            } 
+          })
+
+        const promise = getAppVersionAfterUploadWithTaskCompletion({
+          distProfileId: 'profile-1',
+          taskId: 'task-123',
+          uploadStartTime: uploadStartTime,
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          waitForTaskCompletion: mockWaitForTaskCompletion
+        })
+
+        // Retry için 2 saniye bekle
+        await vi.advanceTimersByTimeAsync(2000)
+        const result = await promise
+
+        expect(result).toBe('v1')
+        expect(mockAppcircleApi.get).toHaveBeenCalledTimes(2)
+      })
+
+      it('should return null if no versions found after retry', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const uploadStartTime = now - 1000
+        const mockWaitForTaskCompletion = vi.fn().mockResolvedValue(undefined)
+
+        // Her iki çağrıda da boş array döndür
+        mockAppcircleApi.get
+          .mockResolvedValueOnce({ 
+            data: { 
+              id: 'profile-1', 
+              appVersions: [] 
+            } 
+          })
+          .mockResolvedValueOnce({ 
+            data: { 
+              id: 'profile-1', 
+              appVersions: [] 
+            } 
+          })
+
+        const promise = getAppVersionAfterUploadWithTaskCompletion({
+          distProfileId: 'profile-1',
+          taskId: 'task-123',
+          uploadStartTime: uploadStartTime,
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          waitForTaskCompletion: mockWaitForTaskCompletion
+        })
+
+        await vi.advanceTimersByTimeAsync(2000)
+        const result = await promise
+
+        expect(result).toBeNull()
+        expect(mockAppcircleApi.get).toHaveBeenCalledTimes(2)
+      })
+
+      it('should select newest version when multiple match', async () => {
+        const now = new Date('2024-01-15T13:30:00Z').getTime()
+        vi.setSystemTime(now)
+
+        const uploadStartTime = now - 1000
+        const mockWaitForTaskCompletion = vi.fn().mockResolvedValue(undefined)
+
+        const mockProfile = {
+          id: 'profile-1',
+          appVersions: [
+            {
+              id: 'v1',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 500).toISOString() // Upload sonrası
+            },
+            {
+              id: 'v2',
+              fileName: 'app-release.apk',
+              size: 1000000,
+              createdAt: new Date(now - 200).toISOString() // Upload sonrası, daha yeni
+            }
+          ]
+        }
+
+        mockAppcircleApi.get.mockResolvedValue({ data: mockProfile })
+
+        const result = await getAppVersionAfterUploadWithTaskCompletion({
+          distProfileId: 'profile-1',
+          taskId: 'task-123',
+          uploadStartTime: uploadStartTime,
+          expectedFileSize: 1000000,
+          fileName: 'app-release.apk',
+          waitForTaskCompletion: mockWaitForTaskCompletion
+        })
+
+        // v2 seçilmeli (daha yeni)
+        expect(result).toBe('v2')
       })
     })
 

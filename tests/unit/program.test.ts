@@ -348,9 +348,12 @@ describe('Program.ts - Comprehensive Tests', () => {
 
         createCommands(mockProgram, Commands, mockActionCb);
 
-        expect(mockProgram.requiredOption).toHaveBeenCalledWith(
-          '--env <environment>',
-          'Environment name'
+        // Note: All parameters now use optional syntax [type] for better custom validation
+        // Required parameters are validated in our custom validation logic
+        expect(mockProgram.option).toHaveBeenCalledWith(
+          '--env [environment]',
+          'Environment name',
+          undefined
         );
       });
 
@@ -401,7 +404,8 @@ describe('Program.ts - Comprehensive Tests', () => {
 
         createCommands(mockProgram, Commands, mockActionCb);
 
-        expect(mockSubProgram.option).toHaveBeenCalledWith('--format <json|yaml>', 'Output format', 'json');
+        // Note: All parameters now use optional syntax [type] for better custom validation
+        expect(mockSubProgram.option).toHaveBeenCalledWith('--format [json|yaml]', 'Output format', 'json');
       });
 
       it('should set action callbacks for all commands', async () => {

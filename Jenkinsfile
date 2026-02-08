@@ -5,7 +5,7 @@ pipeline {
     }
     environment {
         NPM_AUTH_TOKEN = credentials('Appcircle-CLI-NPM-Cred')
-        GITHUB_PAT = credentials('ozer-github-pat')
+        GITHUB_PAT = credentials('appcircle-cli-gh-repo-fg-pat')
     }
     stages {
         stage('PR Validation') {
@@ -230,7 +230,10 @@ pipeline {
 
         stage('Publish') {
             when {
-                expression { params.PUBLISH == true }
+                anyOf {
+                    expression { params.PUBLISH == true }
+                    buildingTag()
+                }
             }
             steps {
                 sh '''#!/bin/bash

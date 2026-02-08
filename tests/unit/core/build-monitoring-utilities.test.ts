@@ -755,7 +755,7 @@ describe('Build Monitoring Utilities', () => {
 
       await expect(async () => {
         await promptForFailedBuildLogs(mockFinalStatusResponse, 'build-789', mockParams, '/default/path', mockDownloadBuildLogs, mockResponseData);
-      }).rejects.toThrow(new AppcircleExitError('Build failed, user chose to exit', 1));
+      }).rejects.toThrow(new AppcircleExitError('Build failed', 1));
     });
   });
 

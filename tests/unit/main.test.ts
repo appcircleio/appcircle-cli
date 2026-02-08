@@ -337,7 +337,7 @@ describe('Main.ts - Comprehensive Tests', () => {
           expect(e.message).toBe('Process exit with code: 1');
         }
         
-        expect(mockConsoleError).toHaveBeenCalledWith('Error occurred');
+        expect(mockConsoleError).toHaveBeenCalledWith('red:\nError occurred (exit code: 1)');
       });
 
       it('should handle Axios error in plain mode', async () => {

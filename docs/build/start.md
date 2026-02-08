@@ -29,10 +29,15 @@ appcircle build start [options]
   --configurationId <uuid>  Configuration ID
   --configuration <string>  Configuration name (alternative to --configurationId)
   --no-wait                 Don't wait for build completion, return immediately with task info
+                            Note: Incompatible with monitoring modes (--monitor) and download options
   --download-logs           Automatically download build logs after completion
+                            Note: Cannot be used with --no-wait or --monitor none
   --download-artifacts      Automatically download build artifacts after completion
+                            Note: Cannot be used with --no-wait or --monitor none
   --path <string>           Download path for logs and artifacts (default: ~/Downloads)
-  --monitor <mode>          Build monitoring preference: none, summary (default), steps, or verbose
+  --monitor [mode]          Build monitoring preference: none, summary (default), steps, or verbose
+                            Valid values: none | summary | steps | verbose
+                            Note: Incompatible with --no-wait. Must be specified with a valid value.
 ```
 
 ## Options inherited from parent commands
@@ -201,9 +206,11 @@ appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> -
 
 - **No Wait**: The `--no-wait` parameter is useful for automation scenarios where you don't want to wait for build completion. The command returns immediately with task information.
 
-- **Auto Download**: The `--download-logs` and `--download-artifacts` parameters automatically download files after build completion. Use `--path` to specify a custom download location.
+- **Parameter Compatibility**: The `--no-wait` flag is incompatible with monitoring modes (`--monitor verbose`, `--monitor steps`, `--monitor summary`). If both are specified, the CLI will display an error and exit. For automation scenarios, use `--no-wait` without any monitoring flags (which defaults to immediate exit like `--monitor none`).
 
-- **Monitoring Preferences**: The `--monitor` parameter allows you to control how build progress is displayed. The default `summary` mode provides real-time build status and duration, while `verbose` mode offers full verbose log streaming, `steps` shows step-by-step progress, and `none` returns only the task ID.
+- **Auto Download**: The `--download-logs` and `--download-artifacts` parameters automatically download files after build completion. Use `--path` to specify a custom download location. **Important**: These download options cannot be used with `--no-wait` or `--monitor none` because downloads require waiting for the build to complete. If you try to use them together, the CLI will display an error message with suggestions on how to resolve the conflict.
+
+- **Monitoring Preferences**: The `--monitor` parameter allows you to control how build progress is displayed. The default `summary` mode provides real-time build status and duration, while `verbose` mode offers full verbose log streaming, `steps` shows step-by-step progress, and `none` returns only the task ID. **Important**: The `--monitor` flag must be provided with a valid value (`none`, `summary`, `steps`, or `verbose`). Using `--monitor` without a value or with an invalid value will result in an error.
 
 - **Real-time Logs**: All monitor modes (except `none`) provide real-time log streaming, allowing you to monitor build progress as it happens. The system automatically formats logs and handles step transitions for better readability.
 
