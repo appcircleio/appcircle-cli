@@ -135,6 +135,35 @@ describe('Signing Identity Service', () => {
         expect(result).toEqual(mockResponse)
       })
 
+      it('should upload P12 without password (optional password)', async () => {
+        const mockStream = 'mock-file-stream'
+        mockFs.createReadStream.mockReturnValue(mockStream as any)
+        
+        const mockResponse = { id: 'cert456', name: 'uploaded-cert-no-password' }
+        mockAppcircleApi.post.mockResolvedValue({ data: mockResponse })
+
+        const result = await uploadP12Certificate({ 
+          path: '/path/cert-no-password.p12'
+        })
+
+        expect(mockFs.createReadStream).toHaveBeenCalledWith('/path/cert-no-password.p12')
+        expect(MockFormData.prototype.append).toHaveBeenCalledWith('binary', mockStream)
+        expect(MockFormData.prototype.append).toHaveBeenCalledWith('password', '')
+        
+        expect(mockAppcircleApi.post).toHaveBeenCalledWith(
+          'signing-identity/v2/certificates',
+          expect.any(FormData),
+          expect.objectContaining({
+            maxBodyLength: Infinity,
+            headers: expect.objectContaining({
+              'content-type': 'multipart/form-data; boundary=test'
+            })
+          })
+        )
+        
+        expect(result).toEqual(mockResponse)
+      })
+
       it('should handle file not found error', async () => {
         const fileError = new Error('ENOENT: no such file or directory')
         mockFs.createReadStream.mockImplementation(() => { throw fileError })

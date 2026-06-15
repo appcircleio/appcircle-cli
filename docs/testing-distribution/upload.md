@@ -20,6 +20,15 @@ appcircle testing-distribution upload [options]
       --help   Show help for command
 ```
 
+## Release Notes
+
+- The `--message` parameter allows you to add release notes for your distribution
+- Release notes are supported for both APK and AAB files
+- In interactive mode, you can enter multi-line release notes:
+  - Type your release notes line by line
+  - Leave two blank lines to finish entering release notes
+  - You can include line breaks and formatting in your release notes
+
 ## Note on File Size Limits
 
 - The maximum allowed file size for uploads is 3 GB

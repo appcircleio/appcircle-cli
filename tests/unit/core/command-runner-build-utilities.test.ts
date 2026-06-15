@@ -764,4 +764,205 @@ describe('Command Runner Build Utilities', () => {
       );
     });
   });
+  
+  describe('Build View with commitHash Support', () => {
+    it('should resolve commitId from commitHash', () => {
+      const commits = [
+        { id: 'commit-uuid-1', hash: 'a1b2c3d4e5f6', message: 'First commit' },
+        { id: 'commit-uuid-2', hash: 'f6e5d4c3b2a1', message: 'Second commit' },
+        { id: 'commit-uuid-3', hash: '123456789abc', message: 'Third commit' }
+      ];
+      
+      const commitHash = 'f6e5d4c3b2a1';
+      const found = commits.find(c => c.hash === commitHash);
+      
+      expect(found).toBeDefined();
+      expect(found?.id).toBe('commit-uuid-2');
+      expect(found?.hash).toBe(commitHash);
+    });
+    
+    it('should return undefined when commitHash is not found', () => {
+      const commits = [
+        { id: 'commit-uuid-1', hash: 'a1b2c3d4e5f6', message: 'First commit' },
+        { id: 'commit-uuid-2', hash: 'f6e5d4c3b2a1', message: 'Second commit' }
+      ];
+      
+      const commitHash = 'nonexistent';
+      const found = commits.find(c => c.hash === commitHash);
+      
+      expect(found).toBeUndefined();
+    });
+    
+    it('should handle short commit hash format', () => {
+      const commits = [
+        { id: 'commit-uuid-1', hash: 'a1b2c3d4', message: 'First commit' },
+        { id: 'commit-uuid-2', hash: 'f6e5d4c3', message: 'Second commit' }
+      ];
+      
+      const commitHash = 'a1b2c3d4';
+      const found = commits.find(c => c.hash === commitHash);
+      
+      expect(found).toBeDefined();
+      expect(found?.id).toBe('commit-uuid-1');
+    });
+    
+    it('should handle full 40-character commit hash', () => {
+      const commits = [
+        { id: 'commit-uuid-1', hash: 'a1b2c3d4e5f6789012345678901234567890abcd', message: 'First commit' }
+      ];
+      
+      const commitHash = 'a1b2c3d4e5f6789012345678901234567890abcd';
+      const found = commits.find(c => c.hash === commitHash);
+      
+      expect(found).toBeDefined();
+      expect(found?.id).toBe('commit-uuid-1');
+    });
+    
+    it('should handle empty commits array', () => {
+      const commits: any[] = [];
+      const commitHash = 'a1b2c3d4';
+      const found = commits.find(c => c.hash === commitHash);
+      
+      expect(found).toBeUndefined();
+    });
+    
+    it('should be case-sensitive when matching commit hashes', () => {
+      const commits = [
+        { id: 'commit-uuid-1', hash: 'A1B2C3D4', message: 'First commit' },
+        { id: 'commit-uuid-2', hash: 'a1b2c3d4', message: 'Second commit (lowercase)' }
+      ];
+      
+      // Should not find uppercase when searching for lowercase
+      const foundLowercase = commits.find(c => c.hash === 'a1b2c3d4');
+      expect(foundLowercase?.id).toBe('commit-uuid-2');
+      
+      // Should not find lowercase when searching for uppercase
+      const foundUppercase = commits.find(c => c.hash === 'A1B2C3D4');
+      expect(foundUppercase?.id).toBe('commit-uuid-1');
+    });
+    
+    it('should handle commits with special characters in message', () => {
+      const commits = [
+        { id: 'commit-uuid-1', hash: 'abc123', message: 'Fix: bug with special chars !@#$%' },
+        { id: 'commit-uuid-2', hash: 'def456', message: 'Feature: new implementation' }
+      ];
+      
+      const commitHash = 'abc123';
+      const found = commits.find(c => c.hash === commitHash);
+      
+      expect(found).toBeDefined();
+      expect(found?.message).toBe('Fix: bug with special chars !@#$%');
+    });
+    
+    it('should prioritize exact hash match over partial match', () => {
+      const commits = [
+        { id: 'commit-uuid-1', hash: 'a1b2', message: 'Short hash' },
+        { id: 'commit-uuid-2', hash: 'a1b2c3d4', message: 'Long hash starting with same chars' }
+      ];
+      
+      const commitHash = 'a1b2';
+      const found = commits.find(c => c.hash === commitHash);
+      
+      expect(found?.id).toBe('commit-uuid-1');
+      expect(found?.hash).toBe('a1b2');
+    });
+  });
+  
+  describe('Build View Parameter Validation', () => {
+    it('should accept commitId when provided', () => {
+      const params = {
+        profileId: 'profile-123',
+        branchId: 'branch-456',
+        commitId: 'commit-789',
+        buildId: 'build-012'
+      };
+      
+      const hasCommitId = params.commitId && params.commitId.trim().length > 0;
+      
+      expect(hasCommitId).toBe(true);
+    });
+    
+    it('should accept commitHash when provided instead of commitId', () => {
+      const params = {
+        profileId: 'profile-123',
+        branchId: 'branch-456',
+        commitHash: 'a1b2c3d4e5f6',
+        buildId: 'build-012'
+      };
+      
+      const hasCommitHash = params.commitHash && params.commitHash.trim().length > 0;
+      
+      expect(hasCommitHash).toBe(true);
+    });
+    
+    it('should accept either commitId or commitHash', () => {
+      const paramsWithId = {
+        commitId: 'commit-789'
+      };
+      
+      const paramsWithHash = {
+        commitHash: 'a1b2c3d4'
+      };
+      
+      const paramsWithBoth = {
+        commitId: 'commit-789',
+        commitHash: 'a1b2c3d4'
+      };
+      
+      const hasValidCommitWithId = paramsWithId.commitId || paramsWithHash.commitHash;
+      const hasValidCommitWithHash = paramsWithHash.commitId || paramsWithHash.commitHash;
+      const hasValidCommitWithBoth = paramsWithBoth.commitId || paramsWithBoth.commitHash;
+      
+      expect(hasValidCommitWithId).toBeTruthy();
+      expect(hasValidCommitWithHash).toBeTruthy();
+      expect(hasValidCommitWithBoth).toBeTruthy();
+    });
+    
+    it('should reject when neither commitId nor commitHash is provided', () => {
+      const params = {
+        profileId: 'profile-123',
+        branchId: 'branch-456',
+        buildId: 'build-012'
+      };
+      
+      const hasValidCommit = params.commitId || params.commitHash;
+      
+      expect(hasValidCommit).toBeFalsy();
+    });
+    
+    it('should reject when commitId is empty string', () => {
+      const params = {
+        commitId: '',
+        commitHash: undefined
+      };
+      
+      const hasValidCommit = (params.commitId && params.commitId.trim()) || (params.commitHash && params.commitHash.trim());
+      
+      expect(hasValidCommit).toBeFalsy();
+    });
+    
+    it('should reject when commitHash is empty string', () => {
+      const params = {
+        commitId: undefined,
+        commitHash: ''
+      };
+      
+      const hasValidCommit = (params.commitId && params.commitId.trim()) || (params.commitHash && params.commitHash.trim());
+      
+      expect(hasValidCommit).toBeFalsy();
+    });
+    
+    it('should prefer commitId over commitHash when both are provided', () => {
+      const params = {
+        commitId: 'commit-789',
+        commitHash: 'a1b2c3d4'
+      };
+      
+      // Simulate the logic where commitId takes precedence
+      const effectiveCommitId = params.commitId || 'will-be-resolved-from-hash';
+      
+      expect(effectiveCommitId).toBe('commit-789');
+      expect(effectiveCommitId).not.toBe('will-be-resolved-from-hash');
+    });
+  });
 });

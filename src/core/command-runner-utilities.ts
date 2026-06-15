@@ -58,17 +58,25 @@ export const validateParameterErrorFlag = (params: any): ValidationResult => {
 
 /**
  * Expands tilde (~) in file paths to home directory
+ * Only expands ~ at the beginning of the path (e.g., ~/Desktop or ~\Desktop)
  * @param filePath Path that may contain tilde
  * @returns Expanded path
  */
 export const expandTildeInPath = (filePath: string): string => {
   if (!filePath) return filePath;
   
+  const trimmedPath = filePath.trim();
   const homeDir = os.homedir();
-  if (filePath.includes('~')) {
-    return filePath.replace(/~/g, homeDir);
+  
+  // Only expand tilde if it's at the start of the path
+  if (trimmedPath === '~') {
+    return homeDir;
   }
-  return filePath;
+  if (trimmedPath.startsWith('~/') || trimmedPath.startsWith('~\\')) {
+    return path.join(homeDir, trimmedPath.slice(2));
+  }
+  
+  return trimmedPath;
 };
 
 /**

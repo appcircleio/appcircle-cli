@@ -40,7 +40,7 @@ export const handleError = (error: any) => {
       if (getConsoleOutputType() === 'json') {
         console.error(JSON.stringify(error));
       } else {
-        console.error(error.message);
+        console.error(chalk.red(`\n${error.message} (exit code: ${error.code})`));
       }
     }
     process.exit(error.code);
@@ -48,14 +48,16 @@ export const handleError = (error: any) => {
 
   if (getConsoleOutputType() === 'json') {
     if (axios.isAxiosError(error)) {
-      console.error(JSON.stringify({ message: error.message, status: error.response?.status, statusText: error.response?.statusText, data: error.response?.data }));
+      const statusText = error.response?.status === 403 ? 'Permission Denied. You are not authorized to perform this operation. Ensure your API key has the required permissions or contact your organization administrator.' : error.response?.statusText;
+      console.error(JSON.stringify({ message: error.message, status: error.response?.status, statusText: statusText, data: error.response?.data }));
     } else {
       console.error(JSON.stringify(error));
     }
   } else {
     if (axios.isAxiosError(error)) {
       const data = error.response?.data as any;
-      console.error(`\n${chalk.red('✖')} ${error.message} ${chalk.red(error.response?.statusText)}${collectErrorMessageFromData(data)}`);
+      const statusText = error.response?.status === 403 ? 'Permission Denied. You are not authorized to perform this operation. Ensure your API key has the required permissions or contact your organization administrator.' : error.response?.statusText;
+      console.error(`\n${chalk.red('✖')} ${error.message} ${chalk.red(statusText)}${collectErrorMessageFromData(data)}`);
       if(error.response?.status === 401) {
         console.error(`Run ${chalk.cyan(`"${PROGRAM_NAME} login --help"`)} command for more information.`);
       }

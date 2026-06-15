@@ -366,11 +366,80 @@ describe('Command Runner Publish Utilities', () => {
     });
 
     describe('handleReleaseCandidateMarking', () => {
+      it('should use appVersionId from commitFileResponse when available', async () => {
+        const services = await import('../../../src/services');
+        
+        const params = { publishProfileId: 'prof1', platform: 'ios' };
+        const commitFileResponse = { appVersionId: 'v1-from-response' };
+        
+        await handleReleaseCandidateMarking(params, true, commitFileResponse);
+        
+        expect(services.setAppVersionReleaseCandidateStatus).toHaveBeenCalledWith({
+          ...params,
+          appVersionId: 'v1-from-response',
+          releaseCandidate: true
+        });
+        expect(services.getAppVersions).not.toHaveBeenCalled();
+      });
+
+      it('should use versionId from commitFileResponse when appVersionId not available', async () => {
+        const services = await import('../../../src/services');
+        
+        const params = { publishProfileId: 'prof1', platform: 'ios' };
+        const commitFileResponse = { versionId: 'v1-from-versionId' };
+        
+        await handleReleaseCandidateMarking(params, true, commitFileResponse);
+        
+        expect(services.setAppVersionReleaseCandidateStatus).toHaveBeenCalledWith({
+          ...params,
+          appVersionId: 'v1-from-versionId',
+          releaseCandidate: true
+        });
+        expect(services.getAppVersions).not.toHaveBeenCalled();
+      });
+
+      it('should use id from commitFileResponse when versionId not available', async () => {
+        const services = await import('../../../src/services');
+        
+        const params = { publishProfileId: 'prof1', platform: 'ios' };
+        const commitFileResponse = { id: 'v1-from-id' };
+        
+        await handleReleaseCandidateMarking(params, true, commitFileResponse);
+        
+        expect(services.setAppVersionReleaseCandidateStatus).toHaveBeenCalledWith({
+          ...params,
+          appVersionId: 'v1-from-id',
+          releaseCandidate: true
+        });
+        expect(services.getAppVersions).not.toHaveBeenCalled();
+      });
+
+      it('should fetch and sort app versions by createdAt when commitFileResponse has no versionId', async () => {
+        const services = await import('../../../src/services');
+        vi.mocked(services.getAppVersions).mockResolvedValue([
+          { id: 'v1', createdAt: '2024-01-01T10:00:00Z' },
+          { id: 'v2', createdAt: '2024-01-02T10:00:00Z' }, // Newest
+          { id: 'v3', createdAt: '2024-01-01T15:00:00Z' }
+        ]);
+
+        const params = { publishProfileId: 'prof1', platform: 'ios' };
+        
+        await handleReleaseCandidateMarking(params, true, {});
+        
+        // Should use v2 (newest by createdAt)
+        expect(services.setAppVersionReleaseCandidateStatus).toHaveBeenCalledWith({
+          ...params,
+          appVersionId: 'v2',
+          releaseCandidate: true
+        });
+        expect(services.getAppVersions).toHaveBeenCalledWith(params);
+      });
+
       it('should mark app version as release candidate when shouldMark is true', async () => {
         const services = await import('../../../src/services');
-        vi.mocked(services.getAppVersions).mockResolvedValue([{ id: 'v1' }]);
+        vi.mocked(services.getAppVersions).mockResolvedValue([{ id: 'v1', createdAt: '2024-01-01T10:00:00Z' }]);
 
-        const params = { publishProfileId: 'prof1' };
+        const params = { publishProfileId: 'prof1', platform: 'ios' };
         
         await handleReleaseCandidateMarking(params, true);
         
@@ -383,9 +452,9 @@ describe('Command Runner Publish Utilities', () => {
 
       it('should set release note when summary is provided', async () => {
         const services = await import('../../../src/services');
-        vi.mocked(services.getAppVersions).mockResolvedValue([{ id: 'v1' }]);
+        vi.mocked(services.getAppVersions).mockResolvedValue([{ id: 'v1', createdAt: '2024-01-01T10:00:00Z' }]);
 
-        const params = { publishProfileId: 'prof1', summary: 'Release notes' };
+        const params = { publishProfileId: 'prof1', platform: 'ios', summary: 'Release notes' };
         
         await handleReleaseCandidateMarking(params, true);
         
@@ -395,12 +464,24 @@ describe('Command Runner Publish Utilities', () => {
         });
       });
 
+      it('should throw error when no app versions found and no commitFileResponse', async () => {
+        const services = await import('../../../src/services');
+        vi.mocked(services.getAppVersions).mockResolvedValue([]);
+
+        const params = { publishProfileId: 'prof1', platform: 'ios' };
+        
+        await expect(
+          handleReleaseCandidateMarking(params, true)
+        ).rejects.toThrow('No app versions found to mark as release candidate');
+      });
+
       it('should not do anything when shouldMark is false', async () => {
         const services = await import('../../../src/services');
         
         await handleReleaseCandidateMarking({}, false);
         
         expect(services.setAppVersionReleaseCandidateStatus).not.toHaveBeenCalled();
+        expect(services.getAppVersions).not.toHaveBeenCalled();
       });
     });
   });

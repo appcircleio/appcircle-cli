@@ -12,10 +12,23 @@ export async function getEnterpriseUploadInformation(options: OptionsType<{ file
   return uploadInformationResponse.data;
 }
 
-export async function commitEnterpriseFileUpload(options: OptionsType<{ fileId: number; fileName: string; entProfileId?: string }>) {
-
+export async function commitEnterpriseFileUpload(options: OptionsType<{ fileId: number; fileName: string; entProfileId?: string; customTag?: string; message?: string }>) {
   var createNewProfile = options.entProfileId === undefined;
-  const commitFileResponse = await appcircleApi.post(`store/v1/profiles/app-versions?action=commitFileUpload&createNewProfile=${createNewProfile}${options.entProfileId ? `&profileId=${options.entProfileId}`: ''}`,{fileId: options.fileId, fileName: options.fileName},{
+  
+  const requestBody: { fileId: number; fileName: string; customTag?: string; message?: string } = {
+    fileId: options.fileId,
+    fileName: options.fileName,
+  };
+  
+  if (options.customTag !== undefined && options.customTag !== null) {
+    requestBody.customTag = options.customTag;
+  }
+  
+  if (options.message !== undefined && options.message !== null) {
+    requestBody.message = options.message;
+  }
+  
+  const commitFileResponse = await appcircleApi.post(`store/v1/profiles/app-versions?action=commitFileUpload&createNewProfile=${createNewProfile}${options.entProfileId ? `&profileId=${options.entProfileId}`: ''}`, requestBody, {
     headers: {
       ...getHeaders(),
     },

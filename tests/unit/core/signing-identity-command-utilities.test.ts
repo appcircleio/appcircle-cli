@@ -367,11 +367,28 @@ describe('Certificate Command Utilities', () => {
       await handleCertificateUpload(mockCommand, params);
       
       expect(createOra).toHaveBeenCalledWith('Try to upload the Certificate');
-      expect(uploadP12Certificate).toHaveBeenCalledWith(params);
+      expect(uploadP12Certificate).toHaveBeenCalledWith(expect.objectContaining({
+        password: 'password'
+      }));
       expect(commandWriter).toHaveBeenCalledWith(CommandTypes.SIGNING_IDENTITY, {
         fullCommandName: mockCommand.fullCommandName,
         data: mockResponse
       });
+      expect(mockSpinner.succeed).toHaveBeenCalled();
+    });
+
+    it('should expand tilde in certificate path', async () => {
+      const params = { path: '~/Downloads/cert.p12', password: 'password' };
+      const mockResponse = { id: 'cert-123', message: 'Uploaded' };
+      
+      (uploadP12Certificate as any).mockResolvedValue(mockResponse);
+      
+      await handleCertificateUpload(mockCommand, params);
+      
+      expect(uploadP12Certificate).toHaveBeenCalledWith(expect.objectContaining({
+        path: expect.not.stringContaining('~'),
+        password: 'password'
+      }));
       expect(mockSpinner.succeed).toHaveBeenCalled();
     });
 
@@ -619,7 +636,9 @@ describe('Keystore Command Utilities', () => {
       await handleKeystoreUpload(mockCommand, params);
       
       expect(createOra).toHaveBeenCalledWith('Trying to upload the Keystore file');
-      expect(uploadAndroidKeystoreFile).toHaveBeenCalledWith(params);
+      expect(uploadAndroidKeystoreFile).toHaveBeenCalledWith(expect.objectContaining({
+        password: 'password'
+      }));
       expect(mockSpinner.succeed).toHaveBeenCalled();
     });
 
@@ -774,7 +793,9 @@ describe('Provisioning Profile Command Utilities', () => {
       await handleProvisioningProfileUpload(mockCommand, params);
       
       expect(createOra).toHaveBeenCalledWith('Trying to upload the Provisioning Profile');
-      expect(uploadProvisioningProfile).toHaveBeenCalledWith(params);
+      expect(uploadProvisioningProfile).toHaveBeenCalledWith(expect.objectContaining({
+        path: expect.any(String)
+      }));
       expect(mockSpinner.succeed).toHaveBeenCalled();
     });
 

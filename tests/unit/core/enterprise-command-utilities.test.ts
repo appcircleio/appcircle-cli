@@ -484,6 +484,24 @@ describe('Enterprise Command Utilities', () => {
   });
 
   describe('validateAndPrepareUploadFile', () => {
+    it('should throw error when appPath is undefined', () => {
+      expect(() => {
+        validateAndPrepareUploadFile(undefined as any);
+      }).toThrow(AppcircleExitError);
+      expect(() => {
+        validateAndPrepareUploadFile(undefined as any);
+      }).toThrow('The --app parameter is required');
+    });
+
+    it('should throw error when appPath is empty string', () => {
+      expect(() => {
+        validateAndPrepareUploadFile('');
+      }).toThrow(AppcircleExitError);
+      expect(() => {
+        validateAndPrepareUploadFile('');
+      }).toThrow('The --app parameter is required');
+    });
+
     it('should validate and prepare upload file successfully', () => {
       const mockStats = { size: 1000000 }; // 1MB
       

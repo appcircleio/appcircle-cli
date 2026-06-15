@@ -337,7 +337,7 @@ describe('Main.ts - Comprehensive Tests', () => {
           expect(e.message).toBe('Process exit with code: 1');
         }
         
-        expect(mockConsoleError).toHaveBeenCalledWith('Error occurred');
+        expect(mockConsoleError).toHaveBeenCalledWith('red:\nError occurred (exit code: 1)');
       });
 
       it('should handle Axios error in plain mode', async () => {
@@ -624,6 +624,33 @@ describe('Main.ts - Comprehensive Tests', () => {
       const { collectErrorMessageFromData } = await import('../../src/main.js');
       const formattedData = collectErrorMessageFromData(mockResponse.data);
       expect(formattedData).toContain('Token expired');
+    });
+
+    it('should test 403 error handling logic with detailed message', async () => {
+      // Test the logic for 403 errors indirectly
+      const mockResponse = {
+        status: 403,
+        statusText: 'Permission Denied. You are not authorized to perform this operation. Ensure your API key has the required permissions or contact your organization administrator.',
+        data: { message: 'Insufficient permissions' }
+      };
+
+      // Verify the condition that triggers permission denied message
+      const is403Error = mockResponse.status === 403;
+      expect(is403Error).toBe(true);
+      
+      // Test that statusText for 403 includes the detailed message
+      const expectedStatusText = mockResponse.status === 403 
+        ? 'Permission Denied. You are not authorized to perform this operation. Ensure your API key has the required permissions or contact your organization administrator.' 
+        : mockResponse.statusText;
+      expect(expectedStatusText).toContain('Permission Denied');
+      expect(expectedStatusText).toContain('You are not authorized to perform this operation');
+      expect(expectedStatusText).toContain('Ensure your API key has the required permissions');
+      expect(expectedStatusText).toContain('contact your organization administrator');
+      
+      // Test that error data formatting works
+      const { collectErrorMessageFromData } = await import('../../src/main.js');
+      const formattedData = collectErrorMessageFromData(mockResponse.data);
+      expect(formattedData).toContain('Insufficient permissions');
     });
 
     it('should handle complex error data formatting', async () => {

@@ -738,7 +738,7 @@ LEARN MORE
 
 USAGE
   appcircle build view --profileId <uuid> --branchId <uuid> --commitId <uuid> --buildId <uuid>
-  appcircle build view --profile <string> --branch <string> --commitId <uuid> --buildId <uuid>
+  appcircle build view --profile <string> --branch <string> --commitHash <string> --buildId <uuid>
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
@@ -746,10 +746,22 @@ REQUIRED OPTIONS
   --branchId <uuid>     Branch ID (UUID format)
   --branch <string>     Branch name (alternative to --branchId)
   --commitId <uuid>     Commit ID (UUID format)
+  --commitHash <string> Git commit hash (alternative to --commitId)
   --buildId <uuid>      Build ID (UUID format)
 
+DESCRIPTION
+  View detailed information about a specific build. You can identify the commit using either:
+  - Appcircle's commit ID (--commitId), or
+  - Git commit hash (--commitHash)
+
 EXAMPLES
+  # Using Appcircle commit ID
   appcircle build view --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
+  
+  # Using Git commit hash
+  appcircle build view --profile "My iOS Project" --branch "main" --commitHash a1b2c3d4e5f6 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
+  
+  # Mixed usage with names
   appcircle build view --profile "My iOS Project" --branch "main" --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
 
 LEARN MORE
@@ -800,7 +812,16 @@ LEARN MORE
             description: 'Commit Message (ID) of your build',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
-            required: true,
+            required: false,
+          },
+          {
+            name: 'commitHash',
+            description: "Git commit hash (alternative to 'commitId')",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
           },
           {
             name: 'buildId',
@@ -1611,7 +1632,7 @@ EXAMPLES
   appcircle signing-identity certificate list
 
 LEARN MORE
-  Use 'appcircle signing-identity certificate upload --path <path> --password <password>' to upload new certificates.
+  Use 'appcircle signing-identity certificate upload --path <path>' to upload new certificates.
   Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to view certificate details.`,
             params:[],
           },
@@ -1621,17 +1642,24 @@ LEARN MORE
             longDescription: `Upload a new iOS certificate bundle to your organization
 
 USAGE
-  appcircle signing-identity certificate upload --path <path> --password <password>
+  appcircle signing-identity certificate upload --path <path> [--password <password>]
 
 REQUIRED OPTIONS
   --path <path>         Path to the certificate file (.p12 format)
-  --password <password> Certificate bundle password
+
+OPTIONAL OPTIONS
+  --password <password> Certificate bundle password (if the certificate is password-protected)
 
 DESCRIPTION
   Upload and install a new iOS certificate bundle (.p12 file) for code signing.
   The certificate will be available for use in your iOS build processes.
+  If your certificate is password-protected, provide the password using the --password option.
 
 EXAMPLES
+  # Upload a certificate without password
+  appcircle signing-identity certificate upload --path ./ios_distribution.p12
+  
+  # Upload a password-protected certificate
   appcircle signing-identity certificate upload --path ./ios_distribution.p12 --password "mypassword"
   appcircle signing-identity certificate upload --path ~/certificates/dev_cert.p12 --password "securepass"
 
@@ -1648,10 +1676,10 @@ LEARN MORE
               },
               {
                 name: 'password',
-                description: 'Certificate Password',
+                description: 'Certificate Password (optional)',
                 type: CommandParameterTypes.PASSWORD,
                 valueType: 'string',
-                required: true
+                required: false
               },
             ],
           },
@@ -2405,14 +2433,17 @@ LEARN MORE
         longDescription: `Upload your mobile application to a testing distribution profile
 
 USAGE
-  appcircle testing-distribution upload --distProfileId <uuid> --app <path> --message <message>
-  appcircle testing-distribution upload --distProfile <string> --app <path> --message <message>
+  appcircle testing-distribution upload --distProfileId <uuid> --app <path> [--message <message>] [--customTag <tag>]
+  appcircle testing-distribution upload --distProfile <string> --app <path> [--message <message>] [--customTag <tag>]
 
 REQUIRED OPTIONS
   --distProfileId <uuid>    Distribution profile ID (UUID format)
   --distProfile <string>    Distribution profile name (alternative to --distProfileId)
   --app <path>             Path to the mobile app file (.ipa for iOS, .apk/.aab for Android)
+
+OPTIONAL OPTIONS
   --message <message>      Release notes for this distribution
+  --customTag <tag>        Custom tag for this distribution
 
 DESCRIPTION
   Upload a mobile application binary to a specified distribution profile for testing.
@@ -2420,7 +2451,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution upload --distProfileId 550e8400-e29b-41d4-a716-446655440000 --app ./MyApp.ipa --message "Fixed login bug"
-  appcircle testing-distribution upload --distProfile "Beta Testing" --app ./MyApp.apk --message "New feature release"
+  appcircle testing-distribution upload --distProfile "Beta Testing" --app ./MyApp.apk --message "New feature release" --customTag "v1.2.3"
 
 LEARN MORE
   Use 'appcircle testing-distribution profile list' to get available distribution profiles with their UUIDs and names.
@@ -2446,6 +2477,12 @@ LEARN MORE
           {
             name: 'message',
             description: 'Release Notes',
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+          },
+          {
+            name: 'customTag',
+            description: 'Custom Tag',
             type: CommandParameterTypes.STRING,
             valueType: 'string',
           },
@@ -3414,7 +3451,7 @@ LEARN MORE
                 longDescription: `Upload a new app version to a publish profile
 
 USAGE
-  appcircle publish profile version upload --platform <platform> --publishProfileId <uuid> --app <path>
+  appcircle publish profile version upload --platform <platform> --publishProfileId <uuid> --app <path> [--message <message>] [--customTag <tag>]
 
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
@@ -3422,12 +3459,17 @@ REQUIRED OPTIONS
   --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
   --app <path>               Path to the app binary (ipa/apk/aab)
 
+OPTIONAL OPTIONS
+  --message <message>        Release notes for this version
+  --customTag <tag>          Custom tag for this version
+
 DESCRIPTION
   Upload a new binary (IPA, APK, or AAB) as a new version to the selected publish profile. Optionally, mark as release candidate and add release notes.
 
 EXAMPLES
   appcircle publish profile version upload --platform ios --publishProfileId <uuid> --app ./MyApp.ipa
   appcircle publish profile version upload --platform android --publishProfile "Google Play Production" --app ./MyApp.aab
+  appcircle publish profile version upload --platform ios --publishProfileId <uuid> --app ./MyApp.ipa --message "Bug fixes" --customTag "v1.2.0"
 
 LEARN MORE
   Use 'appcircle publish profile version list' to see all versions for a profile.`,
@@ -3470,6 +3512,20 @@ LEARN MORE
                     name: 'summary',
                     description: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.) [OPTIONAL]',
                     longDescription: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.) [OPTIONAL]',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false
+                  },
+                  {
+                    name: 'message',
+                    description: 'Release Notes',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false
+                  },
+                  {
+                    name: 'customTag',
+                    description: 'Custom Tag',
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
                     required: false
@@ -4507,18 +4563,23 @@ EXAMPLES
             longDescription: `Upload an enterprise app version for a profile
 
 USAGE
-  appcircle enterprise-app-store version upload-for-profile --entProfileId <uuid> --app <path>
+  appcircle enterprise-app-store version upload-for-profile --entProfileId <uuid> --app <path> [--message <message>] [--customTag <tag>]
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
   --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --app <path>            Path to the app binary (ipa/apk/aab)
 
+OPTIONAL OPTIONS
+  --message <message>     Release notes for this version
+  --customTag <tag>       Custom tag for this version
+
 DESCRIPTION
   Upload a new app version to the specified enterprise profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version upload-for-profile --entProfile "Internal Apps" --app ./MyApp.ipa`,
+  appcircle enterprise-app-store version upload-for-profile --entProfile "Internal Apps" --app ./MyApp.ipa
+  appcircle enterprise-app-store version upload-for-profile --entProfileId <uuid> --app ./MyApp.ipa --message "Bug fixes" --customTag "v1.0.1"`,
             params: [
               {
                 name: 'entProfileId',
@@ -4543,6 +4604,18 @@ EXAMPLES
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
               },
+              {
+                name: 'message',
+                description: 'Release Notes',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+              },
+              {
+                name: 'customTag',
+                description: 'Custom Tag',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+              },
             ],
           },
           {
@@ -4551,16 +4624,21 @@ EXAMPLES
             longDescription: `Upload an enterprise app version without specifying a profile
 
 USAGE
-  appcircle enterprise-app-store version upload-without-profile --app <path>
+  appcircle enterprise-app-store version upload-without-profile --app <path> [--message <message>] [--customTag <tag>]
 
 REQUIRED OPTIONS
   --app <path>            Path to the app binary (ipa/apk/aab)
+
+OPTIONAL OPTIONS
+  --message <message>     Release notes for this version
+  --customTag <tag>       Custom tag for this version
 
 DESCRIPTION
   Upload a new app version without associating it with a specific enterprise profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version upload-without-profile --app ./MyApp.ipa`,
+  appcircle enterprise-app-store version upload-without-profile --app ./MyApp.ipa
+  appcircle enterprise-app-store version upload-without-profile --app ./MyApp.ipa --message "Initial release" --customTag "v1.0.0"`,
             params: [
               {
                 name: 'app',

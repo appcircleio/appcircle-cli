@@ -214,9 +214,21 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
     return uploadInformationResponse.data;
   }
 
-  export async function commitPublishFileUpload(options: OptionsType<{ platform: string,  fileId: number; fileName: string; publishProfileId: string }>) {
+  export async function commitPublishFileUpload(options: OptionsType<{ platform: string,  fileId: number; fileName: string; publishProfileId: string; customTag?: string; message?: string }>) {
+    const requestBody: { fileId: number; fileName: string; customTag?: string; message?: string } = {
+      fileId: options.fileId,
+      fileName: options.fileName,
+    };
+    
+    if (options.customTag !== undefined && options.customTag !== null) {
+      requestBody.customTag = options.customTag;
+    }
+    
+    if (options.message !== undefined && options.message !== null) {
+      requestBody.message = options.message;
+    }
 
-    const commitFileResponse = await appcircleApi.post(`publish/v1/profiles/${options.platform}/${options.publishProfileId}/app-versions?action=commitFileUpload`,{fileId: options.fileId, fileName: options.fileName},{
+    const commitFileResponse = await appcircleApi.post(`publish/v1/profiles/${options.platform}/${options.publishProfileId}/app-versions?action=commitFileUpload`, requestBody, {
       headers: {
         ...getHeaders(),
       },
