@@ -18,70 +18,60 @@ pipeline {
                 # shellcheck shell=bash
                 set -x
                 set -euo pipefail
-                
+
                 echo "🔨 Starting PR Validation Pipeline 🔨"
                 echo "=================================="
-                
-                echo "📦 Installing dependencies.. ."
-                yarn install
-                
-                echo "⚙️  Running TypeScript compilation..."
-                if ! npm run build; then
-                    echo "❌ TypeScript compilation failed! 😢"
-                    exit 1
-                fi
-                echo "✅ TypeScript compilation successful! 🎉"
-                
-                echo "🧪 Running unit tests with coverage..."
-                if ! npm test; then
-                    echo "❌ Unit tests failed! 💔"
-                    exit 1
-                fi
-                echo "✅ Unit tests passed! 🌟"
 
-                echo "📊 Checking coverage thresholds..."
-                if ! node scripts/parse-coverage.js check-threshold; then
-                    echo "❌ Coverage below minimum thresholds! 💔"
-                    echo "⚠️  This PR cannot be merged until coverage meets the requirements."
+                # All Node tooling runs inside Docker so the host agent does not need Node.
+                echo "🐳 Building CI/test image..."
+                docker build -f Dockerfile.test -t ac-cli-test .
+
+                echo "⚙️  TypeScript compilation, 🧪 unit tests with coverage and 📊 threshold check..."
+                docker rm -f ac-cli-ci >/dev/null 2>&1 || true
+                if ! docker run --name ac-cli-ci ac-cli-test sh -c "yarn build && yarn test && node scripts/parse-coverage.js check-threshold && (node scripts/parse-coverage.js pr-comment > /app/pr-comment.txt 2>/dev/null || true)"; then
+                    echo "❌ Build / unit tests / coverage threshold failed! 💔"
+                    docker rm -f ac-cli-ci >/dev/null 2>&1 || true
+                    docker image rm ac-cli-test >/dev/null 2>&1 || true
                     exit 1
                 fi
-                echo "✅ Coverage thresholds met! 🎯"
+                echo "✅ Build, unit tests and coverage thresholds passed! 🎯"
 
                 echo "📊 Posting coverage report to PR..."
                 # This section is optional and won't fail the build
                 set +e  # Don't exit on error for coverage posting
-                if [ -n "${GITHUB_TOKEN:-}" ]; then
-                    # Generate PR comment
-                    COVERAGE_COMMENT=$(node scripts/parse-coverage.js pr-comment 2>/dev/null)
+                docker cp ac-cli-ci:/app/pr-comment.txt ./pr-comment.txt >/dev/null 2>&1
+                if [ -n "${GITHUB_TOKEN:-}" ] && [ -s ./pr-comment.txt ]; then
+                    COVERAGE_COMMENT=$(cat ./pr-comment.txt)
 
-                    if [ $? -eq 0 ] && [ -n "$COVERAGE_COMMENT" ]; then
-                        # Create JSON payload
-                        JSON_PAYLOAD=$(jq -n --arg body "$COVERAGE_COMMENT" '{body: $body}' 2>/dev/null)
+                    # Create JSON payload
+                    JSON_PAYLOAD=$(jq -n --arg body "$COVERAGE_COMMENT" '{body: $body}' 2>/dev/null)
 
-                        if [ $? -eq 0 ] && [ -n "$JSON_PAYLOAD" ]; then
-                            # Post comment to PR
-                            HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/gh_response.json -X POST \
-                              -H "Authorization: token ${GITHUB_TOKEN}" \
-                              -H "Accept: application/vnd.github.v3+json" \
-                              -H "Content-Type: application/json" \
-                              "https://api.github.com/repos/appcircleio/appcircle-cli/issues/${CHANGE_ID}/comments" \
-                              -d "$JSON_PAYLOAD" 2>/dev/null)
+                    if [ $? -eq 0 ] && [ -n "$JSON_PAYLOAD" ]; then
+                        # Post comment to PR
+                        HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/gh_response.json -X POST \
+                          -H "Authorization: token ${GITHUB_TOKEN}" \
+                          -H "Accept: application/vnd.github.v3+json" \
+                          -H "Content-Type: application/json" \
+                          "https://api.github.com/repos/appcircleio/appcircle-cli/issues/${CHANGE_ID}/comments" \
+                          -d "$JSON_PAYLOAD" 2>/dev/null)
 
-                            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-                                echo "✅ Coverage comment posted to PR #${CHANGE_ID}"
-                            else
-                                echo "⚠️  Failed to post coverage comment (HTTP ${HTTP_CODE:-unknown}), continuing..."
-                                cat /tmp/gh_response.json 2>/dev/null || true
-                            fi
+                        if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+                            echo "✅ Coverage comment posted to PR #${CHANGE_ID}"
                         else
-                            echo "⚠️  Failed to create JSON payload, continuing..."
+                            echo "⚠️  Failed to post coverage comment (HTTP ${HTTP_CODE:-unknown}), continuing..."
+                            cat /tmp/gh_response.json 2>/dev/null || true
                         fi
                     else
-                        echo "⚠️  Failed to generate coverage comment, continuing..."
+                        echo "⚠️  Failed to create JSON payload, continuing..."
                     fi
                 else
-                    echo "⚠️  GITHUB_TOKEN not available, skipping coverage comment"
+                    echo "⚠️  No coverage comment generated or GITHUB_TOKEN not available, skipping coverage comment"
                 fi
+
+                # Cleanup
+                docker rm -f ac-cli-ci >/dev/null 2>&1 || true
+                docker image rm ac-cli-test >/dev/null 2>&1 || true
+                rm -f ./pr-comment.txt
                 set -e  # Re-enable exit on error
 
                 echo "=================================="
@@ -116,6 +106,8 @@ pipeline {
                 # Functions
                 die() {
                     echo "⚠️  $1"
+                    docker rm -f ac-cli-badges >/dev/null 2>&1 || true
+                    docker image rm ac-cli-test >/dev/null 2>&1 || true
                     [ -f README.md.bak ] && mv README.md.bak README.md
                     exit 0
                 }
@@ -136,20 +128,29 @@ pipeline {
                 # Main script
                 echo "📊 Updating coverage badges in README..."
 
-                # Install dependencies if needed
-                [ ! -d "node_modules" ] && yarn install
+                # Run tests and generate badges inside Docker (no Node on the host agent)
+                echo "🐳 Building CI/test image..."
+                docker build -f Dockerfile.test -t ac-cli-test . || die "Failed to build test image"
 
-                # Run tests
-                echo "🧪 Running tests to generate coverage..."
-                TEST_OUTPUT=$(npm test 2>&1) || die "Tests failed, skipping badge update"
+                echo "🧪 Running tests to generate coverage and badges..."
+                docker rm -f ac-cli-badges >/dev/null 2>&1 || true
+                docker run --name ac-cli-badges ac-cli-test sh -c '
+                    TEST_OUTPUT=$(yarn test 2>&1) || { echo "$TEST_OUTPUT"; exit 1; }
+                    TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -oE "Tests[[:space:]]+[0-9]+[[:space:]]+passed" | grep -oE "[0-9]+" | head -1)
+                    if [ -n "$TESTS_PASSED" ]; then
+                        node scripts/parse-coverage.js badges "{\\"passed\\":$TESTS_PASSED}" > /app/badges.txt 2>/dev/null
+                    else
+                        node scripts/parse-coverage.js badges > /app/badges.txt 2>/dev/null
+                    fi
+                ' || die "Tests failed, skipping badge update"
 
-                # Extract test count and generate badges
-                TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -oE 'Tests[[:space:]]+[0-9]+[[:space:]]+passed' | grep -oE '[0-9]+' | head -1)
-                if [ -n "$TESTS_PASSED" ]; then
-                    BADGES=$(node scripts/parse-coverage.js badges "{\\"passed\\":$TESTS_PASSED}" 2>/dev/null) || die "Failed to generate badges"
-                else
-                    BADGES=$(node scripts/parse-coverage.js badges 2>/dev/null) || die "Failed to generate badges"
-                fi
+                docker cp ac-cli-badges:/app/badges.txt ./badges.txt >/dev/null 2>&1 || die "Failed to read generated badges"
+                docker rm -f ac-cli-badges >/dev/null 2>&1 || true
+                docker image rm ac-cli-test >/dev/null 2>&1 || true
+
+                BADGES=$(cat ./badges.txt)
+                rm -f ./badges.txt
+                [ -z "$BADGES" ] && die "Failed to generate badges"
 
                 echo "Generated badges:"
                 echo "$BADGES"
@@ -241,8 +242,6 @@ pipeline {
                 set -x
                 set -euo pipefail
 
-                node --version
-                
                 git fetch --tags --force
                 tag=$(git describe --tags --abbrev=0)
                 echo "Tag: ${tag}"
@@ -261,6 +260,9 @@ pipeline {
 
                 ## Build the image and make it ready for publishing.
                 docker image build -t ac-cli .
+
+                ## Print the bundled Node version (inside the image, not the host).
+                docker run --rm ac-cli node --version
 
                 ## Publish the application.
                 publishStatus=0
