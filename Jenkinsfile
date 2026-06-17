@@ -277,4 +277,9 @@ pipeline {
             }
         }
     }
+    post {
+        always {
+            notifySlack(currentBuild.currentResult, currentBuild.durationString);
+        }
+    }
 }
