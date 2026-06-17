@@ -279,7 +279,12 @@ pipeline {
     }
     post {
         always {
-            notifySlack(currentBuild.currentResult, currentBuild.durationString);
+            script {
+                // CLI has no deployment image / security-scan reports, so pass an empty list
+                // (same path codepush uses when no report file exists). Produces the standard
+                // build-summary Slack notification used across the other projects.
+                sendBuildSummaryToSlack(currentBuild.currentResult, currentBuild.durationString, [])
+            }
         }
     }
 }
