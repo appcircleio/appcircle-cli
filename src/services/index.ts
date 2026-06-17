@@ -1059,7 +1059,7 @@ export async function downloadTaskLog(options: OptionsType<{ taskId: string }>, 
     }
     
     return new Promise((resolve, reject) => {
-      if (isTextBasedContent(downloadResponse.headers['content-type'])) {
+      if (isTextBasedContent(downloadResponse.headers['content-type'] as string | undefined)) {
         let responseText = '';
         downloadResponse.data.on('data', (chunk: Buffer) => {
           responseText += chunk.toString('utf8');

@@ -1453,25 +1453,26 @@ describe('Services Index - Main Service Functions', () => {
       it('should upload artifact successfully', async () => {
         // Mock file system to validate file exists
         mockFs.statSync.mockReturnValue({ isFile: () => true, size: 1024 } as any)
-        const mockFormData = new MockFormData()
         const mockStream = { path: '/app/test.ipa' }
         mockFs.createReadStream.mockReturnValue(mockStream as any)
-        
+
         const mockUploadResponse = {
           id: 'upload123',
           url: 'download-url'
         }
         mockAppcircleApi.post.mockResolvedValue({ data: mockUploadResponse })
-        
+
         const result = await uploadArtifact({
           message: 'Test upload',
           app: '/app/test.ipa',
           distProfileId: 'dist123'
         })
-        
+
         expect(mockFs.statSync).toHaveBeenCalledWith('/app/test.ipa')
-        expect(mockFormData.append).toHaveBeenCalledWith('Message', 'Test upload')
-        expect(mockFormData.append).toHaveBeenCalledWith('File', mockStream)
+        // Assert on the actual FormData instance handed to the request (robust across form-data versions)
+        const postedForm = (mockAppcircleApi.post.mock.calls[0] as any[])[1]
+        expect(postedForm.append).toHaveBeenCalledWith('Message', 'Test upload')
+        expect(postedForm.append).toHaveBeenCalledWith('File', mockStream)
         expect(mockAppcircleApi.post).toHaveBeenCalledWith(
           'distribution/v2/profiles/dist123/app-versions',
           expect.any(MockFormData),
