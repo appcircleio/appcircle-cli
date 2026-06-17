@@ -27,6 +27,7 @@ import {
   getOrganizationUsers,
   getOrganizationUserinfo,
   getPublishProfiles,
+  getPublishFlows,
   getAppVersions,
   getPublishVariableGroups,
   getCountries,
@@ -408,6 +409,15 @@ export const handleInteractiveParamsOrArguments = async (
       }
       if (result.value) {
         params.appVersionId = result.value;
+      }
+      continue;
+    } else if (param.name === 'publishFlowId' && param.type === CommandParameterTypes.SELECT) {
+      const result = await handlePublishFlowIdParameter(param, params, getPublishFlows);
+      if (result.isError) {
+        return { isError: true };
+      }
+      if (result.value) {
+        params.publishFlowId = result.value;
       }
       continue;
     }else if(param.name === 'publishVariableGroupId' && param.type === CommandParameterTypes.SELECT){
@@ -2330,6 +2340,53 @@ export const handlePublishProfileIdParameter = async (
     }
   } catch (error) {
     spinner.fail('Failed to load publish profiles');
+    return { isError: true };
+  }
+};
+
+export const handlePublishFlowIdParameter = async (
+  param: any,
+  params: any,
+  getPublishFlows: (options: { platform: any; publishProfileId: any }) => Promise<any[]>,
+  createPrompt = createAutoCompletePrompt,
+  oraSpinner = ora
+): Promise<{ value?: string; isError?: boolean }> => {
+  const spinner = oraSpinner('Listing Publish Flows...').start();
+  try {
+    const flows = await getPublishFlows({ platform: params?.["platform"], publishProfileId: params?.["publishProfileId"] });
+    if (!flows || flows.length === 0) {
+      spinner.text = 'No publish flows available';
+      spinner.fail();
+      return { isError: true };
+    }
+
+    const flowParams = flows.map((flow: any) => {
+      const display = `${flow?.flowName || 'Unknown'} (${flow?.id || ''})`;
+      return { name: display, message: display, _id: flow?.id };
+    });
+
+    if (param) {
+      param.params = flowParams;
+    }
+    spinner.stop();
+
+    const messageText = param?.description || 'Publish Flow';
+    const selectPrompt = createPrompt(
+      param?.name || 'publishFlowId',
+      `${messageText} (${flowParams.length} options)`,
+      flowParams.map((p: any) => p.name || p.message),
+      10
+    );
+
+    const selected = await selectPrompt.run();
+    const match = /\(([^)]+)\)/.exec(selected);
+    if (match && match[1]) {
+      return { value: match[1].trim() };
+    } else {
+      return { value: selected };
+    }
+  } catch (error) {
+    spinner.fail('Failed to load publish flows');
     return { isError: true };
   }
 };

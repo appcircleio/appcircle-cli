@@ -494,7 +494,7 @@ EXAMPLES
 LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
-  Use 'appcircle build profile workflows --profileId <uuid>' to get available workflows.`,
+  Use 'appcircle build profile workflow list --profileId <uuid>' to get available workflows.`,
         params: [
           {
             name: 'profileId',
@@ -1031,7 +1031,7 @@ USAGE
 EXAMPLES
   appcircle build profile list
   appcircle build profile branch list --profileId 550e8400-e29b-41d4-a716-446655440000
-  appcircle build profile workflows --profileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle build profile workflow list --profileId 550e8400-e29b-41d4-a716-446655440000
   appcircle build profile configurations --profileId 550e8400-e29b-41d4-a716-446655440000
 
 LEARN MORE
@@ -1162,9 +1162,247 @@ LEARN MORE
             params: []
           },
           {
+            command: 'workflow',
+            description: 'Workflow Actions of a Build Profile',
+            longDescription: 'Manage the workflows of a build profile: list them, download a workflow as a YAML file, and update an existing workflow from a YAML file.',
+            params: [],
+            subCommands: [
+              {
+                command: 'list',
+                description: 'Get List of Workflows of a Build Profile',
+                longDescription: `Get a list of all workflows for a specific build profile
+
+USAGE
+  appcircle build profile workflow list --profileId <uuid>
+  appcircle build profile workflow list --profile <string>
+
+REQUIRED OPTIONS
+  --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
+
+EXAMPLES
+  appcircle build profile workflow list --profileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle build profile workflow list --profile "My iOS Project"
+
+LEARN MORE
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
+  Use the workflowId from the output for build start commands.`,
+                params: [
+                  {
+                    name: 'profileId',
+                    description: 'Build Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                ],
+              },
+              {
+                command: 'download',
+                description: 'Download a Workflow as a YAML File',
+                longDescription: `Download a build profile workflow as a YAML file so it can be edited locally and re-uploaded.
+
+USAGE
+  appcircle build profile workflow download --profileId <uuid> --workflowId <uuid> [--path <directory>]
+  appcircle build profile workflow download --profile <string> --workflowId <uuid> [--path <directory>]
+
+REQUIRED OPTIONS
+  --profileId <uuid>      Build profile ID (UUID format)
+  --profile <string>      Build profile name (alternative to --profileId)
+  --workflowId <uuid>     Workflow ID (UUID format)
+
+OPTIONAL OPTIONS
+  --path <directory>      Directory for the YAML file to be downloaded (defaults to the current directory)
+
+EXAMPLES
+  appcircle build profile workflow download --profileId 550e8400-e29b-41d4-a716-446655440000 --workflowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+  appcircle build profile workflow download --profile "My iOS Project" --workflowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --path ./exports
+
+LEARN MORE
+  Use 'appcircle build profile workflow list' to get available workflows with their UUIDs and names.
+  Use 'appcircle build profile workflow update' to upload the edited YAML back to the workflow.`,
+                params: [
+                  {
+                    name: 'profileId',
+                    description: 'Build Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'workflowId',
+                    description: 'Workflow Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The Path for the YAML file to be downloaded',
+                    longDescription: '[OPTIONAL] The Path for the YAML file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                  },
+                ],
+              },
+              {
+                command: 'update',
+                description: 'Update a Workflow from a YAML File',
+                longDescription: `Update an existing build profile workflow by uploading a YAML file. The file is validated (component existence, step names, YAML format) before the workflow is replaced.
+
+USAGE
+  appcircle build profile workflow update --profileId <uuid> --workflowId <uuid> --filePath <path> [--workflowName <string>]
+  appcircle build profile workflow update --profile <string> --workflowId <uuid> --filePath <path> [--workflowName <string>]
+
+REQUIRED OPTIONS
+  --profileId <uuid>      Build profile ID (UUID format)
+  --profile <string>      Build profile name (alternative to --profileId)
+  --workflowId <uuid>     Workflow ID to update (UUID format)
+  --filePath <path>       Path to the YAML file to upload
+
+OPTIONAL OPTIONS
+  --workflowName <string> New name for the workflow (defaults to the existing name)
+
+DESCRIPTION
+  Replaces the document of an existing workflow with the uploaded YAML. Every step must
+  reference an existing component/version and have a step name, otherwise the update is rejected.
+
+EXAMPLES
+  appcircle build profile workflow update --profileId 550e8400-e29b-41d4-a716-446655440000 --workflowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --filePath ./workflow.yaml
+  appcircle build profile workflow update --profile "My iOS Project" --workflowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --filePath ~/workflow.yaml --workflowName "Release Workflow"
+
+LEARN MORE
+  Use 'appcircle build profile workflow list' to get available workflows with their UUIDs and names.
+  Use 'appcircle build profile workflow download' to download an existing workflow as a template.`,
+                params: [
+                  {
+                    name: 'profileId',
+                    description: 'Build Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'workflowId',
+                    description: 'Which workflow do you want to update?',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'YAML File Path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true,
+                  },
+                  {
+                    name: 'workflowName',
+                    description: "[OPTIONAL] New name for the workflow",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                ],
+              },
+              {
+                command: 'create',
+                description: 'Create a New Workflow from a YAML File',
+                longDescription: `Create a new build profile workflow by uploading a YAML file. The file is validated (component existence, step names, YAML format) before the workflow is created.
+
+USAGE
+  appcircle build profile workflow create --profileId <uuid> --workflowName <string> --filePath <path>
+  appcircle build profile workflow create --profile <string> --workflowName <string> --filePath <path>
+
+REQUIRED OPTIONS
+  --profileId <uuid>       Build profile ID (UUID format)
+  --profile <string>       Build profile name (alternative to --profileId)
+  --workflowName <string>  Name for the new workflow
+  --filePath <path>        Path to the YAML file to upload
+
+EXAMPLES
+  appcircle build profile workflow create --profileId 550e8400-e29b-41d4-a716-446655440000 --workflowName "Release Workflow" --filePath ./workflow.yaml
+  appcircle build profile workflow create --profile "My iOS Project" --workflowName "Release Workflow" --filePath ~/workflow.yaml
+
+LEARN MORE
+  Use 'appcircle build profile workflow list' to get available workflows with their UUIDs and names.
+  Use 'appcircle build profile workflow download' to download an existing workflow as a template.`,
+                params: [
+                  {
+                    name: 'profileId',
+                    description: 'Build Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'workflowName',
+                    description: 'Name for the new workflow',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: true,
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'YAML File Path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true,
+                  },
+                ],
+              },
+            ],
+          },
+          {
             command: 'workflows',
-            description: 'Get List of Workflows of a Build Profile',
-            longDescription: `Get a list of all workflows for a specific build profile
+            description: '(Deprecated) Get List of Workflows of a Build Profile — use "workflow list" instead',
+            longDescription: `**Deprecated:** This command is deprecated and will be removed in the next release. Use 'appcircle build profile workflow list' instead.
+
+Get a list of all workflows for a specific build profile
 
 USAGE
   appcircle build profile workflows --profileId <uuid>
@@ -1179,8 +1417,8 @@ EXAMPLES
   appcircle build profile workflows --profile "My iOS Project"
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
-  Use the workflowId from the output for build start commands.`,
+  This command is deprecated. Use 'appcircle build profile workflow list' instead.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.`,
             params: [
               {
                 name: 'profileId',
@@ -3940,6 +4178,189 @@ LEARN MORE
                 ],
               },
             ]
+          },
+          {
+            command: 'publish-flow',
+            description: 'Publish Flow Actions of a Publish Profile',
+            longDescription: 'Manage the publish flows of a publish profile: list them, download a flow as a YAML file, and update an existing flow from a YAML file.',
+            params: [],
+            subCommands: [
+              {
+                command: 'list',
+                description: 'Get List of Publish Flows of a Publish Profile',
+                longDescription: `Get a list of all publish flows for a specific publish profile
+
+USAGE
+  appcircle publish profile publish-flow list --platform <platform> --publishProfileId <uuid>
+  appcircle publish profile publish-flow list --platform <platform> --publishProfile <string>
+
+REQUIRED OPTIONS
+  --platform <platform>      Platform (ios or android)
+  --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
+
+EXAMPLES
+  appcircle publish profile publish-flow list --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle publish profile publish-flow list --platform android --publishProfile "Google Play Production"
+
+LEARN MORE
+  Use 'appcircle publish profile list --platform <platform>' to get available profiles with their UUIDs and names.`,
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                ],
+              },
+              {
+                command: 'download',
+                description: 'Download a Publish Flow as a YAML File',
+                longDescription: `Download a publish profile publish-flow as a YAML file so it can be edited locally and re-uploaded.
+
+USAGE
+  appcircle publish profile publish-flow download --platform <platform> --publishProfileId <uuid> --publishFlowId <uuid> [--path <directory>]
+
+REQUIRED OPTIONS
+  --platform <platform>      Platform (ios or android)
+  --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
+  --publishFlowId <uuid>     Publish flow ID (UUID format)
+
+OPTIONAL OPTIONS
+  --path <directory>         Directory for the YAML file to be downloaded (defaults to the current directory)
+
+EXAMPLES
+  appcircle publish profile publish-flow download --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --publishFlowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+  appcircle publish profile publish-flow download --platform android --publishProfile "Google Play Production" --publishFlowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --path ./exports
+
+LEARN MORE
+  Use 'appcircle publish profile publish-flow list --platform <platform> --publishProfileId <uuid>' to get available flows.
+  Use 'appcircle publish profile publish-flow update' to upload the edited YAML back to the flow.`,
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'publishFlowId',
+                    description: 'Publish Flow Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The Path for the YAML file to be downloaded',
+                    longDescription: '[OPTIONAL] The Path for the YAML file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                  },
+                ],
+              },
+              {
+                command: 'update',
+                description: 'Update a Publish Flow from a YAML File',
+                longDescription: `Update an existing publish profile publish-flow by uploading a YAML file. The file is validated (component existence, step names, YAML format) before the flow is replaced.
+
+USAGE
+  appcircle publish profile publish-flow update --platform <platform> --publishProfileId <uuid> --publishFlowId <uuid> --filePath <path> [--flowName <string>]
+
+REQUIRED OPTIONS
+  --platform <platform>      Platform (ios or android)
+  --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
+  --publishFlowId <uuid>     Publish flow ID to update (UUID format)
+  --filePath <path>          Path to the YAML file to upload
+
+OPTIONAL OPTIONS
+  --flowName <string>        New name for the publish flow (defaults to the existing name)
+
+DESCRIPTION
+  Replaces the document of an existing publish flow with the uploaded YAML. Every step must
+  reference an existing component/version and have a step name, otherwise the update is rejected.
+
+EXAMPLES
+  appcircle publish profile publish-flow update --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --publishFlowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --filePath ./flow.yaml
+  appcircle publish profile publish-flow update --platform android --publishProfile "Google Play Production" --publishFlowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --filePath ~/flow.yaml --flowName "Release Flow"
+
+LEARN MORE
+  Use 'appcircle publish profile publish-flow list --platform <platform> --publishProfileId <uuid>' to get available flows.
+  Use 'appcircle publish profile publish-flow download' to download an existing flow as a template.`,
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'publishFlowId',
+                    description: 'Which publish flow do you want to update?',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'YAML File Path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true,
+                  },
+                  {
+                    name: 'flowName',
+                    description: '[OPTIONAL] New name for the publish flow',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                ],
+              },
+            ],
           }
         ]
       },

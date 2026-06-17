@@ -145,7 +145,10 @@ export const writeBuildCommand = (data: any): void => {
     writeBuildProfileList(data);
   } else if (fullCommandName === `${PROGRAM_NAME}-build-profile-branch-list`) {
     writeBuildBranchList(data);
+  } else if (fullCommandName === `${PROGRAM_NAME}-build-profile-workflow-list`) {
+    writeBuildWorkflowList(data);
   } else if (fullCommandName === `${PROGRAM_NAME}-build-profile-workflows`) {
+    // Deprecated alias of workflow-list; render the same table.
     writeBuildWorkflowList(data);
   } else if (fullCommandName === `${PROGRAM_NAME}-build-profile-configurations`) {
     writeBuildConfigurationList(data);
@@ -459,6 +462,8 @@ export const writePublishCommand = (data: any): void => {
     writePublishProfileRename(data);
   } else if (fullCommandName === `${PROGRAM_NAME}-publish-profile-list`) {
     writePublishProfileList(data);
+  } else if (fullCommandName === `${PROGRAM_NAME}-publish-profile-publish-flow-list`) {
+    writePublishFlowList(data);
   } else if (fullCommandName === `${PROGRAM_NAME}-publish-variable-group-list`) {
     writePublishVariableGroupList(data);
   } else if (fullCommandName === `${PROGRAM_NAME}-publish-variable-group-view`) {
@@ -515,6 +520,20 @@ export const writePublishProfileList = (data: any): void => {
       'Platform': mapOperatingSystem(publishProfile.platformType),
       Created: formatDate(publishProfile.createDate),
       Updated: formatDate(publishProfile.updateDate),
+    }));
+    logTable(tableData);
+  } else {
+    logMessage(message!);
+  }
+};
+
+export const writePublishFlowList = (data: any): void => {
+  const { shouldDisplay, message } = shouldDisplayTable(data.data, '  No publish flow found');
+
+  if (shouldDisplay) {
+    const tableData = data.data.map((flow: any) => ({
+      'Id': flow.id,
+      'Name': flow.flowName,
     }));
     logTable(tableData);
   } else {

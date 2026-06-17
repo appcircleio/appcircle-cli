@@ -60,6 +60,9 @@ import {
   createEnvironmentVariable,
   getBranches,
   getWorkflows,
+  downloadWorkflowYaml,
+  updateWorkflowFromFile,
+  createWorkflowFromFile,
   getConfigurations,
   getTaskStatus,
   getUserInfo,
@@ -2001,6 +2004,114 @@ describe('Services Index - Main Service Functions', () => {
           { headers: mockGetHeaders() }
         )
         expect(result).toEqual(mockWorkflows)
+      })
+    })
+
+    describe('downloadWorkflowYaml', () => {
+      it('should download workflow YAML as binary', async () => {
+        const mockYaml = Buffer.from('steps:\n- componentType: appcircle_git_clone\n')
+        mockAppcircleApi.get.mockResolvedValue({ data: mockYaml })
+
+        const result = await downloadWorkflowYaml({ profileId: 'profile123', workflowId: 'workflow123' })
+
+        expect(mockAppcircleApi.get).toHaveBeenCalledWith(
+          'build/v1/profiles/profile123/workflows/workflow123?action=download',
+          expect.objectContaining({ responseType: 'arraybuffer' })
+        )
+        expect(result).toEqual(mockYaml)
+      })
+
+      it('should propagate download errors', async () => {
+        mockAppcircleApi.get.mockRejectedValue(new Error('Not found'))
+        await expect(
+          downloadWorkflowYaml({ profileId: 'profile123', workflowId: 'missing' })
+        ).rejects.toThrow('Not found')
+      })
+    })
+
+    describe('updateWorkflowFromFile', () => {
+      it('should update workflow from file via multipart PATCH', async () => {
+        const mockResponse = { message: 'updated' }
+        mockAppcircleApi.patch.mockResolvedValue({ data: mockResponse })
+        mockFs.createReadStream.mockReturnValue({ path: '/tmp/workflow.yaml' } as any)
+
+        const result = await updateWorkflowFromFile({
+          profileId: 'profile123',
+          workflowId: 'workflow123',
+          filePath: '/tmp/workflow.yaml'
+        })
+
+        expect(mockAppcircleApi.patch).toHaveBeenCalledWith(
+          'build/v1/profiles/profile123/workflows/workflow123?action=update',
+          expect.any(MockFormData),
+          expect.objectContaining({
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+          })
+        )
+        expect(result).toEqual(mockResponse)
+      })
+
+      it('should append workflowName when provided', async () => {
+        mockAppcircleApi.patch.mockResolvedValue({ data: {} })
+        mockFs.createReadStream.mockReturnValue({ path: '/tmp/workflow.yaml' } as any)
+        const appendSpy = vi.spyOn(MockFormData.prototype, 'append')
+
+        await updateWorkflowFromFile({
+          profileId: 'profile123',
+          workflowId: 'workflow123',
+          filePath: '/tmp/workflow.yaml',
+          workflowName: 'Release Workflow'
+        })
+
+        expect(appendSpy).toHaveBeenCalledWith('workflowName', 'Release Workflow')
+        expect(appendSpy).toHaveBeenCalledWith('file', expect.anything())
+      })
+
+      it('should handle update errors', async () => {
+        mockAppcircleApi.patch.mockRejectedValue(new Error('Update failed'))
+        mockFs.createReadStream.mockReturnValue({ path: '/tmp/workflow.yaml' } as any)
+
+        await expect(updateWorkflowFromFile({
+          profileId: 'profile123',
+          workflowId: 'workflow123',
+          filePath: '/tmp/workflow.yaml'
+        })).rejects.toThrow('Update failed')
+      })
+    })
+
+    describe('createWorkflowFromFile', () => {
+      it('should create a workflow from file via multipart POST', async () => {
+        const mockResponse = { id: 'new-workflow-id', workflowName: 'Release Workflow' }
+        mockAppcircleApi.post.mockResolvedValue({ data: mockResponse })
+        mockFs.createReadStream.mockReturnValue({ path: '/tmp/workflow.yaml' } as any)
+        const appendSpy = vi.spyOn(MockFormData.prototype, 'append')
+
+        const result = await createWorkflowFromFile({
+          profileId: 'profile123',
+          workflowName: 'Release Workflow',
+          filePath: '/tmp/workflow.yaml'
+        })
+
+        expect(mockAppcircleApi.post).toHaveBeenCalledWith(
+          'build/v1/profiles/profile123/custom-workflows',
+          expect.any(MockFormData),
+          expect.objectContaining({ maxContentLength: Infinity, maxBodyLength: Infinity })
+        )
+        expect(appendSpy).toHaveBeenCalledWith('workflowName', 'Release Workflow')
+        expect(appendSpy).toHaveBeenCalledWith('file', expect.anything())
+        expect(result).toEqual(mockResponse)
+      })
+
+      it('should handle create errors', async () => {
+        mockAppcircleApi.post.mockRejectedValue(new Error('Create failed'))
+        mockFs.createReadStream.mockReturnValue({ path: '/tmp/workflow.yaml' } as any)
+
+        await expect(createWorkflowFromFile({
+          profileId: 'profile123',
+          workflowName: 'Release Workflow',
+          filePath: '/tmp/workflow.yaml'
+        })).rejects.toThrow('Create failed')
       })
     })
 

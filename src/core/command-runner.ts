@@ -57,6 +57,9 @@ import {
   getBuildProfiles,
   getBranches,
   getWorkflows,
+  downloadWorkflowYaml,
+  updateWorkflowFromFile,
+  createWorkflowFromFile,
   getCommits,
   getBuildsOfCommit,
   getDistributionProfiles,
@@ -94,6 +97,9 @@ import {
   getOrganizationUsersWithRoles,
   createPublishProfile,
   getPublishProfiles,
+  getPublishFlows,
+  downloadPublishFlowYaml,
+  updatePublishFlowFromFile,
   uploadAppVersion,
   deleteAppVersion,
   getAppVersionDownloadLink,
@@ -3505,7 +3511,10 @@ export const validatePublishProfileParams = async (command: ProgramCommand, para
     `${PROGRAM_NAME}-publish-profile-version-delete`,
     `${PROGRAM_NAME}-publish-profile-version-mark-as-rc`,
     `${PROGRAM_NAME}-publish-profile-version-unmark-as-rc`,
-    `${PROGRAM_NAME}-publish-profile-version-update-release-note`
+    `${PROGRAM_NAME}-publish-profile-version-update-release-note`,
+    `${PROGRAM_NAME}-publish-profile-publish-flow-list`,
+    `${PROGRAM_NAME}-publish-profile-publish-flow-download`,
+    `${PROGRAM_NAME}-publish-profile-publish-flow-update`
   ];
 
   if (profileRequiredCommands.includes(command.fullCommandName)) {
@@ -3610,6 +3619,96 @@ export const handlePublishProfileList = async (command: ProgramCommand, params: 
     fullCommandName: command.fullCommandName,
     data: profiles,
   });
+};
+
+export const handlePublishFlowList = async (command: ProgramCommand, params: any) => {
+  const spinner = createOra('Listing Publish Flows...').start();
+  const flows = await getPublishFlows({ platform: params.platform, publishProfileId: params.publishProfileId });
+  spinner.stop();
+  commandWriter(CommandTypes.PUBLISH, {
+    fullCommandName: command.fullCommandName,
+    data: flows,
+  });
+};
+
+export const handlePublishFlowDownload = async (command: ProgramCommand, params: any) => {
+  if (!params.publishFlowId) {
+    const desc = getLongDescriptionForCommand(command.fullCommandName);
+    if (desc) {
+      console.error(`\n${desc}\n`);
+    }
+    throw new AppcircleExitError('', 1);
+  }
+  const spinner = createOra('Downloading Publish Flow...').start();
+  try {
+    // Resolve a friendly file name from the flow name, fall back to the id.
+    let flowName = params.publishFlowId;
+    try {
+      const flows = await getPublishFlows({ platform: params.platform, publishProfileId: params.publishProfileId });
+      const found = (flows || []).find((f: any) => f.id === params.publishFlowId);
+      if (found?.flowName) flowName = found.flowName;
+    } catch {
+      // non-fatal: keep the id-based name
+    }
+
+    const responseData = await downloadPublishFlowYaml(params);
+
+    const timestamp = Date.now();
+    const fileName = `${flowName}_${timestamp}.yaml`;
+
+    const homeDir = os.homedir();
+    const defaultDownloadDir = path.join(homeDir, 'Downloads');
+    let filePath = params.path || defaultDownloadDir;
+
+    if (filePath.includes('~')) {
+      filePath = filePath.replace(/~/g, os.homedir());
+    }
+
+    filePath = path.resolve(filePath);
+
+    if (!fs.existsSync(filePath)) {
+      fs.mkdirSync(filePath, { recursive: true });
+    }
+
+    if (fs.statSync(filePath).isDirectory()) {
+      filePath = path.join(filePath, fileName);
+    }
+
+    fs.writeFileSync(filePath, Buffer.from(responseData));
+    spinner.succeed(`Publish Flow downloaded successfully to ${filePath}`);
+  } catch (e) {
+    spinner.fail('Failed to download Publish Flow');
+    throw e;
+  }
+};
+
+export const handlePublishFlowUpdate = async (command: ProgramCommand, params: any) => {
+  if (!params.publishFlowId || !params.filePath) {
+    const desc = getLongDescriptionForCommand(command.fullCommandName);
+    if (desc) {
+      console.error(`\n${desc}\n`);
+    }
+    throw new AppcircleExitError('', 1);
+  }
+
+  let filePath = params.filePath;
+  if (filePath.includes('~')) {
+    filePath = filePath.replace(/~/g, os.homedir());
+  }
+  filePath = path.resolve(filePath);
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    throw new ProgramError(`Publish flow file not found at path: ${filePath}`);
+  }
+  params.filePath = filePath;
+
+  const spinner = createOra('Updating Publish Flow...').start();
+  try {
+    await updatePublishFlowFromFile(params);
+    spinner.succeed('Publish Flow updated successfully');
+  } catch (e) {
+    spinner.fail('Failed to update Publish Flow');
+    throw e;
+  }
 };
 
 export const handlePublishProfileDelete = async (command: ProgramCommand, params: any) => {
@@ -4141,7 +4240,13 @@ export const handlePublishCommand = async (command: ProgramCommand, params: any)
     await handlePublishProfileDelete(command, params);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-rename`) {
     await handlePublishProfileRename(command, params);
-  } 
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-publish-flow-list`) {
+    await handlePublishFlowList(command, params);
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-publish-flow-download`) {
+    await handlePublishFlowDownload(command, params);
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-publish-flow-update`) {
+    await handlePublishFlowUpdate(command, params);
+  }
   else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-upload`) {
     await handlePublishVersionUpload(command, params);
   } else if (command.fullCommandName === `${PROGRAM_NAME}-publish-profile-version-delete`) {
@@ -5190,7 +5295,7 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
-  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflows`) {
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflow-list`) {
     if (!params.profileId && !params.profile) {
       const desc = getLongDescriptionForCommand(command.fullCommandName);
       if (desc) {
@@ -5205,6 +5310,132 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
       fullCommandName: command.fullCommandName,
       data: responseData,
     });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflows`) {
+    // Deprecated alias of `build profile workflow list`. Still works; will be removed next release.
+    if (!params.profileId && !params.profile) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+    console.error('⚠️  "appcircle build profile workflows" is deprecated and will be removed in the next release. Use "appcircle build profile workflow list" instead.');
+    const spinner = createOra('Listing...').start();
+    const responseData = await getWorkflows(params);
+    spinner.stop();
+    commandWriter(CommandTypes.BUILD, {
+      fullCommandName: command.fullCommandName,
+      data: responseData,
+    });
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflow-download`) {
+    if ((!params.profileId && !params.profile) || !params.workflowId) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+    const spinner = createOra('Downloading Workflow...').start();
+    try {
+      await validateAndResolveBuildProfile(params, getBuildProfiles);
+
+      // Resolve a friendly file name from the workflow name, fall back to the id.
+      let workflowName = params.workflowId;
+      try {
+        const workflows = await getWorkflows({ profileId: params.profileId });
+        const found = (workflows || []).find((w: any) => w.id === params.workflowId);
+        if (found?.workflowName) workflowName = found.workflowName;
+      } catch {
+        // non-fatal: keep the id-based name
+      }
+
+      const responseData = await downloadWorkflowYaml(params);
+
+      const timestamp = Date.now();
+      const fileName = `${workflowName}_${timestamp}.yaml`;
+
+      const homeDir = os.homedir();
+      const defaultDownloadDir = path.join(homeDir, 'Downloads');
+      let filePath = params.path || defaultDownloadDir;
+
+      if (filePath.includes('~')) {
+        filePath = filePath.replace(/~/g, os.homedir());
+      }
+
+      filePath = path.resolve(filePath);
+
+      if (!fs.existsSync(filePath)) {
+        fs.mkdirSync(filePath, { recursive: true });
+      }
+
+      if (fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(filePath, fileName);
+      }
+
+      fs.writeFileSync(filePath, Buffer.from(responseData));
+      spinner.succeed(`Workflow downloaded successfully to ${filePath}`);
+    } catch (e) {
+      spinner.fail('Failed to download Workflow');
+      throw e;
+    }
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflow-update`) {
+    if ((!params.profileId && !params.profile) || !params.workflowId || !params.filePath) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+
+    let filePath = params.filePath;
+    if (filePath.includes('~')) {
+      filePath = filePath.replace(/~/g, os.homedir());
+    }
+    filePath = path.resolve(filePath);
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+      throw new ProgramError(`Workflow file not found at path: ${filePath}`);
+    }
+    params.filePath = filePath;
+
+    const spinner = createOra('Updating Workflow...').start();
+    try {
+      await validateAndResolveBuildProfile(params, getBuildProfiles);
+      await updateWorkflowFromFile(params);
+      spinner.succeed('Workflow updated successfully');
+    } catch (e) {
+      spinner.fail('Failed to update Workflow');
+      throw e;
+    }
+  } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-workflow-create`) {
+    if ((!params.profileId && !params.profile) || !params.workflowName || !params.filePath) {
+      const desc = getLongDescriptionForCommand(command.fullCommandName);
+      if (desc) {
+        console.error(`\n${desc}\n`);
+      }
+      throw new AppcircleExitError('', 1);
+    }
+
+    let filePath = params.filePath;
+    if (filePath.includes('~')) {
+      filePath = filePath.replace(/~/g, os.homedir());
+    }
+    filePath = path.resolve(filePath);
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+      throw new ProgramError(`Workflow file not found at path: ${filePath}`);
+    }
+    params.filePath = filePath;
+
+    const spinner = createOra('Creating Workflow...').start();
+    try {
+      await validateAndResolveBuildProfile(params, getBuildProfiles);
+      const responseData = await createWorkflowFromFile(params);
+      const createdName = responseData?.workflowName || params.workflowName;
+      const createdId = responseData?.id ? ` (${responseData.id})` : '';
+      spinner.succeed(`Workflow '${createdName}'${createdId} created successfully`);
+    } catch (e) {
+      spinner.fail('Failed to create Workflow');
+      throw e;
+    }
   } else if (command.fullCommandName === `${PROGRAM_NAME}-build-profile-configurations`) {
     if (!params.profileId && !params.profile) {
       const desc = getLongDescriptionForCommand(command.fullCommandName);

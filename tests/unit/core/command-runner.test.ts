@@ -137,6 +137,9 @@ vi.mock('../../../src/services', async (importOriginal) => {
     getBuildProfiles: vi.fn().mockResolvedValue([{ id: 'profile1', name: 'Test Profile' }]),
     getBranches: vi.fn().mockResolvedValue(defaultArray),
     getWorkflows: vi.fn().mockResolvedValue(defaultArray),
+    downloadWorkflowYaml: vi.fn().mockResolvedValue(Buffer.from('steps: []')),
+    updateWorkflowFromFile: vi.fn().mockResolvedValue(defaultObject),
+    createWorkflowFromFile: vi.fn().mockResolvedValue({ id: 'new-wf', workflowName: 'New WF' }),
     getCommits: vi.fn().mockResolvedValue(defaultArray),
     getBuildsOfCommit: vi.fn().mockResolvedValue(defaultArray),
     getActiveBuilds: vi.fn().mockResolvedValue(defaultArray),
@@ -376,6 +379,85 @@ describe('Command Runner - Comprehensive Tests', () => {
       
       expect(mockCommand.name).toHaveBeenCalled();
       expect(mockCommand.opts).toHaveBeenCalled();
+    });
+  });
+
+  describe('🧩 Build Profile Workflow Commands', () => {
+    it('workflow download: should fail validation without profile/workflow ids', async () => {
+      const command = createMockCommand('appcircle-build-profile-workflow-download', {}, CommandTypes.BUILD);
+      await expect(runCommand(command)).rejects.toThrow(AppcircleExitError);
+    });
+
+    it('workflow download: should fail validation when workflowId is missing', async () => {
+      const command = createMockCommand('appcircle-build-profile-workflow-download', { profileId: 'profile1' }, CommandTypes.BUILD);
+      await expect(runCommand(command)).rejects.toThrow(AppcircleExitError);
+    });
+
+    it('workflow update: should fail validation when filePath is missing', async () => {
+      const command = createMockCommand('appcircle-build-profile-workflow-update', { profileId: 'profile1', workflowId: 'wf1' }, CommandTypes.BUILD);
+      await expect(runCommand(command)).rejects.toThrow(AppcircleExitError);
+    });
+
+    it('workflow update: should reject a non-existent file path', async () => {
+      const command = createMockCommand(
+        'appcircle-build-profile-workflow-update',
+        { profileId: 'profile1', workflowId: 'wf1', filePath: '/tmp/__ac_no_such_workflow_file__.yaml' },
+        CommandTypes.BUILD
+      );
+      await expect(runCommand(command)).rejects.toThrow();
+    });
+
+    it('workflow create: should fail validation without workflowName/filePath', async () => {
+      const command = createMockCommand('appcircle-build-profile-workflow-create', { profileId: 'profile1' }, CommandTypes.BUILD);
+      await expect(runCommand(command)).rejects.toThrow(AppcircleExitError);
+    });
+
+    it('workflow create: should reject a non-existent file path', async () => {
+      const command = createMockCommand(
+        'appcircle-build-profile-workflow-create',
+        { profileId: 'profile1', workflowName: 'New WF', filePath: '/tmp/__ac_no_such_create_file__.yaml' },
+        CommandTypes.BUILD
+      );
+      await expect(runCommand(command)).rejects.toThrow();
+    });
+
+    it('deprecated "workflows" alias: should fail validation without profile', async () => {
+      const command = createMockCommand('appcircle-build-profile-workflows', {}, CommandTypes.BUILD);
+      await expect(runCommand(command)).rejects.toThrow(AppcircleExitError);
+    });
+
+    it('deprecated "workflows" alias: should still run and warn when a profile is given', async () => {
+      const consoleMock = mockConsole();
+      const command = createMockCommand('appcircle-build-profile-workflows', { profileId: 'profile1' }, CommandTypes.BUILD);
+      await expect(runCommand(command)).resolves.not.toThrow();
+      expect(consoleMock.error).toHaveBeenCalledWith(expect.stringContaining('deprecated'));
+      consoleMock.restore();
+    });
+  });
+
+  describe('🧩 Publish Profile Flow Commands', () => {
+    it('flow download: should fail validation without publishFlowId', async () => {
+      const command = createMockCommand('appcircle-publish-profile-publish-flow-download', { platform: 'ios', publishProfileId: 'p1' }, CommandTypes.PUBLISH);
+      await expect(runCommand(command)).rejects.toThrow(AppcircleExitError);
+    });
+
+    it('flow update: should fail validation when filePath is missing', async () => {
+      const command = createMockCommand('appcircle-publish-profile-publish-flow-update', { platform: 'ios', publishProfileId: 'p1', publishFlowId: 'f1' }, CommandTypes.PUBLISH);
+      await expect(runCommand(command)).rejects.toThrow(AppcircleExitError);
+    });
+
+    it('flow update: should reject a non-existent file path', async () => {
+      const command = createMockCommand(
+        'appcircle-publish-profile-publish-flow-update',
+        { platform: 'ios', publishProfileId: 'p1', publishFlowId: 'f1', filePath: '/tmp/__ac_no_such_publish_flow_file__.yaml' },
+        CommandTypes.PUBLISH
+      );
+      await expect(runCommand(command)).rejects.toThrow();
+    });
+
+    it('flow commands: should fail without platform', async () => {
+      const command = createMockCommand('appcircle-publish-profile-publish-flow-list', {}, CommandTypes.PUBLISH);
+      await expect(runCommand(command)).rejects.toThrow();
     });
   });
 

@@ -45,7 +45,10 @@ import {
   downloadAppVersion,
   getPublishUploadInformation,
   commitPublishFileUpload,
-  uploadPublishEnvironmentVariablesFromFile
+  uploadPublishEnvironmentVariablesFromFile,
+  getPublishFlows,
+  downloadPublishFlowYaml,
+  updatePublishFlowFromFile
 } from '../../../src/services/publish'
 
 import { appcircleApi, getHeaders } from '../../../src/services/api'
@@ -1686,6 +1689,96 @@ describe('Publish Service', () => {
           })
         })
       )
+    })
+  })
+
+  describe('Publish Flow operations', () => {
+    describe('getPublishFlows', () => {
+      it('should list publish flows for a profile', async () => {
+        const mockFlows = [{ id: 'flow1', name: 'Default Publish Flow' }]
+        mockAppcircleApi.get.mockResolvedValue({ data: mockFlows })
+
+        const result = await getPublishFlows({ platform: 'android', publishProfileId: 'profile123' })
+
+        expect(mockAppcircleApi.get).toHaveBeenCalledWith(
+          'publish/v1/profiles/android/profile123/publishflows',
+          { headers: getHeaders() }
+        )
+        expect(result).toEqual(mockFlows)
+      })
+    })
+
+    describe('downloadPublishFlowYaml', () => {
+      it('should download publish flow YAML as binary', async () => {
+        const mockYaml = Buffer.from('steps: []')
+        mockAppcircleApi.get.mockResolvedValue({ data: mockYaml })
+
+        const result = await downloadPublishFlowYaml({ platform: 'ios', publishProfileId: 'profile123', publishFlowId: 'flow123' })
+
+        expect(mockAppcircleApi.get).toHaveBeenCalledWith(
+          'publish/v1/profiles/ios/profile123/publishflows/flow123?action=download',
+          expect.objectContaining({ responseType: 'arraybuffer' })
+        )
+        expect(result).toEqual(mockYaml)
+      })
+
+      it('should propagate download errors', async () => {
+        mockAppcircleApi.get.mockRejectedValue(new Error('Not found'))
+        await expect(
+          downloadPublishFlowYaml({ platform: 'ios', publishProfileId: 'profile123', publishFlowId: 'missing' })
+        ).rejects.toThrow('Not found')
+      })
+    })
+
+    describe('updatePublishFlowFromFile', () => {
+      it('should update publish flow from file via multipart PATCH', async () => {
+        const mockResponse = { taskId: 'task1' }
+        mockAppcircleApi.patch.mockResolvedValue({ data: mockResponse })
+        ;(fs.createReadStream as any).mockReturnValue({ path: '/tmp/flow.yaml' })
+
+        const result = await updatePublishFlowFromFile({
+          platform: 'android',
+          publishProfileId: 'profile123',
+          publishFlowId: 'flow123',
+          filePath: '/tmp/flow.yaml'
+        })
+
+        expect(mockAppcircleApi.patch).toHaveBeenCalledWith(
+          'publish/v1/profiles/android/profile123/publishflows/flow123?action=update',
+          expect.any(MockFormData),
+          expect.objectContaining({ maxContentLength: Infinity, maxBodyLength: Infinity })
+        )
+        expect(result).toEqual(mockResponse)
+      })
+
+      it('should append flowName when provided', async () => {
+        mockAppcircleApi.patch.mockResolvedValue({ data: {} })
+        ;(fs.createReadStream as any).mockReturnValue({ path: '/tmp/flow.yaml' })
+        const appendSpy = vi.spyOn(MockFormData.prototype, 'append')
+
+        await updatePublishFlowFromFile({
+          platform: 'ios',
+          publishProfileId: 'profile123',
+          publishFlowId: 'flow123',
+          filePath: '/tmp/flow.yaml',
+          flowName: 'Release Flow'
+        })
+
+        expect(appendSpy).toHaveBeenCalledWith('flowName', 'Release Flow')
+        expect(appendSpy).toHaveBeenCalledWith('file', expect.anything())
+      })
+
+      it('should handle update errors', async () => {
+        mockAppcircleApi.patch.mockRejectedValue(new Error('Update failed'))
+        ;(fs.createReadStream as any).mockReturnValue({ path: '/tmp/flow.yaml' })
+
+        await expect(updatePublishFlowFromFile({
+          platform: 'ios',
+          publishProfileId: 'profile123',
+          publishFlowId: 'flow123',
+          filePath: '/tmp/flow.yaml'
+        })).rejects.toThrow('Update failed')
+      })
     })
   })
 })

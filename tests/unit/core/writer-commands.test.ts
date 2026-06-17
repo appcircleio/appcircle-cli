@@ -481,7 +481,7 @@ describe('Writer Commands', () => {
 
       it('should write workflow list', () => {
         const data = {
-          fullCommandName: 'appcircle-build-profile-workflows',
+          fullCommandName: 'appcircle-build-profile-workflow-list',
           data: [
             {
               id: 'workflow1',

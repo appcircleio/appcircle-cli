@@ -610,6 +610,63 @@ export async function getWorkflows(options: OptionsType<{ profileId: string }>) 
   return workflowResponse.data;
 }
 
+export async function downloadWorkflowYaml(options: OptionsType<{ profileId: string; workflowId: string }>) {
+  const response = await appcircleApi.get(
+    `build/v1/profiles/${options.profileId}/workflows/${options.workflowId}?action=download`,
+    {
+      responseType: 'arraybuffer',
+      headers: getHeaders(),
+    }
+  );
+  return response.data;
+}
+
+export async function updateWorkflowFromFile(
+  options: OptionsType<{ profileId: string; workflowId: string; filePath: string; workflowName?: string }>
+) {
+  const form = new FormData();
+  if (options.workflowName) {
+    form.append('workflowName', options.workflowName);
+  }
+  form.append('file', fs.createReadStream(options.filePath));
+
+  const response = await appcircleApi.patch(
+    `build/v1/profiles/${options.profileId}/workflows/${options.workflowId}?action=update`,
+    form,
+    {
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      headers: {
+        ...getHeaders(),
+        ...form.getHeaders(),
+      },
+    }
+  );
+  return response.data;
+}
+
+export async function createWorkflowFromFile(
+  options: OptionsType<{ profileId: string; workflowName: string; filePath: string }>
+) {
+  const form = new FormData();
+  form.append('workflowName', options.workflowName);
+  form.append('file', fs.createReadStream(options.filePath));
+
+  const response = await appcircleApi.post(
+    `build/v1/profiles/${options.profileId}/custom-workflows`,
+    form,
+    {
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      headers: {
+        ...getHeaders(),
+        ...form.getHeaders(),
+      },
+    }
+  );
+  return response.data;
+}
+
 export async function getConfigurations(options: OptionsType<{ profileId: string }>) {
   const configurationsResponse = await appcircleApi.get(`build/v2/profiles/${options.profileId}/configurations`, {
     headers: getHeaders(),

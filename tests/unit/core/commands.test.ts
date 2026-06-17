@@ -279,8 +279,16 @@ describe('commands.ts', () => {
       const profileSubCommandNames = profileCommand.subCommands!.map(sub => sub.command);
       expect(profileSubCommandNames).toContain('list');
       expect(profileSubCommandNames).toContain('branch');
-      expect(profileSubCommandNames).toContain('workflows');
+      expect(profileSubCommandNames).toContain('workflow');
       expect(profileSubCommandNames).toContain('configurations');
+
+      // workflow group should expose list/download/update
+      const workflowCommand = profileCommand.subCommands!.find(sub => sub.command === 'workflow');
+      const workflowSubCommandNames = workflowCommand?.subCommands?.map(sub => sub.command) ?? [];
+      expect(workflowSubCommandNames).toContain('list');
+      expect(workflowSubCommandNames).toContain('download');
+      expect(workflowSubCommandNames).toContain('update');
+      expect(workflowSubCommandNames).toContain('create');
     });
   });
 
@@ -305,6 +313,16 @@ describe('commands.ts', () => {
       expect(subCommandNames).toContain('profile');
       expect(subCommandNames).toContain('start');
       expect(subCommandNames).toContain('active-list');
+    });
+
+    it('should have a publish profile publish-flow group with list/download/update', () => {
+      const profile = publishCommand.subCommands!.find(sub => sub.command === 'profile');
+      const flow = profile?.subCommands?.find(sub => sub.command === 'publish-flow');
+      expect(flow).toBeDefined();
+      const flowSubs = flow?.subCommands?.map(sub => sub.command) ?? [];
+      expect(flowSubs).toContain('list');
+      expect(flowSubs).toContain('download');
+      expect(flowSubs).toContain('update');
     });
   });
 
