@@ -1,6 +1,8 @@
-# `appcircle build profile workflows`
+**Deprecated:** This command is deprecated and will be removed in the next release. Use [`appcircle build profile workflow list`](workflow/list.md) instead.
 
-Get list of workflows of a build profile
+# ~~`appcircle build profile workflows`~~
+
+Get list of workflows of a build profile.
 
 ```plaintext
 appcircle build profile workflows [options]
@@ -10,6 +12,7 @@ appcircle build profile workflows [options]
 
 ```plaintext
       --profileId <uuid>  Build profile ID
+      --profile <string>  Build profile name (alternative to --profileId)
 ```
 
 ## Options inherited from parent commands

@@ -10,11 +10,13 @@ export enum EnvironmentVariables {
   AC_ACCESS_TOKEN = "AC_ACCESS_TOKEN",
   API_HOSTNAME = "API_HOSTNAME",
   AUTH_HOSTNAME = "AUTH_HOSTNAME",
+  HOOK_HOSTNAME = "HOOK_HOSTNAME",
 }
 
 export const DefaultEnvironmentVariables = {
   API_HOSTNAME: "https://api.appcircle.io",
   AUTH_HOSTNAME: "https://auth.appcircle.io",
+  HOOK_HOSTNAME: "https://hook.appcircle.io",
   AC_ACCESS_TOKEN: "",
 };
 

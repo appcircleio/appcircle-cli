@@ -29,9 +29,15 @@ appcircle build start [options]
   --configurationId <uuid>  Configuration ID
   --configuration <string>  Configuration name (alternative to --configurationId)
   --no-wait                 Don't wait for build completion, return immediately with task info
+                            Note: Incompatible with monitoring modes (--monitor) and download options
   --download-logs           Automatically download build logs after completion
+                            Note: Cannot be used with --no-wait or --monitor none
   --download-artifacts      Automatically download build artifacts after completion
+                            Note: Cannot be used with --no-wait or --monitor none
   --path <string>           Download path for logs and artifacts (default: ~/Downloads)
+  --monitor [mode]          Build monitoring preference: none, summary (default), steps, or verbose
+                            Valid values: none | summary | steps | verbose
+                            Note: Incompatible with --no-wait. Must be specified with a valid value.
 ```
 
 ## Options inherited from parent commands
@@ -74,6 +80,27 @@ appcircle build start --profileId <uuid> --branch "main" --workflowId <uuid>
 ### Configuration Selection
 - **Optional**: If not provided, uses the first available configuration for the profile
 - **Example**: `--configurationId <uuid>` or `--configuration "Debug Configuration"`
+
+### Monitor Mode Selection
+The `--monitor` parameter controls how the build process is monitored and displayed:
+
+- **`none`**: No monitoring. Just return Task/Build ID and exit immediately
+- **`summary`** (default): Wait until completion, show final status + total duration in one line
+- **`steps`**: Wait until completion, show step-by-step progress (started/finished) minimally
+- **`verbose`**: Wait until completion, stream detailed logs line by line in real-time
+
+**Real-time Log Features:**
+- All monitor modes (except `none`) provide real-time log streaming from the build process
+- Logs are displayed as they are generated, providing immediate feedback on build progress
+- The system automatically handles log formatting and step transitions for better readability
+
+**Backward Compatibility:**
+- The legacy `--execution-mode` parameter is still supported for backward compatibility
+- Legacy modes are automatically mapped to new monitor modes:
+  - `normal` → `summary`
+  - `detailed` → `verbose`
+  - `step-summary` → `steps`
+  - `skip` → `none`
 
 ## Usage Examples
 
@@ -121,6 +148,21 @@ appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> -
 appcircle build start --profile "My Android App" --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --workflow "Default Push Workflow"
 ```
 
+#### 9. Build with Different Execution Modes
+```bash
+# Normal mode (default) - standard monitoring with real-time logs
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid>
+
+# Verbose mode - enhanced monitoring with detailed progress tracking
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --monitor verbose
+
+# Steps mode - clean table showing only steps and durations
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --monitor steps
+
+# None mode - return task ID immediately without monitoring
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --monitor none
+```
+
 ## Common Scenarios
 
 ### Scenario 1: Build Latest Commit from Branch
@@ -147,6 +189,15 @@ appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> -
 appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --download-logs --download-artifacts
 ```
 
+### Scenario 5: Real-time Build Monitoring
+```bash
+# For development - watch build progress in real-time with detailed logs
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --monitor verbose
+
+# For CI/CD - get clean step summary without verbose logs
+appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> --monitor steps
+```
+
 ## Notes
 
 - **Commit vs Branch**: When you provide `--commitId`, the system doesn't need branch information since the commit is already specified. When you provide `--branchId`, the system automatically uses the latest commit from that branch.
@@ -155,7 +206,15 @@ appcircle build start --profileId <uuid> --commitId <uuid> --workflowId <uuid> -
 
 - **No Wait**: The `--no-wait` parameter is useful for automation scenarios where you don't want to wait for build completion. The command returns immediately with task information.
 
-- **Auto Download**: The `--download-logs` and `--download-artifacts` parameters automatically download files after build completion. Use `--path` to specify a custom download location.
+- **Parameter Compatibility**: The `--no-wait` flag is incompatible with monitoring modes (`--monitor verbose`, `--monitor steps`, `--monitor summary`). If both are specified, the CLI will display an error and exit. For automation scenarios, use `--no-wait` without any monitoring flags (which defaults to immediate exit like `--monitor none`).
+
+- **Auto Download**: The `--download-logs` and `--download-artifacts` parameters automatically download files after build completion. Use `--path` to specify a custom download location. **Important**: These download options cannot be used with `--no-wait` or `--monitor none` because downloads require waiting for the build to complete. If you try to use them together, the CLI will display an error message with suggestions on how to resolve the conflict.
+
+- **Monitoring Preferences**: The `--monitor` parameter allows you to control how build progress is displayed. The default `summary` mode provides real-time build status and duration, while `verbose` mode offers full verbose log streaming, `steps` shows step-by-step progress, and `none` returns only the task ID. **Important**: The `--monitor` flag must be provided with a valid value (`none`, `summary`, `steps`, or `verbose`). Using `--monitor` without a value or with an invalid value will result in an error.
+
+- **Real-time Logs**: All monitor modes (except `none`) provide real-time log streaming, allowing you to monitor build progress as it happens. The system automatically formats logs and handles step transitions for better readability.
+
+- **Backward Compatibility**: The legacy `--execution-mode` parameter is still supported and automatically maps to the new monitor modes for seamless migration.
 
 ## Learn More
 

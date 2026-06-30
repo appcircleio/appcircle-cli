@@ -1,4 +1,6 @@
 ![NPM Version](https://img.shields.io/npm/v/%40appcircle%2Fcli?label=@appcircle%2Fcli&labelColor=ff8e34&color=5a789e)
+![Coverage](https://img.shields.io/badge/coverage-77.63%25-yellow)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
 
 # Appcircle Command Line Interface
 
@@ -98,6 +100,8 @@ appcircle <command> <subcommand> ... <subcommand> [options] -o json
 
 - `AUTH_HOSTNAME`: Specifies the host where your IAM (identity access management) server endpoint is located. [See also](#configuring-your-appcircle-cli-environment) for more details.
 
+- `HOOK_HOSTNAME`: Specifies the host where the webhook endpoint is located. [See also](#configuring-your-appcircle-cli-environment) for more details.
+
 ## Interactive Mode
 
 Appcircle CLI incorporates a GUI that allows users to interactively access its features. To view all features in interactive mode, execute the following command:
@@ -153,9 +157,9 @@ CURL_LOGGING= appcircle
 
 You can authenticate with Appcircle using either Personal Access Token or API Key:
 
-#### Using Personal Access Token
-- [Generate a personal access token from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#generatingmanaging-the-personal-api-tokens)
-- Using the Appcircle CLI, create a full access API token using the following command: `appcircle login pat --token="YOUR PERSONAL ACCESS TOKEN"`.
+#### Using Personal Access Key
+- [Generate a personal access key from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#generatingmanaging-the-personal-api-tokens)
+- Using the Appcircle CLI, create a full access API token using the following command: `appcircle login personal-access-key --secret="YOUR PERSONAL ACCESS KEY"`.
 
 #### Using API Key
 - [Create an API Key from the Appcircle dashboard](https://docs.appcircle.io/appcircle-api/api-authentication#api-keys)

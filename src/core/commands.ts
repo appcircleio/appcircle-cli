@@ -42,6 +42,7 @@ export type CommandType = {
   description: string;
   longDescription?: string;
   ignore?: boolean;
+  hidden?: boolean; // Hide from interactive mode menu
   subCommands?: CommandType[];
   arguments?: ParamType[];
   params: ParamType[];
@@ -113,7 +114,7 @@ LEARN MORE
         arguments: [
           {
             name: 'key',
-            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN]',
+            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, AC_ACCESS_TOKEN]',
             type: CommandParameterTypes.SELECT,
             params: Object.keys(DefaultEnvironmentVariables),
           },
@@ -128,7 +129,7 @@ USAGE
   appcircle config set <key> <value>
 
 REQUIRED ARGUMENTS
-  <key>    Configuration key (API_HOSTNAME, AUTH_HOSTNAME, or AC_ACCESS_TOKEN)
+  <key>    Configuration key (API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, or AC_ACCESS_TOKEN)
   <value>  New value for the configuration property
 
 DESCRIPTION
@@ -137,7 +138,8 @@ DESCRIPTION
 
 EXAMPLES
   appcircle config set API_HOSTNAME "https://api.appcircle.io"
-  appcircle config set AUTH_HOSTNAME "https://auth.appcircle.io" 
+  appcircle config set AUTH_HOSTNAME "https://auth.appcircle.io"
+  appcircle config set HOOK_HOSTNAME "https://hook.appcircle.io"
   appcircle config set AC_ACCESS_TOKEN "your-access-token-here"
 
 LEARN MORE
@@ -148,7 +150,7 @@ LEARN MORE
         arguments: [
           {
             name: 'key',
-            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN]',
+            description: 'Config key [API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, AC_ACCESS_TOKEN]',
             type: CommandParameterTypes.SELECT,
             params: Object.keys(DefaultEnvironmentVariables),
           },
@@ -277,19 +279,19 @@ LEARN MORE
   {
     command: CommandTypes.LOGIN,
     description: 'Login',
-    longDescription: `Authenticate with Appcircle using Personal Access Token or API Key
+    longDescription: `Authenticate with Appcircle using Personal Access Key or API Key
 
 USAGE
-  appcircle login pat --token <token>
+  appcircle login personal-access-key --secret <secret>
   appcircle login api-key [--name <name> --secret <secret> [--organization-id <id>]]
 
 DESCRIPTION
   Authenticate with Appcircle to access your organization's resources and perform CLI operations.
-  You can choose between Personal Access Token or API Key authentication methods.
+  You can choose between Personal Access Key or API Key authentication methods.
   API Key method supports an optional organization ID parameter for multi-organization accounts.
 
 EXAMPLES
-  appcircle login pat --token "your-personal-access-token-here"
+  appcircle login personal-access-key --secret "my-secret"
   appcircle login api-key
   appcircle login api-key --name "my-api-key" --secret "my-secret"
   appcircle login api-key --name "my-api-key" --secret "my-secret" --organization-id "org-123"
@@ -301,9 +303,46 @@ LEARN MORE
     params: [],
     subCommands: [
       {
+        command: 'personal-access-key',
+        description: 'Login with Personal Access Key',
+        longDescription: `Authenticate with Appcircle using your Personal Access Key
+
+USAGE
+  appcircle login personal-access-key --secret <secret>
+
+REQUIRED OPTIONS
+  --secret <secret>  Your Personal Access Key from Appcircle dashboard
+
+DESCRIPTION
+  Authenticate with Appcircle using your Personal Access Key. You can provide your key 
+  directly via the --secret option, or the command will prompt you to enter it interactively 
+  for security. Once authenticated, your token will be stored securely for future CLI operations.
+
+EXAMPLES
+  appcircle login personal-access-key --secret "my-secret"
+
+LEARN MORE
+  To get your Personal Access Key:
+  1. Go to Appcircle Dashboard (https://my.appcircle.io)
+  2. Navigate to 'My Organization' → 'Integrations' → 'Personal API Tokens'
+  3. Click 'Generate Token' and copy the generated key
+  4. Use the key with this login command`,
+        params: [
+          {
+            name: 'secret',
+            description: 'Personal Access Key',
+            longDescription: 'Your Personal Access Key from Appcircle dashboard',
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            requriedForInteractiveMode: false,
+          },
+        ],
+      },
+      {
         command: 'pat',
-        description: 'Login with Personal Access Token',
-        longDescription: `Authenticate with Appcircle using your Personal Access Token
+        description: 'Login with Personal Access Token (Legacy)',
+        hidden: true, // Hide from interactive mode menu
+        longDescription: `Authenticate with Appcircle using your Personal Access Token (Legacy)
 
 USAGE
   appcircle login pat --token <token>
@@ -312,19 +351,16 @@ REQUIRED OPTIONS
   --token <token>  Your Personal Access Token from Appcircle dashboard
 
 DESCRIPTION
-  Authenticate with Appcircle using your Personal Access Token. You can provide your token 
-  directly via the --token option, or the command will prompt you to enter it interactively 
-  for security. Once authenticated, your token will be stored securely for future CLI operations.
+  Legacy authentication method using Personal Access Token. This command is provided
+  for backward compatibility. For new implementations, use 'personal-access-key' instead.
+  The functionality is identical to the personal-access-key command.
 
 EXAMPLES
-  appcircle login pat --token "your-personal-access-token-here"
+  appcircle login pat --token "my-token"
 
 LEARN MORE
-  To get your Personal Access Token:
-  1. Go to Appcircle Dashboard (https://my.appcircle.io)
-  2. Navigate to 'My Organization' → 'Integrations' → 'Personal API Tokens'
-  3. Click 'Generate Token' and copy the generated token
-  4. Use the token with this login command`,
+  This is a legacy command. For new implementations, use:
+  appcircle login personal-access-key --secret "my-secret"`,
         params: [
           {
             name: 'token',
@@ -448,6 +484,7 @@ OPTIONAL OPTIONS
   --download-logs           Automatically download build logs after completion
   --download-artifacts      Automatically download build artifacts after completion
   --path <string>           Download path for logs and artifacts (default: ~/Downloads)
+  --monitor <mode>          Build monitoring preference: none, summary (default), steps, or verbose
 
 EXAMPLES
   appcircle build start --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --workflowId 6ba7b811-9dad-11d1-80b4-00c04fd430c8
@@ -457,7 +494,7 @@ EXAMPLES
 LEARN MORE
   Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
   Use 'appcircle build profile branch list --profileId <uuid>' to get available branches.
-  Use 'appcircle build profile workflows --profileId <uuid>' to get available workflows.`,
+  Use 'appcircle build profile workflow list --profileId <uuid>' to get available workflows.`,
         params: [
           {
             name: 'profileId',
@@ -591,6 +628,17 @@ LEARN MORE
             skipForInteractiveMode: true,
             params: [],
           },
+          {
+            name: 'monitor',
+            description: "Build monitoring preference: none, summary (default), steps, or verbose",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
+            defaultValue: 'summary',
+            params: [],
+          },
         ],
       },
       {
@@ -690,7 +738,7 @@ LEARN MORE
 
 USAGE
   appcircle build view --profileId <uuid> --branchId <uuid> --commitId <uuid> --buildId <uuid>
-  appcircle build view --profile <string> --branch <string> --commitId <uuid> --buildId <uuid>
+  appcircle build view --profile <string> --branch <string> --commitHash <string> --buildId <uuid>
 
 REQUIRED OPTIONS
   --profileId <uuid>    Build profile ID (UUID format)
@@ -698,10 +746,22 @@ REQUIRED OPTIONS
   --branchId <uuid>     Branch ID (UUID format)
   --branch <string>     Branch name (alternative to --branchId)
   --commitId <uuid>     Commit ID (UUID format)
+  --commitHash <string> Git commit hash (alternative to --commitId)
   --buildId <uuid>      Build ID (UUID format)
 
+DESCRIPTION
+  View detailed information about a specific build. You can identify the commit using either:
+  - Appcircle's commit ID (--commitId), or
+  - Git commit hash (--commitHash)
+
 EXAMPLES
+  # Using Appcircle commit ID
   appcircle build view --profileId 550e8400-e29b-41d4-a716-446655440000 --branchId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
+  
+  # Using Git commit hash
+  appcircle build view --profile "My iOS Project" --branch "main" --commitHash a1b2c3d4e5f6 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
+  
+  # Mixed usage with names
   appcircle build view --profile "My iOS Project" --branch "main" --commitId 6ba7b812-9dad-11d1-80b4-00c04fd430c8 --buildId 6ba7b813-9dad-11d1-80b4-00c04fd430c8
 
 LEARN MORE
@@ -752,7 +812,16 @@ LEARN MORE
             description: 'Commit Message (ID) of your build',
             type: CommandParameterTypes.SELECT,
             valueType: 'uuid',
-            required: true,
+            required: false,
+          },
+          {
+            name: 'commitHash',
+            description: "Git commit hash (alternative to 'commitId')",
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+            required: false,
+            requriedForInteractiveMode: false,
+            skipForInteractiveMode: true,
           },
           {
             name: 'buildId',
@@ -962,7 +1031,7 @@ USAGE
 EXAMPLES
   appcircle build profile list
   appcircle build profile branch list --profileId 550e8400-e29b-41d4-a716-446655440000
-  appcircle build profile workflows --profileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle build profile workflow list --profileId 550e8400-e29b-41d4-a716-446655440000
   appcircle build profile configurations --profileId 550e8400-e29b-41d4-a716-446655440000
 
 LEARN MORE
@@ -1093,9 +1162,247 @@ LEARN MORE
             params: []
           },
           {
+            command: 'workflow',
+            description: 'Workflow Actions of a Build Profile',
+            longDescription: 'Manage the workflows of a build profile: list them, download a workflow as a YAML file, and update an existing workflow from a YAML file.',
+            params: [],
+            subCommands: [
+              {
+                command: 'list',
+                description: 'Get List of Workflows of a Build Profile',
+                longDescription: `Get a list of all workflows for a specific build profile
+
+USAGE
+  appcircle build profile workflow list --profileId <uuid>
+  appcircle build profile workflow list --profile <string>
+
+REQUIRED OPTIONS
+  --profileId <uuid>    Build profile ID (UUID format)
+  --profile <string>    Build profile name (alternative to --profileId)
+
+EXAMPLES
+  appcircle build profile workflow list --profileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle build profile workflow list --profile "My iOS Project"
+
+LEARN MORE
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
+  Use the workflowId from the output for build start commands.`,
+                params: [
+                  {
+                    name: 'profileId',
+                    description: 'Build Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                ],
+              },
+              {
+                command: 'download',
+                description: 'Download a Workflow as a YAML File',
+                longDescription: `Download a build profile workflow as a YAML file so it can be edited locally and re-uploaded.
+
+USAGE
+  appcircle build profile workflow download --profileId <uuid> --workflowId <uuid> [--path <directory>]
+  appcircle build profile workflow download --profile <string> --workflowId <uuid> [--path <directory>]
+
+REQUIRED OPTIONS
+  --profileId <uuid>      Build profile ID (UUID format)
+  --profile <string>      Build profile name (alternative to --profileId)
+  --workflowId <uuid>     Workflow ID (UUID format)
+
+OPTIONAL OPTIONS
+  --path <directory>      Directory for the YAML file to be downloaded (defaults to the current directory)
+
+EXAMPLES
+  appcircle build profile workflow download --profileId 550e8400-e29b-41d4-a716-446655440000 --workflowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+  appcircle build profile workflow download --profile "My iOS Project" --workflowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --path ./exports
+
+LEARN MORE
+  Use 'appcircle build profile workflow list' to get available workflows with their UUIDs and names.
+  Use 'appcircle build profile workflow update' to upload the edited YAML back to the workflow.`,
+                params: [
+                  {
+                    name: 'profileId',
+                    description: 'Build Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'workflowId',
+                    description: 'Workflow Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The Path for the YAML file to be downloaded',
+                    longDescription: '[OPTIONAL] The Path for the YAML file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                  },
+                ],
+              },
+              {
+                command: 'update',
+                description: 'Update a Workflow from a YAML File',
+                longDescription: `Update an existing build profile workflow by uploading a YAML file. The file is validated (component existence, step names, YAML format) before the workflow is replaced.
+
+USAGE
+  appcircle build profile workflow update --profileId <uuid> --workflowId <uuid> --filePath <path> [--workflowName <string>]
+  appcircle build profile workflow update --profile <string> --workflowId <uuid> --filePath <path> [--workflowName <string>]
+
+REQUIRED OPTIONS
+  --profileId <uuid>      Build profile ID (UUID format)
+  --profile <string>      Build profile name (alternative to --profileId)
+  --workflowId <uuid>     Workflow ID to update (UUID format)
+  --filePath <path>       Path to the YAML file to upload
+
+OPTIONAL OPTIONS
+  --workflowName <string> New name for the workflow (defaults to the existing name)
+
+DESCRIPTION
+  Replaces the document of an existing workflow with the uploaded YAML. Every step must
+  reference an existing component/version and have a step name, otherwise the update is rejected.
+
+EXAMPLES
+  appcircle build profile workflow update --profileId 550e8400-e29b-41d4-a716-446655440000 --workflowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --filePath ./workflow.yaml
+  appcircle build profile workflow update --profile "My iOS Project" --workflowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --filePath ~/workflow.yaml --workflowName "Release Workflow"
+
+LEARN MORE
+  Use 'appcircle build profile workflow list' to get available workflows with their UUIDs and names.
+  Use 'appcircle build profile workflow download' to download an existing workflow as a template.`,
+                params: [
+                  {
+                    name: 'profileId',
+                    description: 'Build Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'workflowId',
+                    description: 'Which workflow do you want to update?',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'YAML File Path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true,
+                  },
+                  {
+                    name: 'workflowName',
+                    description: "[OPTIONAL] New name for the workflow",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                ],
+              },
+              {
+                command: 'create',
+                description: 'Create a New Workflow from a YAML File',
+                longDescription: `Create a new build profile workflow by uploading a YAML file. The file is validated (component existence, step names, YAML format) before the workflow is created.
+
+USAGE
+  appcircle build profile workflow create --profileId <uuid> --workflowName <string> --filePath <path>
+  appcircle build profile workflow create --profile <string> --workflowName <string> --filePath <path>
+
+REQUIRED OPTIONS
+  --profileId <uuid>       Build profile ID (UUID format)
+  --profile <string>       Build profile name (alternative to --profileId)
+  --workflowName <string>  Name for the new workflow
+  --filePath <path>        Path to the YAML file to upload
+
+EXAMPLES
+  appcircle build profile workflow create --profileId 550e8400-e29b-41d4-a716-446655440000 --workflowName "Release Workflow" --filePath ./workflow.yaml
+  appcircle build profile workflow create --profile "My iOS Project" --workflowName "Release Workflow" --filePath ~/workflow.yaml
+
+LEARN MORE
+  Use 'appcircle build profile workflow list' to get available workflows with their UUIDs and names.
+  Use 'appcircle build profile workflow download' to download an existing workflow as a template.`,
+                params: [
+                  {
+                    name: 'profileId',
+                    description: 'Build Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false,
+                  },
+                  {
+                    name: 'profile',
+                    description: "Build Profile Name instead of 'profileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'workflowName',
+                    description: 'Name for the new workflow',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: true,
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'YAML File Path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true,
+                  },
+                ],
+              },
+            ],
+          },
+          {
             command: 'workflows',
-            description: 'Get List of Workflows of a Build Profile',
-            longDescription: `Get a list of all workflows for a specific build profile
+            description: '(Deprecated) Get List of Workflows of a Build Profile — use "workflow list" instead',
+            longDescription: `**Deprecated:** This command is deprecated and will be removed in the next release. Use 'appcircle build profile workflow list' instead.
+
+Get a list of all workflows for a specific build profile
 
 USAGE
   appcircle build profile workflows --profileId <uuid>
@@ -1110,8 +1417,8 @@ EXAMPLES
   appcircle build profile workflows --profile "My iOS Project"
 
 LEARN MORE
-  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.
-  Use the workflowId from the output for build start commands.`,
+  This command is deprecated. Use 'appcircle build profile workflow list' instead.
+  Use 'appcircle build profile list' to get available profiles with their UUIDs and names.`,
             params: [
               {
                 name: 'profileId',
@@ -1563,7 +1870,7 @@ EXAMPLES
   appcircle signing-identity certificate list
 
 LEARN MORE
-  Use 'appcircle signing-identity certificate upload --path <path> --password <password>' to upload new certificates.
+  Use 'appcircle signing-identity certificate upload --path <path>' to upload new certificates.
   Use 'appcircle signing-identity certificate view --certificateBundleId <uuid>' to view certificate details.`,
             params:[],
           },
@@ -1573,17 +1880,24 @@ LEARN MORE
             longDescription: `Upload a new iOS certificate bundle to your organization
 
 USAGE
-  appcircle signing-identity certificate upload --path <path> --password <password>
+  appcircle signing-identity certificate upload --path <path> [--password <password>]
 
 REQUIRED OPTIONS
   --path <path>         Path to the certificate file (.p12 format)
-  --password <password> Certificate bundle password
+
+OPTIONAL OPTIONS
+  --password <password> Certificate bundle password (if the certificate is password-protected)
 
 DESCRIPTION
   Upload and install a new iOS certificate bundle (.p12 file) for code signing.
   The certificate will be available for use in your iOS build processes.
+  If your certificate is password-protected, provide the password using the --password option.
 
 EXAMPLES
+  # Upload a certificate without password
+  appcircle signing-identity certificate upload --path ./ios_distribution.p12
+  
+  # Upload a password-protected certificate
   appcircle signing-identity certificate upload --path ./ios_distribution.p12 --password "mypassword"
   appcircle signing-identity certificate upload --path ~/certificates/dev_cert.p12 --password "securepass"
 
@@ -1600,10 +1914,10 @@ LEARN MORE
               },
               {
                 name: 'password',
-                description: 'Certificate Password',
+                description: 'Certificate Password (optional)',
                 type: CommandParameterTypes.PASSWORD,
                 valueType: 'string',
-                required: true
+                required: false
               },
             ],
           },
@@ -2357,14 +2671,17 @@ LEARN MORE
         longDescription: `Upload your mobile application to a testing distribution profile
 
 USAGE
-  appcircle testing-distribution upload --distProfileId <uuid> --app <path> --message <message>
-  appcircle testing-distribution upload --distProfile <string> --app <path> --message <message>
+  appcircle testing-distribution upload --distProfileId <uuid> --app <path> [--message <message>] [--customTag <tag>]
+  appcircle testing-distribution upload --distProfile <string> --app <path> [--message <message>] [--customTag <tag>]
 
 REQUIRED OPTIONS
   --distProfileId <uuid>    Distribution profile ID (UUID format)
   --distProfile <string>    Distribution profile name (alternative to --distProfileId)
   --app <path>             Path to the mobile app file (.ipa for iOS, .apk/.aab for Android)
+
+OPTIONAL OPTIONS
   --message <message>      Release notes for this distribution
+  --customTag <tag>        Custom tag for this distribution
 
 DESCRIPTION
   Upload a mobile application binary to a specified distribution profile for testing.
@@ -2372,7 +2689,7 @@ DESCRIPTION
 
 EXAMPLES
   appcircle testing-distribution upload --distProfileId 550e8400-e29b-41d4-a716-446655440000 --app ./MyApp.ipa --message "Fixed login bug"
-  appcircle testing-distribution upload --distProfile "Beta Testing" --app ./MyApp.apk --message "New feature release"
+  appcircle testing-distribution upload --distProfile "Beta Testing" --app ./MyApp.apk --message "New feature release" --customTag "v1.2.3"
 
 LEARN MORE
   Use 'appcircle testing-distribution profile list' to get available distribution profiles with their UUIDs and names.
@@ -2398,6 +2715,12 @@ LEARN MORE
           {
             name: 'message',
             description: 'Release Notes',
+            type: CommandParameterTypes.STRING,
+            valueType: 'string',
+          },
+          {
+            name: 'customTag',
+            description: 'Custom Tag',
             type: CommandParameterTypes.STRING,
             valueType: 'string',
           },
@@ -3366,7 +3689,7 @@ LEARN MORE
                 longDescription: `Upload a new app version to a publish profile
 
 USAGE
-  appcircle publish profile version upload --platform <platform> --publishProfileId <uuid> --app <path>
+  appcircle publish profile version upload --platform <platform> --publishProfileId <uuid> --app <path> [--message <message>] [--customTag <tag>]
 
 REQUIRED OPTIONS
   --platform <platform>      Platform (ios or android)
@@ -3374,12 +3697,17 @@ REQUIRED OPTIONS
   --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
   --app <path>               Path to the app binary (ipa/apk/aab)
 
+OPTIONAL OPTIONS
+  --message <message>        Release notes for this version
+  --customTag <tag>          Custom tag for this version
+
 DESCRIPTION
   Upload a new binary (IPA, APK, or AAB) as a new version to the selected publish profile. Optionally, mark as release candidate and add release notes.
 
 EXAMPLES
   appcircle publish profile version upload --platform ios --publishProfileId <uuid> --app ./MyApp.ipa
   appcircle publish profile version upload --platform android --publishProfile "Google Play Production" --app ./MyApp.aab
+  appcircle publish profile version upload --platform ios --publishProfileId <uuid> --app ./MyApp.ipa --message "Bug fixes" --customTag "v1.2.0"
 
 LEARN MORE
   Use 'appcircle publish profile version list' to see all versions for a profile.`,
@@ -3422,6 +3750,20 @@ LEARN MORE
                     name: 'summary',
                     description: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.) [OPTIONAL]',
                     longDescription: 'Release Notes (To add a release note to the app version, you need to mark the version as a release candidate.) [OPTIONAL]',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false
+                  },
+                  {
+                    name: 'message',
+                    description: 'Release Notes',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false
+                  },
+                  {
+                    name: 'customTag',
+                    description: 'Custom Tag',
                     type: CommandParameterTypes.STRING,
                     valueType: 'string',
                     required: false
@@ -3836,6 +4178,189 @@ LEARN MORE
                 ],
               },
             ]
+          },
+          {
+            command: 'publish-flow',
+            description: 'Publish Flow Actions of a Publish Profile',
+            longDescription: 'Manage the publish flows of a publish profile: list them, download a flow as a YAML file, and update an existing flow from a YAML file.',
+            params: [],
+            subCommands: [
+              {
+                command: 'list',
+                description: 'Get List of Publish Flows of a Publish Profile',
+                longDescription: `Get a list of all publish flows for a specific publish profile
+
+USAGE
+  appcircle publish profile publish-flow list --platform <platform> --publishProfileId <uuid>
+  appcircle publish profile publish-flow list --platform <platform> --publishProfile <string>
+
+REQUIRED OPTIONS
+  --platform <platform>      Platform (ios or android)
+  --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
+
+EXAMPLES
+  appcircle publish profile publish-flow list --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000
+  appcircle publish profile publish-flow list --platform android --publishProfile "Google Play Production"
+
+LEARN MORE
+  Use 'appcircle publish profile list --platform <platform>' to get available profiles with their UUIDs and names.`,
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                ],
+              },
+              {
+                command: 'download',
+                description: 'Download a Publish Flow as a YAML File',
+                longDescription: `Download a publish profile publish-flow as a YAML file so it can be edited locally and re-uploaded.
+
+USAGE
+  appcircle publish profile publish-flow download --platform <platform> --publishProfileId <uuid> --publishFlowId <uuid> [--path <directory>]
+
+REQUIRED OPTIONS
+  --platform <platform>      Platform (ios or android)
+  --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
+  --publishFlowId <uuid>     Publish flow ID (UUID format)
+
+OPTIONAL OPTIONS
+  --path <directory>         Directory for the YAML file to be downloaded (defaults to the current directory)
+
+EXAMPLES
+  appcircle publish profile publish-flow download --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --publishFlowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+  appcircle publish profile publish-flow download --platform android --publishProfile "Google Play Production" --publishFlowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --path ./exports
+
+LEARN MORE
+  Use 'appcircle publish profile publish-flow list --platform <platform> --publishProfileId <uuid>' to get available flows.
+  Use 'appcircle publish profile publish-flow update' to upload the edited YAML back to the flow.`,
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'publishFlowId',
+                    description: 'Publish Flow Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'path',
+                    description: '[OPTIONAL] The Path for the YAML file to be downloaded',
+                    longDescription: '[OPTIONAL] The Path for the YAML file to be downloaded (Defaults to the current directory)',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                  },
+                ],
+              },
+              {
+                command: 'update',
+                description: 'Update a Publish Flow from a YAML File',
+                longDescription: `Update an existing publish profile publish-flow by uploading a YAML file. The file is validated (component existence, step names, YAML format) before the flow is replaced.
+
+USAGE
+  appcircle publish profile publish-flow update --platform <platform> --publishProfileId <uuid> --publishFlowId <uuid> --filePath <path> [--flowName <string>]
+
+REQUIRED OPTIONS
+  --platform <platform>      Platform (ios or android)
+  --publishProfileId <uuid>  Publish profile ID (UUID format)
+  --publishProfile <string>  Publish profile name (alternative to --publishProfileId)
+  --publishFlowId <uuid>     Publish flow ID to update (UUID format)
+  --filePath <path>          Path to the YAML file to upload
+
+OPTIONAL OPTIONS
+  --flowName <string>        New name for the publish flow (defaults to the existing name)
+
+DESCRIPTION
+  Replaces the document of an existing publish flow with the uploaded YAML. Every step must
+  reference an existing component/version and have a step name, otherwise the update is rejected.
+
+EXAMPLES
+  appcircle publish profile publish-flow update --platform ios --publishProfileId 550e8400-e29b-41d4-a716-446655440000 --publishFlowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --filePath ./flow.yaml
+  appcircle publish profile publish-flow update --platform android --publishProfile "Google Play Production" --publishFlowId 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --filePath ~/flow.yaml --flowName "Release Flow"
+
+LEARN MORE
+  Use 'appcircle publish profile publish-flow list --platform <platform> --publishProfileId <uuid>' to get available flows.
+  Use 'appcircle publish profile publish-flow download' to download an existing flow as a template.`,
+                params: [
+                  platformParam,
+                  {
+                    name: 'publishProfileId',
+                    description: 'Publish Profile Name (ID)',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'publishProfile',
+                    description: "Publish Profile Name instead of 'publishProfileId'",
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                  {
+                    name: 'publishFlowId',
+                    description: 'Which publish flow do you want to update?',
+                    type: CommandParameterTypes.SELECT,
+                    valueType: 'uuid',
+                    required: false
+                  },
+                  {
+                    name: 'filePath',
+                    description: 'YAML File Path',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'path',
+                    required: true,
+                  },
+                  {
+                    name: 'flowName',
+                    description: '[OPTIONAL] New name for the publish flow',
+                    type: CommandParameterTypes.STRING,
+                    valueType: 'string',
+                    required: false,
+                    requriedForInteractiveMode: false,
+                    skipForInteractiveMode: true,
+                    params: [],
+                  },
+                ],
+              },
+            ],
           }
         ]
       },
@@ -4183,22 +4708,22 @@ EXAMPLES
             longDescription: `Publish an enterprise app version
 
 USAGE
-  appcircle enterprise-app-store version publish --entProfileId <uuid> --entVersionId <uuid> [--summary <text>] [--releaseNotes <text>] [--publishType <type>]
+  appcircle enterprise-app-store version publish --entProfileId <uuid> --entVersionId <uuid> --summary <text> --releaseNotes <text> --publishType <type>
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
   --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --entVersionId <uuid>   App Version ID (UUID format)
   --entVersion <string>   App version name (alternative to --entVersionId)
-  --summary <text>        (Optional) Summary text
-  --releaseNotes <text>   (Optional) Release notes
-  --publishType <type>    (Optional) 0=None, 1=Beta, 2=Live
+  --summary <text>        Summary text
+  --releaseNotes <text>   Release notes
+  --publishType <type>    Publish type: 0=None, 1=Beta, 2=Live
 
 DESCRIPTION
   Publish a specific app version to the enterprise app store profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version publish --entProfile "Internal Apps" --entVersion "v1.2.3" --publishType 2`,
+  appcircle enterprise-app-store version publish --entProfile "Internal Apps" --entVersion "v1.2.3" --summary "New release" --releaseNotes "Bug fixes and improvements" --publishType 2`,
             params: [
               {
                 name: 'entProfileId',
@@ -4239,12 +4764,14 @@ EXAMPLES
                 description: 'Summary',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
+                required: true,
               },
               {
                 name: 'releaseNotes',
                 description: 'Release Notes',
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
+                required: true,
               },
               {
                 name: 'publishType',
@@ -4266,6 +4793,7 @@ EXAMPLES
                   },
                 ],
                 valueType: 'number',
+                required: true,
               },
             ],
           },
@@ -4456,18 +4984,23 @@ EXAMPLES
             longDescription: `Upload an enterprise app version for a profile
 
 USAGE
-  appcircle enterprise-app-store version upload-for-profile --entProfileId <uuid> --app <path>
+  appcircle enterprise-app-store version upload-for-profile --entProfileId <uuid> --app <path> [--message <message>] [--customTag <tag>]
 
 REQUIRED OPTIONS
   --entProfileId <uuid>   Enterprise Profile ID (UUID format)
   --entProfile <string>      Enterprise profile name (alternative to --entProfileId)
   --app <path>            Path to the app binary (ipa/apk/aab)
 
+OPTIONAL OPTIONS
+  --message <message>     Release notes for this version
+  --customTag <tag>       Custom tag for this version
+
 DESCRIPTION
   Upload a new app version to the specified enterprise profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version upload-for-profile --entProfile "Internal Apps" --app ./MyApp.ipa`,
+  appcircle enterprise-app-store version upload-for-profile --entProfile "Internal Apps" --app ./MyApp.ipa
+  appcircle enterprise-app-store version upload-for-profile --entProfileId <uuid> --app ./MyApp.ipa --message "Bug fixes" --customTag "v1.0.1"`,
             params: [
               {
                 name: 'entProfileId',
@@ -4492,6 +5025,18 @@ EXAMPLES
                 type: CommandParameterTypes.STRING,
                 valueType: 'string',
               },
+              {
+                name: 'message',
+                description: 'Release Notes',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+              },
+              {
+                name: 'customTag',
+                description: 'Custom Tag',
+                type: CommandParameterTypes.STRING,
+                valueType: 'string',
+              },
             ],
           },
           {
@@ -4500,16 +5045,21 @@ EXAMPLES
             longDescription: `Upload an enterprise app version without specifying a profile
 
 USAGE
-  appcircle enterprise-app-store version upload-without-profile --app <path>
+  appcircle enterprise-app-store version upload-without-profile --app <path> [--message <message>] [--customTag <tag>]
 
 REQUIRED OPTIONS
   --app <path>            Path to the app binary (ipa/apk/aab)
+
+OPTIONAL OPTIONS
+  --message <message>     Release notes for this version
+  --customTag <tag>       Custom tag for this version
 
 DESCRIPTION
   Upload a new app version without associating it with a specific enterprise profile.
 
 EXAMPLES
-  appcircle enterprise-app-store version upload-without-profile --app ./MyApp.ipa`,
+  appcircle enterprise-app-store version upload-without-profile --app ./MyApp.ipa
+  appcircle enterprise-app-store version upload-without-profile --app ./MyApp.ipa --message "Initial release" --customTag "v1.0.0"`,
             params: [
               {
                 name: 'app',

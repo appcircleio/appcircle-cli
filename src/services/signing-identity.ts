@@ -226,10 +226,11 @@ const ROOTPATH = 'signing-identity';
     });
     return response.data;
   }
-  export async function uploadP12Certificate(options: OptionsType<{ path: string, password: string }>) {
+  export async function uploadP12Certificate(options: OptionsType<{ path: string, password?: string }>) {
     const data = new FormData();
     data.append('binary', fs.createReadStream(options.path));
-    data.append('password', options.password);
+    // Only append password if provided
+    data.append('password', options.password || '');
     const uploadResponse = await appcircleApi.post(`${ROOTPATH}/v2/certificates`,data, {
         maxBodyLength: Infinity,
         headers: {

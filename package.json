@@ -1,6 +1,6 @@
 {
   "name": "@appcircle/cli",
-  "version": "2.7.3",
+  "version": "2.8.0",
   "description": "CLI tool for running Appcircle services from the command line",
   "main": "bin/appcircle.js",
   "bin": {
@@ -9,6 +9,9 @@
   "scripts": {
     "watch": "rm -rf dist && tsc -w",
     "build": "rm -rf dist && tsc",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "update-badges": "bash scripts/update-badges-local.sh",
     "postversion": "git push && git push --tags",
     "postuninstall": "node ./scripts/appcircle-uninstall.js",
     "check:package": "zx ./scripts/check-package.mjs",
@@ -57,8 +60,12 @@
     "@types/jsonfile": "^6.0.0",
     "@types/minimist": "^1.2.1",
     "@types/node": "^18.15.11",
-    "cz-conventional-changelog": "^3.3.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "cz-conventional-changelog": "^3.0.1",
+    "msw": "^2.11.0",
     "typescript": "^4.3.4",
+    "vitest": "3.1.4",
     "zx": "^5.2.3"
   },
   "config": {

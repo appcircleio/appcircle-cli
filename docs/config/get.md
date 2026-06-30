@@ -10,6 +10,7 @@ appcircle config get <key>
 ```plaintext
 $ appcircle config get API_HOSTNAME
 $ appcircle config get AUTH_HOSTNAME
+$ appcircle config get HOOK_HOSTNAME
 $ appcircle config get AC_ACCESS_TOKEN
 ```
 
@@ -17,7 +18,7 @@ $ appcircle config get AC_ACCESS_TOKEN
 
 | Argument                                                                                                                                 | Description                                             |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `key`                                                                                                        | Config key [API_HOSTNAME, AUTH_HOSTNAME, AC_ACCESS_TOKEN]                                           
+| `key`                                                                                                        | Config key [API_HOSTNAME, AUTH_HOSTNAME, HOOK_HOSTNAME, AC_ACCESS_TOKEN]                                           
 
 ## Options inherited from parent commands
 

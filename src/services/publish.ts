@@ -37,6 +37,49 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
     return response.data;
   }
 
+  export async function getPublishFlows(options: OptionsType<{ platform: string; publishProfileId: string }>) {
+    const response = await appcircleApi.get(
+      `publish/v1/profiles/${options.platform}/${options.publishProfileId}/publishflows`,
+      { headers: getHeaders() }
+    );
+    return response.data;
+  }
+
+  export async function downloadPublishFlowYaml(options: OptionsType<{ platform: string; publishProfileId: string; publishFlowId: string }>) {
+    const response = await appcircleApi.get(
+      `publish/v1/profiles/${options.platform}/${options.publishProfileId}/publishflows/${options.publishFlowId}?action=download`,
+      {
+        responseType: 'arraybuffer',
+        headers: getHeaders(),
+      }
+    );
+    return response.data;
+  }
+
+  export async function updatePublishFlowFromFile(
+    options: OptionsType<{ platform: string; publishProfileId: string; publishFlowId: string; filePath: string; flowName?: string }>
+  ) {
+    const form = new FormData();
+    if (options.flowName) {
+      form.append('flowName', options.flowName);
+    }
+    form.append('file', fs.createReadStream(options.filePath));
+
+    const response = await appcircleApi.patch(
+      `publish/v1/profiles/${options.platform}/${options.publishProfileId}/publishflows/${options.publishFlowId}?action=update`,
+      form,
+      {
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        headers: {
+          ...getHeaders(),
+          ...form.getHeaders(),
+        },
+      }
+    );
+    return response.data;
+  }
+
 
   export async function getAppVersionDetail(options: OptionsType<{  publishProfileId: string, platform:string, appVersionId: string}>) {
     const response = await appcircleApi.get(
@@ -214,9 +257,21 @@ export async function deletePublishProfile(options: OptionsType<{ platform: stri
     return uploadInformationResponse.data;
   }
 
-  export async function commitPublishFileUpload(options: OptionsType<{ platform: string,  fileId: number; fileName: string; publishProfileId: string }>) {
+  export async function commitPublishFileUpload(options: OptionsType<{ platform: string,  fileId: number; fileName: string; publishProfileId: string; customTag?: string; message?: string }>) {
+    const requestBody: { fileId: number; fileName: string; customTag?: string; message?: string } = {
+      fileId: options.fileId,
+      fileName: options.fileName,
+    };
+    
+    if (options.customTag !== undefined && options.customTag !== null) {
+      requestBody.customTag = options.customTag;
+    }
+    
+    if (options.message !== undefined && options.message !== null) {
+      requestBody.message = options.message;
+    }
 
-    const commitFileResponse = await appcircleApi.post(`publish/v1/profiles/${options.platform}/${options.publishProfileId}/app-versions?action=commitFileUpload`,{fileId: options.fileId, fileName: options.fileName},{
+    const commitFileResponse = await appcircleApi.post(`publish/v1/profiles/${options.platform}/${options.publishProfileId}/app-versions?action=commitFileUpload`, requestBody, {
       headers: {
         ...getHeaders(),
       },

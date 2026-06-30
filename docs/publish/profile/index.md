@@ -20,4 +20,5 @@ appcircle publish profile [command] [options]
 - [`delete`](delete.md)
 - [`version`](version/index.md)
 - [`settings`](settings/index.md)
+- [`publish-flow`](publish-flow/index.md)
 
