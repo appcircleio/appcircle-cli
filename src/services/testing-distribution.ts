@@ -17,7 +17,11 @@ export async function getDistributionProfiles(options: OptionsType = {}) {
 }
 
 export async function getDistributionProfileById(options: OptionsType<{ distProfileId: string }>) {
-    const distributionProfile = await appcircleApi.get(`distribution/v2/profiles/${options.distProfileId}`, {
+    // addAppVersions=true is requested explicitly: getLatestAppVersionId and the post-upload
+    // version resolution read profile.appVersions from this response. The backend currently
+    // embeds them by default, but the profile-detail endpoints are moving to opt-in embedding
+    // (BE-9216) — being explicit keeps this working when that default flips.
+    const distributionProfile = await appcircleApi.get(`distribution/v2/profiles/${options.distProfileId}?addAppVersions=true`, {
       headers: getHeaders(),
     });
     return distributionProfile.data;
