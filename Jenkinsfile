@@ -13,6 +13,7 @@ pipeline {
                 changeRequest()
             }
             steps {
+                script { dockerLogin() } // GAR login: Dockerfiles pull nodedhi from the private registry
                 withCredentials([string(credentialsId: 'GithubPersonalToken', variable: 'GITHUB_TOKEN')]) {
                     sh '''#!/bin/bash
                 # shellcheck shell=bash
@@ -89,6 +90,7 @@ pipeline {
                 }
             }
             steps {
+                script { dockerLogin() } // GAR login: Dockerfiles pull nodedhi from the private registry
                 sh '''#!/bin/bash
                 # shellcheck shell=bash
                 set -e
@@ -237,6 +239,7 @@ pipeline {
                 }
             }
             steps {
+                script { dockerLogin() } // GAR login: Dockerfiles pull nodedhi from the private registry
                 sh '''#!/bin/bash
                 # shellcheck shell=bash
                 set -x
