@@ -1,5 +1,7 @@
-FROM node:23-alpine3.20
+FROM europe-west1-docker.pkg.dev/appcircle/docker-registry/nodedhi:26-alpine3.23-dev
 WORKDIR /app
 COPY package.json yarn.lock ./
+# Node 26 images ship without yarn and corepack; --force overwrites a bundled yarn if the base has one.
+RUN npm install -g --force yarn@1.22.22
 RUN yarn install
 COPY . .
