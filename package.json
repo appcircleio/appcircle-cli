@@ -1,6 +1,6 @@
 {
   "name": "@appcircle/cli",
-  "version": "2.8.0",
+  "version": "3.0.0",
   "description": "CLI tool for running Appcircle services from the command line",
   "main": "bin/appcircle.js",
   "bin": {
@@ -14,7 +14,7 @@
     "update-badges": "bash scripts/update-badges-local.sh",
     "postversion": "git push && git push --tags",
     "postuninstall": "node ./scripts/appcircle-uninstall.js",
-    "check:package": "zx ./scripts/check-package.mjs",
+    "check:package": "node ./scripts/check-package.mjs",
     "bump:version:beta": "npm version prerelease --preid=beta",
     "bump:version:alpha": "npm version prerelease --preid=alpha",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
@@ -37,36 +37,34 @@
   },
   "homepage": "https://github.com/appcircleio/appcircle-cli#readme",
   "dependencies": {
-    "axios": "^1.3.4",
-    "chalk": "^4.1.1",
-    "commander": "^11.1.0",
-    "conf": "^10.2.0",
+    "axios": "^1.21.1",
+    "chalk": "^6.0.1",
+    "commander": "^15.1.0",
+    "conf": "^16.0.0",
     "enquirer": "^2.3.6",
+    "env-paths": "2.2.1",
     "form-data": "^4.0.0",
-    "jsonfile": "^6.1.0",
+    "jsonfile": "^6.2.1",
     "minimist": "^1.2.6",
-    "moment": "^2.29.3",
-    "ora": "^5.4.0"
+    "moment": "^2.31.0",
+    "ora": "^10.0.0"
   },
   "files": [
     "bin/",
     "dist/",
     "scripts/"
   ],
-  "resolutions": {
-    "ora/strip-ansi": "6.0.1"
-  },
   "devDependencies": {
-    "@types/jsonfile": "^6.0.0",
+    "@types/jsonfile": "^6.1.4",
     "@types/minimist": "^1.2.1",
-    "@types/node": "^18.15.11",
-    "@vitest/coverage-v8": "^3.2.4",
-    "@vitest/ui": "^3.2.4",
-    "cz-conventional-changelog": "^3.0.1",
-    "msw": "^2.11.0",
-    "typescript": "^4.3.4",
-    "vitest": "3.1.4",
-    "zx": "^5.2.3"
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "@vitest/ui": "^5.1.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "msw": "^3.0.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.7",
+    "vitest": "5.1.0"
   },
   "config": {
     "commitizen": {
@@ -74,6 +72,6 @@
     }
   },
   "engines": {
-    "node": ">=18.15.0"
+    "node": ">=22.13.0"
   }
 }

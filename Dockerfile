@@ -1,8 +1,10 @@
-FROM node:23-alpine3.20 AS BUILDER
+FROM node:26.13.0-alpine3.24 AS BUILDER
 WORKDIR /app
 COPY yarn.lock .
 COPY package.json .
-RUN yarn install
+# Node 26 images ship without yarn and corepack.
+RUN npm install -g yarn@1.22.22
+RUN yarn install --frozen-lockfile
 COPY . .
 RUN yarn run check:package
 RUN yarn run build

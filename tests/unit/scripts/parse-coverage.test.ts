@@ -251,10 +251,10 @@ describe('parse-coverage.js helper functions', () => {
 
     it('should handle exact threshold values', () => {
       const exactCoverage = {
-        statements: { pct: 75, covered: 7500, total: 10000 },
-        branches: { pct: 75, covered: 1500, total: 2000 },
-        functions: { pct: 70, covered: 350, total: 500 },
-        lines: { pct: 75, covered: 7500, total: 10000 }
+        statements: { pct: 65, covered: 6500, total: 10000 },
+        branches: { pct: 55, covered: 1100, total: 2000 },
+        functions: { pct: 80, covered: 400, total: 500 },
+        lines: { pct: 65, covered: 6500, total: 10000 }
       };
 
       const result = checkCoverageThresholds(exactCoverage);

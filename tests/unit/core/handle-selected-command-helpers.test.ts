@@ -7,9 +7,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock dependencies
 vi.mock('enquirer', () => ({
-  AutoComplete: vi.fn().mockImplementation(() => ({
+  AutoComplete: vi.fn().mockImplementation(function () { return {
     run: vi.fn().mockResolvedValue('1. Test')
-  }))
+  }; })
 }));
 
 // Import the actual helper functions from the module

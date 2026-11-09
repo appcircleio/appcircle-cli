@@ -20,7 +20,7 @@ describe('LogProcessor', () => {
       isDuplicate: vi.fn().mockReturnValue(false),
       clear: vi.fn()
     };
-    vi.mocked(MessageDeduplicator).mockImplementation(() => mockDeduplicator);
+    vi.mocked(MessageDeduplicator).mockImplementation(function () { return mockDeduplicator; });
 
     // Create LogProcessor instance
     logProcessor = new LogProcessor(mockOnProcessedMessage);

@@ -907,7 +907,7 @@ describe('Services Index Utilities', () => {
         const mockFormData = {
           append: vi.fn()
         }
-        const MockFormData = vi.fn().mockImplementation(() => mockFormData)
+        const MockFormData = vi.fn().mockImplementation(function () { return mockFormData; })
         const mockFileStream = { path: '/test/file.ipa' }
         
         const result = createUploadFormData('Test message', mockFileStream, MockFormData)
@@ -920,7 +920,7 @@ describe('Services Index Utilities', () => {
 
       it('should handle empty message', () => {
         const mockFormData = { append: vi.fn() }
-        const MockFormData = vi.fn().mockImplementation(() => mockFormData)
+        const MockFormData = vi.fn().mockImplementation(function () { return mockFormData; })
         const mockFileStream = {}
         
         createUploadFormData('', mockFileStream, MockFormData)

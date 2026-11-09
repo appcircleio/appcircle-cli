@@ -90,6 +90,8 @@ export const createProgram = () => {
   const cliDescription = `Appcircle CLI is a command-line interface to interact with the Appcircle platform, enabling you to manage your CI/CD workflows, builds, testing distribution, and more, directly from your terminal.`;
   
   program.name(PROGRAM_NAME);
+  // commander 13+ rejects extra arguments; keep ignoring them as before. Subcommands inherit it via .command().
+  program.allowExcessArguments();
   program.version(`v${version}`, "-v, --version", "output the version number");
   
   program.option("-i, --interactive", "interactive mode (AppCircle GUI)");

@@ -85,13 +85,13 @@ vi.mock('enquirer', () => ({
       downloadLogs: true,
       selectedAction: '1. Test Command'
     }),
-    AutoComplete: vi.fn().mockImplementation(() => ({
+    AutoComplete: vi.fn().mockImplementation(function () { return {
       run: vi.fn().mockResolvedValue('1. Test Command')
-    }))
+    }; })
   },
-  AutoComplete: vi.fn().mockImplementation(() => ({
+  AutoComplete: vi.fn().mockImplementation(function () { return {
     run: vi.fn().mockResolvedValue('1. Test Command')
-  }))
+  }; })
 }))
 
 vi.mock('readline', () => ({

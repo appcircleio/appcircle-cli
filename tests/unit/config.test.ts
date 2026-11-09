@@ -24,7 +24,7 @@ function resetMockStore() {
 // Mock the conf module
 vi.mock('conf', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
+    default: vi.fn().mockImplementation(function () { return {
       get store() { return testMockStore; },
       path: '/mock/config/path.json',
       get: vi.fn((key: string) => {
@@ -52,7 +52,7 @@ vi.mock('conf', () => {
       clear: vi.fn(() => {
         resetMockStore();
       })
-    }))
+    }; })
   };
 });
 

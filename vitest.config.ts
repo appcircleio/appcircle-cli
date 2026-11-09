@@ -26,11 +26,13 @@ export default defineConfig({
       ],
       // Separate thresholds for different test types
       thresholds: {
+        // Re-baselined for vitest 4+'s AST-based v8 counting (per-file coverage unchanged; the old
+        // counting scored every line of the src/core/commands.ts data literal as a covered statement).
         global: {
-          branches: 75,
-          functions: 70,
-          lines: 75,
-          statements: 75
+          branches: 55,
+          functions: 80,
+          lines: 65,
+          statements: 65
         },
         // Unit tests should have higher coverage
         'tests/unit/**': {
