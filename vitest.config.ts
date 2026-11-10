@@ -26,13 +26,17 @@ export default defineConfig({
       ],
       // Separate thresholds for different test types
       thresholds: {
-        // Re-baselined for vitest 4+'s AST-based v8 counting (per-file coverage unchanged; the old
-        // counting scored every line of the src/core/commands.ts data literal as a covered statement).
+        // Ratcheted to the measured floor (BE-10005: 99.35 stmt / 98.51 branch / 99.22 fn / 99.36 line).
+        // The remaining gap is unreachable or dead source code, not untested behaviour. Functions use 98:
+        // at 99 the margin was only 2 functions.
+        // Vitest does not treat "global" as a special key (it is read as a glob), so `yarn test` does not
+        // enforce these numbers. CI enforces them with `node scripts/parse-coverage.js check-threshold`,
+        // which reads this "global" block, so keep its shape.
         global: {
-          branches: 55,
-          functions: 80,
-          lines: 65,
-          statements: 65
+          branches: 98,
+          functions: 98,
+          lines: 99,
+          statements: 99
         },
         // Unit tests should have higher coverage
         'tests/unit/**': {

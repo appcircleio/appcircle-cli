@@ -227,10 +227,10 @@ describe('parse-coverage.js helper functions', () => {
 
     it('should return true when all coverage meets thresholds', () => {
       const goodCoverage = {
-        statements: { pct: 80, covered: 8000, total: 10000 },
-        branches: { pct: 80, covered: 1600, total: 2000 },
-        functions: { pct: 80, covered: 400, total: 500 },
-        lines: { pct: 80, covered: 8000, total: 10000 }
+        statements: { pct: 99.5, covered: 9950, total: 10000 },
+        branches: { pct: 99.5, covered: 1990, total: 2000 },
+        functions: { pct: 99.6, covered: 498, total: 500 },
+        lines: { pct: 99.5, covered: 9950, total: 10000 }
       };
 
       const result = checkCoverageThresholds(goodCoverage);
@@ -251,10 +251,10 @@ describe('parse-coverage.js helper functions', () => {
 
     it('should handle exact threshold values', () => {
       const exactCoverage = {
-        statements: { pct: 65, covered: 6500, total: 10000 },
-        branches: { pct: 55, covered: 1100, total: 2000 },
-        functions: { pct: 80, covered: 400, total: 500 },
-        lines: { pct: 65, covered: 6500, total: 10000 }
+        statements: { pct: 99, covered: 9900, total: 10000 },
+        branches: { pct: 98, covered: 1960, total: 2000 },
+        functions: { pct: 98, covered: 490, total: 500 },
+        lines: { pct: 99, covered: 9900, total: 10000 }
       };
 
       const result = checkCoverageThresholds(exactCoverage);
