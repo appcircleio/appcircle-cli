@@ -13,9 +13,9 @@ vi.mock('../../../src/core/command-runner', () => ({
 
 // Mock external dependencies
 vi.mock('enquirer', () => ({
-  AutoComplete: vi.fn().mockImplementation(() => ({
+  AutoComplete: vi.fn().mockImplementation(function () { return {
     run: vi.fn()
-  }))
+  }; })
 }));
 
 describe('Execution Mode Functionality', () => {

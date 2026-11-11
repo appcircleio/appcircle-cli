@@ -15,9 +15,9 @@ vi.mock('chalk', () => ({
 }));
 
 vi.mock('../../../src/utils/curlhelper', () => ({
-  default: vi.fn().mockImplementation((config) => ({
+  default: vi.fn().mockImplementation(function (config: any) { return {
     generateCommand: vi.fn(() => `curl -X ${config.method || 'GET'} ${config.url || 'test'}`)
-  }))
+  }; })
 }));
 
 vi.mock('../../../src/config', () => ({

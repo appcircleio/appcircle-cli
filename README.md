@@ -25,6 +25,8 @@ Appcircle CLI is a unified tool for accessing the Appcircle platform features fr
 
 ## Installation Instructions
 
+Appcircle CLI requires Node.js 22.13 or later.
+
 To install Appcircle CLI globally, simply launch:
 
 ```

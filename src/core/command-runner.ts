@@ -1188,7 +1188,7 @@ export const checkIfUserAlreadyLoggedIn = (): boolean => {
 export const validateCurrentTokenIsValid = async (): Promise<boolean> => {
   try {
     // Use a simple API call to test token validity
-    const { getBuildProfiles } = await import('../services');
+    const { getBuildProfiles } = await import('../services/index.js');
     await getBuildProfiles();
     return true;
   } catch (error: any) {
@@ -4597,9 +4597,9 @@ ${variableGroups.map((group: any) => `  - ${group.name}`).join('\n')}`);
         console.log(chalk.green(`✓ SSE connection established with browserId: ${sseConnection.browserId}`));
         
         // Step 2: Initialize monitoring components
-        const { LogProcessor } = await import('../utils/LogProcessor');
-        const { TerminalRenderer } = await import('../utils/TerminalRenderer');
-        const { ProgressTracker } = await import('../utils/ProgressTracker');
+        const { LogProcessor } = await import('../utils/LogProcessor.js');
+        const { TerminalRenderer } = await import('../utils/TerminalRenderer.js');
+        const { ProgressTracker } = await import('../utils/ProgressTracker.js');
         
         const buildLogOptions = {
           timestamps: false,

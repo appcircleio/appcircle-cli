@@ -5,6 +5,31 @@ import {
   findCommandByParts 
 } from '../../../src/core/command-runner'
 
+// Hoisted above the imports by vitest; a nested vi.mock is refused since vitest 5.
+vi.mock('../../../src/services/api', () => ({
+  getBuildProfiles: vi.fn().mockResolvedValue([
+    { id: 'test-profile', name: 'Test Profile' }
+  ]),
+  getBranches: vi.fn().mockResolvedValue([
+    { id: 'test-branch', name: 'main' }
+  ]),
+  getWorkflows: vi.fn().mockResolvedValue([
+    { id: 'test-workflow', name: 'Test Workflow' }
+  ]),
+  getConfigurations: vi.fn().mockResolvedValue([
+    { id: 'test-config', name: 'Test Config' }
+  ]),
+  startBuild: vi.fn().mockResolvedValue({
+    taskId: 'test-task-id',
+    buildId: 'test-build-id'
+  }),
+  getBuildStatusFromQueue: vi.fn().mockResolvedValue({
+    status: 2, // completed
+    hasWarning: false
+  }),
+  getLatestBuildId: vi.fn().mockResolvedValue('test-build-id')
+}))
+
 describe('command-runner internals (non-exported)', () => {
   let originalLog: any
   let originalStdoutWrite: any
@@ -48,31 +73,6 @@ describe('command-runner internals (non-exported)', () => {
     // This test verifies that the internal createStepSummaryFormatter works
     // by testing the build command flow that uses it
     
-    // Mock the required dependencies
-    vi.mock('../../../src/services/api', () => ({
-      getBuildProfiles: vi.fn().mockResolvedValue([
-        { id: 'test-profile', name: 'Test Profile' }
-      ]),
-      getBranches: vi.fn().mockResolvedValue([
-        { id: 'test-branch', name: 'main' }
-      ]),
-      getWorkflows: vi.fn().mockResolvedValue([
-        { id: 'test-workflow', name: 'Test Workflow' }
-      ]),
-      getConfigurations: vi.fn().mockResolvedValue([
-        { id: 'test-config', name: 'Test Config' }
-      ]),
-      startBuild: vi.fn().mockResolvedValue({
-        taskId: 'test-task-id',
-        buildId: 'test-build-id'
-      }),
-      getBuildStatusFromQueue: vi.fn().mockResolvedValue({
-        status: 2, // completed
-        hasWarning: false
-      }),
-      getLatestBuildId: vi.fn().mockResolvedValue('test-build-id')
-    }))
-
     // Mock environment variables
     process.env.AC_ACCESS_TOKEN = 'test-token'
     process.env.AC_ORGANIZATION_ID = 'test-org'

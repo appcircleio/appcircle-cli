@@ -111,3 +111,5 @@ dist
 .DS_STORE
 
 output
+# Yarn is the package manager; yarn.lock is the only lockfile
+package-lock.json

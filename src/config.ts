@@ -2,6 +2,7 @@
  * Implements CRUD options from a file. Replaces the usage of a database, acts like environment variables.
  */
 import Conf from 'conf';
+import envPaths from 'env-paths';
 
 /**
  * This variable exists only to specify which environment variables are being used.
@@ -25,7 +26,11 @@ interface ConfigData extends Record<string, any> {
   envs: { [key: string]: typeof DefaultEnvironmentVariables };
 }
 
+// conf <=10 derived its directory from the package name with env-paths 2. conf now refuses a scoped
+// projectName, so the same call is made here to keep existing users' config. env-paths stays on 2.x:
+// the version conf bundles refuses the "/" in "@appcircle/cli".
 const config = new Conf<ConfigData>({
+  cwd: envPaths("@appcircle/cli", { suffix: "nodejs" }).config,
   defaults: { current: "default", envs: { default: DefaultEnvironmentVariables } },
 });
 

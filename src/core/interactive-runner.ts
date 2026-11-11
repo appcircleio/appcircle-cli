@@ -2066,7 +2066,7 @@ export const handleAuthenticationSubMenu = async (
     if (currentToken) {
       // Validate if the current token is still valid
       try {
-        const { validateCurrentTokenIsValid } = await import('./command-runner');
+        const { validateCurrentTokenIsValid } = await import('./command-runner.js');
         const isTokenValid = await validateCurrentTokenIsValid();
 
         if (isTokenValid) {
@@ -2076,7 +2076,7 @@ export const handleAuthenticationSubMenu = async (
         } else {
           // Token is expired/invalid, clear it and proceed with new login
           console.log('Current token is expired or invalid. Clearing stored token and proceeding with new login...');
-          const { clearStoredToken } = await import('./command-runner');
+          const { clearStoredToken } = await import('./command-runner.js');
           clearStoredToken();
         }
       } catch (error) {

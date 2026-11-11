@@ -15,13 +15,13 @@ import {
 
 // Mock enquirer - need to use factory function to avoid hoisting issues
 vi.mock('enquirer', () => ({
-  AutoComplete: vi.fn().mockImplementation((config) => ({
+  AutoComplete: vi.fn().mockImplementation(function (config) { return {
     name: config.name,
     message: config.message,
     choices: config.choices,
     limit: config.limit,
     run: vi.fn().mockResolvedValue('test selection')
-  }))
+  }; })
 }));
 
 describe('Parameter Helper Functions', () => {
